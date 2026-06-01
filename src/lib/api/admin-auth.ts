@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth/getAdmin"
 
-export async function requireAdmin() {
+type Admin = NonNullable<Awaited<ReturnType<typeof getAdmin>>>
+type AdminAuthResult =
+  | { admin: Admin; response: null }
+  | { admin: null; response: NextResponse }
+
+export async function requireAdmin(): Promise<AdminAuthResult> {
   const admin = await getAdmin()
   if (!admin) {
     return {
@@ -13,7 +18,7 @@ export async function requireAdmin() {
   return { admin, response: null }
 }
 
-export async function requireSuperAdmin() {
+export async function requireSuperAdmin(): Promise<AdminAuthResult> {
   const result = await requireAdmin()
   if (!result.admin) {
     return result

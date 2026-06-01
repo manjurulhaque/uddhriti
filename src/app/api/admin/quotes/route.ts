@@ -29,7 +29,7 @@ function countWords(content: string) {
 
 export async function POST(req: Request) {
   const { admin, response } = await requireSuperAdmin()
-  if (response || !admin) return response
+  if (response) return response
 
   const body = await req.json().catch(() => null)
   const parsed = quoteCreateSchema.safeParse(body)

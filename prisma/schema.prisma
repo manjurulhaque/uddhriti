@@ -1,0 +1,444 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+
+enum QuoteStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum WorkType {
+  BOOK
+  SPEECH
+  ARTICLE
+  INTERVIEW
+  SCRIPTURE
+  LETTER
+  OTHER
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  EDITOR
+}
+
+enum TagType {
+  TOPIC
+  EMOTION
+  ACTION
+  VALUE
+  TIME
+  PERSON
+  VIRTUE
+  VICE
+  STATE
+  RELATIONSHIP
+  WORK
+  SPIRITUAL
+  POLITICS
+  SOCIETY
+  NATURE
+  PLACE
+  ERA
+  EVENT
+  ART
+  SCIENCE
+  FAITH_TRADITION
+}
+
+enum AttributionStatus {
+  CONFIRMED
+  DISPUTED
+  MISATTRIBUTED
+  UNKNOWN
+}
+
+enum FAQPageType {
+  TAG
+  CATEGORY
+  AUTHOR
+  QUOTE
+  COLLECTION
+}
+
+enum CollectionVisibility {
+  PUBLIC
+  PRIVATE
+  EDITORIAL
+}
+
+//////////////////////////////////////////////////////
+// ADMIN
+//////////////////////////////////////////////////////
+
+model Admin {
+  id String @id @default(uuid()) @db.Uuid
+
+  email String @unique
+  name String?
+
+  passwordHash String?
+  role AdminRole @default(EDITOR)
+
+  createdQuotes Quote[] @relation("QuoteCreatedBy")
+  publishedQuotes Quote[] @relation("QuotePublishedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+//////////////////////////////////////////////////////
+// AUTHOR
+//////////////////////////////////////////////////////
+
+model Author {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String
+  nameNormalized String @unique
+  slug String @unique
+
+  bio String?
+
+  birthYear Int?
+  deathYear Int?
+
+  dateOfBirth DateTime?
+  dateOfDeath DateTime?
+
+  nationality String?
+  profession String?
+
+  imageUrl String?
+
+  wikipediaUrl String?
+  wikidataId String?
+
+  quoteCount Int @default(0)
+
+  quotes Quote[]
+  sources Source[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([nameNormalized])
+  @@index([quoteCount])
+}
+
+//////////////////////////////////////////////////////
+// SOURCE
+//////////////////////////////////////////////////////
+
+model Source {
+  id String @id @default(uuid()) @db.Uuid
+
+  title String
+  slug String @unique
+
+  type WorkType
+
+  year Int?
+  yearLabel String?
+  yearApproximate Boolean @default(false)
+
+  publisher String?
+  location String?
+
+  description String?
+  externalUrl String?
+
+  authorId String? @db.Uuid
+  author Author? @relation(fields: [authorId], references: [id])
+
+  quotes Quote[]
+
+  quoteCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+//////////////////////////////////////////////////////
+// CATEGORY
+//////////////////////////////////////////////////////
+
+model Category {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String
+  slug String @unique
+
+  description String?
+
+  metaTitle String?
+  metaDescription String?
+
+  quoteCount Int @default(0)
+
+  quotes Quote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([quoteCount])
+}
+
+//////////////////////////////////////////////////////
+// TAG
+//////////////////////////////////////////////////////
+
+model Tag {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String
+  slug String @unique
+
+  type TagType
+
+  description String?
+
+  quoteCount Int @default(0)
+
+  quotes QuoteTag[]
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([quoteCount])
+}
+
+//////////////////////////////////////////////////////
+// COLLECTION
+//////////////////////////////////////////////////////
+
+model Collection {
+  id String @id @default(uuid()) @db.Uuid
+
+  title String
+  slug String @unique
+
+  description String?
+
+  visibility CollectionVisibility @default(PUBLIC)
+
+  quotes QuoteCollection[]
+
+  quoteCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+//////////////////////////////////////////////////////
+// QUOTE
+//////////////////////////////////////////////////////
+
+model Quote {
+  id String @id @default(uuid()) @db.Uuid
+
+  content String
+  meaning String?
+  historicalContext String?
+  modernRelevance String?
+  language String @default("en")
+  wordCount Int?
+
+  searchVector Unsupported("tsvector")?
+
+  slug String
+  slugHistory QuoteSlugHistory[]
+
+  normalizedContent String?
+  contentHash String
+
+  authorId String? @db.Uuid
+  author Author? @relation(fields: [authorId], references: [id])
+
+  authorName String?
+  authorSlug String?
+
+  sourceId String? @db.Uuid
+  source Source? @relation(fields: [sourceId], references: [id])
+
+  categoryId String @db.Uuid
+  category Category @relation(fields: [categoryId], references: [id])
+
+  categorySlug String
+
+  tags QuoteTag[]
+  tagSlugs String[]
+
+  collections QuoteCollection[]
+
+  randomKey Float @default(dbgenerated("random()"))
+
+  views Int @default(0)
+  likes Int @default(0)
+  shares Int @default(0)
+
+  popularityScore Int @default(0)
+
+  trendingScore Float @default(0)
+  trendingViews24h Int @default(0)
+  trendingShares24h Int @default(0)
+
+  rankScore Float @default(0)
+
+  isFeatured Boolean @default(false)
+
+  isVerified Boolean @default(false)
+  attributionStatus AttributionStatus @default(UNKNOWN)
+
+  verificationConfidence Decimal @default(0.0) @db.Decimal(3,2)
+  verificationNote String?
+
+  adminSortKey Int @default(0)
+
+  status QuoteStatus @default(DRAFT)
+
+  createdById String? @db.Uuid
+  createdBy Admin? @relation("QuoteCreatedBy", fields: [createdById], references: [id])
+
+  publishedById String? @db.Uuid
+  publishedBy Admin? @relation("QuotePublishedBy", fields: [publishedById], references: [id])
+
+  reports QuoteReport[]
+  dailyStats QuoteDailyStat[]
+
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  @@unique([contentHash, language])
+  @@unique([slug, language])
+
+  @@index([status, publishedAt])
+  @@index([authorId, status])
+  @@index([authorSlug])
+  @@index([categorySlug])
+  @@index([categorySlug, status, publishedAt])
+  @@index([authorSlug, status, publishedAt])
+  @@index([language, status])
+  @@index([randomKey])
+  @@index([views])
+  @@index([trendingScore])
+  @@index([rankScore])
+}
+
+//////////////////////////////////////////////////////
+// QUOTE TAG
+//////////////////////////////////////////////////////
+
+model QuoteTag {
+  quoteId String @db.Uuid
+  tagId String @db.Uuid
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([quoteId, tagId])
+  @@index([tagId])
+  @@index([quoteId])
+}
+
+//////////////////////////////////////////////////////
+// QUOTE COLLECTION
+//////////////////////////////////////////////////////
+
+model QuoteCollection {
+  quoteId String @db.Uuid
+  collectionId String @db.Uuid
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  position Int?
+
+  @@id([quoteId, collectionId])
+  @@index([collectionId])
+}
+
+//////////////////////////////////////////////////////
+// QUOTE SLUG HISTORY
+//////////////////////////////////////////////////////
+
+model QuoteSlugHistory {
+  id String @id @default(uuid()) @db.Uuid
+
+  slug String @unique
+
+  quoteId String @db.Uuid
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+//////////////////////////////////////////////////////
+// QUOTE REPORT
+//////////////////////////////////////////////////////
+
+model QuoteReport {
+  id String @id @default(uuid()) @db.Uuid
+
+  quoteId String @db.Uuid
+  quote Quote @relation(fields: [quoteId], references: [id])
+
+  reason String
+
+  createdAt DateTime @default(now())
+}
+
+//////////////////////////////////////////////////////
+// QUOTE DAILY STATS
+//////////////////////////////////////////////////////
+
+model QuoteDailyStat {
+  id String @id @default(uuid()) @db.Uuid
+
+  quoteId String @db.Uuid
+  quote Quote @relation(fields: [quoteId], references: [id])
+
+  date DateTime
+
+  views Int @default(0)
+  shares Int @default(0)
+
+  @@unique([quoteId, date])
+  @@index([quoteId])
+  @@index([date])
+}
+
+//////////////////////////////////////////////////////
+// FAQ
+//////////////////////////////////////////////////////
+
+model FAQ {
+  id String @id @default(uuid()) @db.Uuid
+
+  question String
+  answer String
+
+  pageType FAQPageType
+  pageSlug String
+
+  position Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([pageType, pageSlug])
+  @@index([pageType, pageSlug, position])
+}

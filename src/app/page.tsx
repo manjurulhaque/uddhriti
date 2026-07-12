@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { subtractDays } from "@/lib/datetime"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 60
 
 const quoteCardSelect = {
   id: true,

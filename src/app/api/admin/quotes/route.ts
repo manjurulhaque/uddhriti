@@ -11,6 +11,7 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 function normalize(content: string) {
   return content.trim().replace(/\s+/g, " ").toLowerCase()
@@ -219,6 +220,10 @@ export async function POST(req: Request) {
 
       return createdQuote
     })
+
+    if (isPublishing) {
+      revalidatePublicSurfaces()
+    }
 
     return NextResponse.json(quote)
 

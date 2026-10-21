@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import {
   recalculateAuthorQuoteCounts,
   recalculateSourceQuoteCounts,
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
+  if (rateLimited) return rateLimited
 
   const body = (await req.json().catch(() => null)) as BulkActionPayload | null
   if (!body) {

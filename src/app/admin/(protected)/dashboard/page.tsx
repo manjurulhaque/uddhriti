@@ -1,8 +1,8 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { APP_TIME_ZONE, formatDateInAppTimeZone, formatShortDateInAppTimeZone, subtractDays } from "@/lib/datetime"
+import { getDashboardMetrics } from "@/lib/dashboard/metrics"
+import { formatDateInAppTimeZone, formatShortDateInAppTimeZone, subtractDays } from "@/lib/datetime"
 
 export default async function DashboardPage() {
   const admin = await getAdmin()
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const fourteenDaysAgo = subtractDays(now, 14)
   const thirtyDaysAgo = subtractDays(now, 30)
 
-  const [
+  const {
     totalQuotes,
     publishedQuotes,
     draftQuotes,
@@ -47,117 +47,6 @@ export default async function DashboardPage() {
     topSources,
     mostViewedQuotes,
     trendingQuotes,
-  ] = await Promise.all([
-    prisma.quote.count({ where: { deletedAt: null } }),
-    prisma.quote.count({ where: { status: "PUBLISHED", deletedAt: null } }),
-    prisma.quote.count({ where: { status: "DRAFT", deletedAt: null } }),
-    prisma.quote.count({ where: { status: "REVIEW", deletedAt: null } }),
-    prisma.quote.count({ where: { status: "ARCHIVED", deletedAt: null } }),
-    prisma.quote.count({ where: { isFeatured: true, deletedAt: null } }),
-    prisma.quote.count({
-      where: {
-        deletedAt: null,
-        OR: [{ authorId: null }, { authorName: null }],
-      },
-    }),
-    prisma.quote.count({
-      where: {
-        deletedAt: null,
-        createdAt: { gte: sevenDaysAgo },
-      },
-    }),
-    prisma.author.count(),
-    prisma.category.count(),
-    prisma.tag.count(),
-    prisma.source.count(),
-    prisma.collection.count(),
-    prisma.quote.count({ where: { deletedAt: { not: null } } }),
-    prisma.quote.count({
-      where: {
-        deletedAt: null,
-        createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo },
-      },
-    }),
-    prisma.author.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    prisma.author.count({ where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
-    prisma.category.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    prisma.category.count({ where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
-    prisma.tag.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    prisma.tag.count({ where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
-    prisma.source.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    prisma.source.count({ where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
-    prisma.quote.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        content: true,
-        createdAt: true,
-        createdBy: { select: { email: true } },
-      },
-    }),
-    prisma.author.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: { id: true, name: true, createdAt: true },
-    }),
-    prisma.source.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: { id: true, title: true, type: true, createdAt: true },
-    }),
-    prisma.category.findMany({
-      orderBy: { quoteCount: "desc" },
-      take: 5,
-      select: { id: true, name: true, quoteCount: true },
-    }),
-    prisma.tag.findMany({
-      orderBy: { quoteCount: "desc" },
-      take: 5,
-      select: { id: true, name: true, type: true, quoteCount: true },
-    }),
-    prisma.source.findMany({
-      orderBy: { quoteCount: "desc" },
-      take: 5,
-      select: { id: true, title: true, type: true, quoteCount: true },
-    }),
-    prisma.quote.findMany({
-      where: { deletedAt: null, status: "PUBLISHED" },
-      orderBy: { views: "desc" },
-      take: 5,
-      select: { id: true, content: true, views: true, authorName: true },
-    }),
-    prisma.$queryRaw<
-      {
-        id: string
-        content: string
-        views: number
-        authorName: string | null
-        score: number
-      }[]
-    >`
-      SELECT
-        q.id,
-        q.content,
-        q.views,
-        q."authorName",
-        q.views / POWER(
-          EXTRACT(EPOCH FROM (NOW() - q."publishedAt")) / 3600 + 2,
-          1.8
-        ) AS score
-      FROM "Quote" q
-      WHERE q."status" = 'PUBLISHED'
-        AND q."deletedAt" IS NULL
-        AND q."publishedAt" IS NOT NULL
-      ORDER BY score DESC
-      LIMIT 5;
-    `,
-  ])
-
-  const publishRate = totalQuotes === 0 ? 0 : Math.round((publishedQuotes / totalQuotes) * 100)
-  const attributedQuotes = Math.max(0, totalQuotes - unattributedQuotes)
-  const [
     verifiedQuotes,
     missingSourceQuotes,
     publishedLast7Days,
@@ -182,194 +71,14 @@ export default async function DashboardPage() {
     activeCategories,
     activeTags,
     featuredPublishedQuotes,
-  ] = await Promise.all([
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          isVerified: true,
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          sourceId: null,
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          status: "PUBLISHED",
-          publishedAt: { gte: sevenDaysAgo },
-        },
-      }),
-      prisma.$queryRaw<
-        {
-          day: Date
-          count: number
-        }[]
-      >`
-        SELECT
-          series.day::date AS "day",
-          COALESCE(COUNT(q.id), 0)::int AS "count"
-        FROM generate_series(
-          (CURRENT_TIMESTAMP AT TIME ZONE ${APP_TIME_ZONE})::date - INTERVAL '29 days',
-          (CURRENT_TIMESTAMP AT TIME ZONE ${APP_TIME_ZONE})::date,
-          INTERVAL '1 day'
-        ) AS series(day)
-        LEFT JOIN "Quote" q
-          ON q."publishedAt" IS NOT NULL
-          AND q."status" = 'PUBLISHED'
-          AND q."deletedAt" IS NULL
-          AND (q."publishedAt" AT TIME ZONE ${APP_TIME_ZONE})::date = series.day::date
-        GROUP BY series.day
-        ORDER BY series.day ASC;
-      `,
-      prisma.quoteDailyStat.aggregate({
-        where: {
-          date: { gte: sevenDaysAgo },
-        },
-        _sum: {
-          views: true,
-          shares: true,
-        },
-      }),
-      prisma.quoteDailyStat.aggregate({
-        where: {
-          date: { gte: fourteenDaysAgo, lt: sevenDaysAgo },
-        },
-        _sum: {
-          views: true,
-          shares: true,
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          attributionStatus: "CONFIRMED",
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          attributionStatus: "DISPUTED",
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          attributionStatus: "MISATTRIBUTED",
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          attributionStatus: "UNKNOWN",
-        },
-      }),
-      prisma.quote.aggregate({
-        where: { deletedAt: null },
-        _avg: { verificationConfidence: true },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          verificationConfidence: { lt: 0.5 },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          tags: { none: {} },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          OR: [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }],
-        },
-      }),
-      prisma.source.count({
-        where: {
-          quotes: {
-            none: {
-              deletedAt: null,
-            },
-          },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          status: { in: ["DRAFT", "REVIEW"] },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          status: { in: ["DRAFT", "REVIEW"] },
-          createdAt: { lt: fourteenDaysAgo },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          status: "PUBLISHED",
-          publishedAt: { gte: thirtyDaysAgo },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          status: "PUBLISHED",
-          publishedAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo },
-        },
-      }),
-      prisma.source.groupBy({
-        by: ["type"],
-        _count: { _all: true },
-        orderBy: {
-          _count: {
-            type: "desc",
-          },
-        },
-      }),
-      prisma.author.count({
-        where: {
-          quotes: {
-            some: {
-              deletedAt: null,
-            },
-          },
-        },
-      }),
-      prisma.category.count({
-        where: {
-          quotes: {
-            some: {
-              deletedAt: null,
-            },
-          },
-        },
-      }),
-      prisma.tag.count({
-        where: {
-          quotes: {
-            some: {
-              quote: {
-                deletedAt: null,
-              },
-            },
-          },
-        },
-      }),
-      prisma.quote.count({
-        where: {
-          deletedAt: null,
-          status: "PUBLISHED",
-          isFeatured: true,
-        },
-      }),
-    ])
+  } = await getDashboardMetrics({
+    sevenDaysAgo,
+    fourteenDaysAgo,
+    thirtyDaysAgo,
+  })
+
+  const publishRate = totalQuotes === 0 ? 0 : Math.round((publishedQuotes / totalQuotes) * 100)
+  const attributedQuotes = Math.max(0, totalQuotes - unattributedQuotes)
 
   const verifiedRate = totalQuotes === 0 ? 0 : Math.round((verifiedQuotes / totalQuotes) * 100)
   const publishVelocity = Number((publishedLast7Days / 7).toFixed(1))

@@ -12,6 +12,7 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -137,6 +138,7 @@ export async function PATCH(
           categoryId: true,
           tags: { select: { tagId: true } },
           publishedAt: true,
+          status: true,
         },
       })
 
@@ -268,10 +270,14 @@ export async function PATCH(
       await recalculateCategoryQuoteCounts(tx, [previousQuote.categoryId, category.id])
       await recalculateTagQuoteCounts(tx, [...previousQuote.tags.map((entry) => entry.tagId), ...tags.map((tag) => tag.id)])
 
-      return quote
+      return { quote, previousStatus: previousQuote.status }
     })
 
-    return NextResponse.json(updated)
+    if (updated.previousStatus === "PUBLISHED" || updated.quote.status === "PUBLISHED") {
+      revalidatePublicSurfaces()
+    }
+
+    return NextResponse.json(updated.quote)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to update quote"
     return NextResponse.json({ error: message }, { status: 400 })
@@ -289,6 +295,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  let shouldRevalidateHomepage = false
+
   await prisma.$transaction(async (tx) => {
     const existing = await tx.quote.findUnique({
       where: { id },
@@ -299,11 +307,16 @@ export async function DELETE(
         categoryId: true,
         tags: { select: { tagId: true } },
         deletedAt: true,
+        status: true,
       },
     })
 
     if (!existing) {
       throw new Error("Quote not found")
+    }
+
+    if (existing.status === "PUBLISHED" && !existing.deletedAt) {
+      shouldRevalidateHomepage = true
     }
 
     const isPermanentDelete = new URL(req.url).searchParams.get("permanent") === "true"
@@ -333,6 +346,10 @@ export async function DELETE(
     await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
   })
 
+  if (shouldRevalidateHomepage) {
+    revalidatePublicSurfaces()
+  }
+
   return NextResponse.json({ success: true })
 }
 
@@ -352,6 +369,8 @@ export async function POST(
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
 
+  let shouldRevalidateHomepage = false
+
   await prisma.$transaction(async (tx) => {
     const existing = await tx.quote.findUnique({
       where: { id },
@@ -361,6 +380,7 @@ export async function POST(
         categoryId: true,
         tags: { select: { tagId: true } },
         deletedAt: true,
+        status: true,
       },
     })
 
@@ -374,12 +394,20 @@ export async function POST(
         data: { deletedAt: null },
       })
 
+      if (existing.status === "PUBLISHED") {
+        shouldRevalidateHomepage = true
+      }
+
       await recalculateAuthorQuoteCounts(tx, [existing.authorId])
       await recalculateSourceQuoteCounts(tx, [existing.sourceId])
       await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
       await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
     }
   })
+
+  if (shouldRevalidateHomepage) {
+    revalidatePublicSurfaces()
+  }
 
   return NextResponse.json({ success: true })
 }

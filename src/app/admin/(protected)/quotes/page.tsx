@@ -7,6 +7,8 @@ import { QuotesListManager } from "./QuotesListManager"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
+const PAGE_SIZE = 50
+
 const filterLabels: Record<QuoteFilter, string> = {
   all: "All Quotes",
   draft: "Draft / Review",
@@ -28,6 +30,46 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
   return "all"
 }
 
+function getPageNumber(value: string | string[] | undefined) {
+  if (typeof value !== "string") return 1
+
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed) || parsed < 1) return 1
+
+  return parsed
+}
+
+function buildQuoteWhere(activeFilter: QuoteFilter): Prisma.QuoteWhereInput {
+  if (activeFilter === "all") {
+    return { deletedAt: null }
+  }
+
+  if (activeFilter === "draft") {
+    return { deletedAt: null, status: { in: ["DRAFT", "REVIEW"] } }
+  }
+
+  if (activeFilter === "archived") {
+    return { deletedAt: null, status: "ARCHIVED" }
+  }
+
+  if (activeFilter === "unattributed") {
+    return { deletedAt: null, OR: [{ authorId: null }, { authorName: null }] }
+  }
+
+  if (activeFilter === "missing-source") {
+    return { deletedAt: null, sourceId: null }
+  }
+
+  if (activeFilter === "no-tags") {
+    return { deletedAt: null, tags: { none: {} } }
+  }
+
+  return {
+    deletedAt: null,
+    OR: [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }],
+  }
+}
+
 export default async function QuotesPage({
   searchParams,
 }: {
@@ -38,24 +80,13 @@ export default async function QuotesPage({
 
   const resolvedSearchParams = (await searchParams) ?? {}
   const activeFilter = getQuoteFilter(resolvedSearchParams.filter)
+  const requestedPage = getPageNumber(resolvedSearchParams.page)
+  const where = buildQuoteWhere(activeFilter)
 
-  const where: Prisma.QuoteWhereInput =
-    activeFilter === "all"
-      ? { deletedAt: null }
-      : activeFilter === "draft"
-      ? { deletedAt: null, status: { in: ["DRAFT", "REVIEW"] } }
-      : activeFilter === "archived"
-      ? { deletedAt: null, status: "ARCHIVED" }
-      : activeFilter === "unattributed"
-      ? { deletedAt: null, OR: [{ authorId: null }, { authorName: null }] }
-      : activeFilter === "missing-source"
-      ? { deletedAt: null, sourceId: null }
-      : activeFilter === "no-tags"
-      ? { deletedAt: null, tags: { none: {} } }
-      : {
-          deletedAt: null,
-          OR: [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }],
-        }
+  const total = await prisma.quote.count({ where })
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const page = Math.min(requestedPage, totalPages)
+  const skip = (page - 1) * PAGE_SIZE
 
   const quotes = await prisma.quote.findMany({
     where,
@@ -73,6 +104,8 @@ export default async function QuotesPage({
       tags: { select: { tagId: true } },
     },
     orderBy: { createdAt: "desc" },
+    take: PAGE_SIZE,
+    skip,
   })
 
   const normalizedQuotes = quotes.map((quote) => ({
@@ -157,7 +190,14 @@ export default async function QuotesPage({
         </Link>
       </div>
 
-      <QuotesListManager quotes={normalizedQuotes} activeFilterLabel={filterLabels[activeFilter]} />
+      <QuotesListManager
+        quotes={normalizedQuotes}
+        activeFilter={activeFilter}
+        activeFilterLabel={filterLabels[activeFilter]}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+      />
     </div>
   )
 }

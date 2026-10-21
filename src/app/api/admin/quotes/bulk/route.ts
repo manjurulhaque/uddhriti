@@ -13,6 +13,8 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 type ImportItem = {
   content?: string
@@ -187,6 +189,9 @@ export async function POST(req: Request) {
   if (!admin || admin.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
+  if (rateLimited) return rateLimited
 
   let body: {
     items?: ImportItem[]
@@ -930,6 +935,7 @@ export async function POST(req: Request) {
   }
 
   let created = 0
+  let publishedAny = false
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -1097,6 +1103,10 @@ export async function POST(req: Request) {
           affectedTagIds.add(tag.id)
         }
 
+        if (item.publish) {
+          publishedAny = true
+        }
+
         created += 1
         existingSet.add(dedupeKey)
       }
@@ -1109,6 +1119,10 @@ export async function POST(req: Request) {
       maxWait: 10000,
       timeout: 60000,
     })
+
+    if (publishedAny) {
+      revalidatePublicSurfaces()
+    }
 
     return NextResponse.json({
       totalReceived:

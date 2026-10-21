@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { importAuthorFromWikipediaOrWikidata, importAuthorFromWikiquote } from "@/lib/wikimedia/authorImport"
 import { importAuthorFromOpenLibrary } from "@/lib/openlibrary/authorImport"
 import { importAuthorFromViaf } from "@/lib/viaf/authorImport"
@@ -132,6 +133,9 @@ export async function POST(req: Request) {
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "import")
+  if (rateLimited) return rateLimited
 
   let payload: ImportRequestPayload
   try {

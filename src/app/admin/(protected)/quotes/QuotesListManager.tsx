@@ -39,12 +39,35 @@ type SortOption =
   | "content"
   | "needs-attention"
 
+type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
+
+function buildQuotesListHref(filter: QuoteFilter, page: number) {
+  const params = new URLSearchParams()
+  if (filter !== "all") {
+    params.set("filter", filter)
+  }
+  if (page > 1) {
+    params.set("page", String(page))
+  }
+
+  const query = params.toString()
+  return query ? `/admin/quotes?${query}` : "/admin/quotes"
+}
+
 export function QuotesListManager({
   quotes,
+  activeFilter,
   activeFilterLabel,
+  page,
+  pageSize,
+  total,
 }: {
   quotes: QuoteItem[]
+  activeFilter: QuoteFilter
   activeFilterLabel: string
+  page: number
+  pageSize: number
+  total: number
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -108,6 +131,9 @@ export function QuotesListManager({
     visibleQuotes.length > 0 &&
     visibleQuotes.every((quote) => selectedIds.includes(quote.id))
   const selectedCount = selectedIds.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = total === 0 ? 0 : Math.min(page * pageSize, total)
 
   async function ensureOptions(nextAction: BulkActionType) {
     if (isLoadingOptions) return
@@ -227,6 +253,16 @@ export function QuotesListManager({
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-col gap-2 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
+        <p>
+          Showing {rangeStart}-{rangeEnd} of {total} quotes
+          {activeFilterLabel !== "All Quotes" ? ` in ${activeFilterLabel}` : ""}
+        </p>
+        <p>
+          Page {page} of {totalPages}
+        </p>
+      </div>
+
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <input
           type="search"
@@ -343,7 +379,11 @@ export function QuotesListManager({
         </div>
       ) : null}
 
-      {quotes.length === 0 ? <div className="border border-dashed rounded p-4 text-sm text-gray-500">No quotes found for {activeFilterLabel}.</div> : null}
+      {quotes.length === 0 ? (
+        <div className="border border-dashed rounded p-4 text-sm text-gray-500">
+          No quotes found for {activeFilterLabel}.
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         {visibleQuotes.length > 0 ? (
@@ -412,6 +452,38 @@ export function QuotesListManager({
           </div>
         ))}
       </div>
+
+      {totalPages > 1 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <p className="text-sm text-gray-500">
+            {search.trim()
+              ? "Search and sort apply to the current page only."
+              : "Sorted within the current page."}
+          </p>
+          <div className="flex items-center gap-2">
+            {page > 1 ? (
+              <Link
+                href={buildQuotesListHref(activeFilter, page - 1)}
+                className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+              >
+                Previous
+              </Link>
+            ) : (
+              <span className="rounded border px-3 py-1.5 text-sm text-gray-400">Previous</span>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={buildQuotesListHref(activeFilter, page + 1)}
+                className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="rounded border px-3 py-1.5 text-sm text-gray-400">Next</span>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

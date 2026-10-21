@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { createUniqueSourceSlug } from "@/lib/wikimedia/sourceImport"
 import { importSourcesFromCrossref } from "@/lib/crossref/sourceImport"
 
@@ -9,6 +10,9 @@ export async function POST(req: Request) {
   if (!admin || admin.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "import")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const authorId = typeof body?.authorId === "string" ? body.authorId : null

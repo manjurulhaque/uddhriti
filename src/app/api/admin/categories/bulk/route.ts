@@ -3,6 +3,7 @@ import { z } from "zod"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -40,6 +41,9 @@ export async function POST(req: Request) {
   if (!admin || admin.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
+  if (rateLimited) return rateLimited
 
   const json = await req.json().catch(() => null)
   const parsed = payloadSchema.safeParse(json)

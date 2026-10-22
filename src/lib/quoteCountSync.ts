@@ -14,7 +14,7 @@ export async function recalculateAuthorQuoteCounts(tx: Prisma.TransactionClient,
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
       FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
-      LEFT JOIN "Quote" q ON q."authorId" = target.id AND q."deletedAt" IS NULL
+      LEFT JOIN "Quote" q ON q."authorId" = target.id AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE a.id = counts.id
@@ -31,7 +31,7 @@ export async function recalculateSourceQuoteCounts(tx: Prisma.TransactionClient,
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
       FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
-      LEFT JOIN "Quote" q ON q."sourceId" = target.id AND q."deletedAt" IS NULL
+      LEFT JOIN "Quote" q ON q."sourceId" = target.id AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE s.id = counts.id
@@ -51,7 +51,7 @@ export async function recalculateCategoryQuoteCounts(
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
       FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
-      LEFT JOIN "Quote" q ON q."categoryId" = target.id AND q."deletedAt" IS NULL
+      LEFT JOIN "Quote" q ON q."categoryId" = target.id AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE c.id = counts.id
@@ -69,7 +69,7 @@ export async function recalculateTagQuoteCounts(tx: Prisma.TransactionClient, ta
       SELECT target.id, COUNT(q.id)::int AS cnt
       FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
       LEFT JOIN "QuoteTag" qt ON qt."tagId" = target.id
-      LEFT JOIN "Quote" q ON q.id = qt."quoteId" AND q."deletedAt" IS NULL
+      LEFT JOIN "Quote" q ON q.id = qt."quoteId" AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE t.id = counts.id

@@ -4,7 +4,7 @@ export default function Loading() {
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center px-5 py-12 sm:px-8">
         <div className="w-full max-w-md animate-rise rounded-[1.75rem] border border-[var(--ink-900)]/10 bg-white px-8 py-10 text-center shadow-[0_18px_50px_rgba(33,37,41,0.08)]">
           <div
-            className="mx-auto h-10 w-10 rounded-full border-2 border-[var(--accent-gold)] border-t-[var(--accent-rust)]"
+            className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-gold)] border-t-[var(--accent-rust)]"
             role="status"
             aria-label="Loading"
           />

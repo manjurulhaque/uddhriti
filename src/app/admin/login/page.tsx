@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
         onSubmit={handleLogin}
         className="w-full max-w-sm p-6 border rounded-lg"
       >
-        <h1 className="text-xl font-bold mb-4">Super Admin Login</h1>
+        <h1 className="text-xl font-bold mb-4">Admin Login</h1>
 
         <input
           type="email"

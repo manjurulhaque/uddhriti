@@ -1,13 +1,45 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  title: "Quotations | Timeless Quotes and Ideas",
+  title: {
+    default: "Uddhriti — Timeless Quotes and Ideas",
+    template: "%s | Uddhriti",
+  },
   description:
-    "Explore a curated collection of meaningful quotes from books, speeches, and thinkers.",
+    "Explore a curated collection of meaningful quotes from books, speeches, and thinkers across history.",
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    title: "Uddhriti — Timeless Quotes and Ideas",
+    description:
+      "A warm, searchable home for memorable quotations from books, speeches, interviews, scripture, and everything that keeps language alive.",
+    url: siteUrl,
+    siteName: "Uddhriti",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Uddhriti — Timeless Quotes and Ideas",
+    description:
+      "A curated collection of meaningful quotes from books, speeches, and thinkers.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#212529",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -25,3 +57,4 @@ export default function RootLayout({
     </html>
   );
 }
+

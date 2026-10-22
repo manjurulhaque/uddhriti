@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireSuperAdmin } from "@/lib/api/admin-auth";
 
 export async function GET() {
+  const { response } = await requireSuperAdmin();
+  if (response) return response;
+
   const admins = await prisma.admin.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -17,6 +21,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const { response } = await requireSuperAdmin();
+  if (response) return response;
+
   const body = await req.json();
 
   if (!body?.email || typeof body.email !== "string") {

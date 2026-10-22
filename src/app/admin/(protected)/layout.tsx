@@ -2,6 +2,7 @@ import Link from "next/link"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { isPrivateOrLocalIp } from "@/lib/ip"
 import { CurrentIpDisplay } from "./CurrentIpDisplay"
 
 export default async function ProtectedAdminLayout({
@@ -148,38 +149,7 @@ function normalizeIpCandidate(value: string | null | undefined) {
   return candidate
 }
 
-function isPrivateOrLocalIp(value: string) {
-  if (value === "127.0.0.1" || value === "0.0.0.0") {
-    return true
-  }
 
-  if (value.includes(":")) {
-    const normalized = value.toLowerCase()
-
-    return (
-      normalized === "::1" ||
-      normalized.startsWith("fc") ||
-      normalized.startsWith("fd") ||
-      normalized.startsWith("fe80:") ||
-      normalized.startsWith("fec0:")
-    )
-  }
-
-  const octets = value.split(".").map(Number)
-  if (octets.length !== 4 || octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
-    return false
-  }
-
-  const [first, second] = octets
-
-  return (
-    first === 10 ||
-    first === 127 ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168) ||
-    (first === 169 && second === 254)
-  )
-}
 
 function SidebarLink({
   href,

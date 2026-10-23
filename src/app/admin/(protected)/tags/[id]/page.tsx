@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Select,
+  Textarea,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  ConfirmModal,
+} from "@/components/ui"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 
 function slugify(text: string) {
@@ -26,24 +36,31 @@ export default function EditTagPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     async function loadTag() {
-      const res = await fetch(`/api/admin/tags/${id}`)
-      if (!res.ok) {
-        setError("Failed to load tag")
-        setLoading(false)
-        return
-      }
+      try {
+        const res = await fetch(`/api/admin/tags/${id}`)
+        if (!res.ok) {
+          setError("Failed to load tag")
+          setLoading(false)
+          return
+        }
 
-      const data = await res.json()
-      setForm({
-        name: data.name || "",
-        slug: data.slug || "",
-        type: data.type || "TOPIC",
-        description: data.description || "",
-      })
-      setLoading(false)
+        const data = await res.json()
+        setForm({
+          name: data.name || "",
+          slug: data.slug || "",
+          type: data.type || "TOPIC",
+          description: data.description || "",
+        })
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load tag")
+      } finally {
+        setLoading(false)
+      }
     }
 
     loadTag()
@@ -56,7 +73,8 @@ export default function EditTagPage() {
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
     setSaving(true)
     setErrors({})
     setError("")
@@ -84,105 +102,112 @@ export default function EditTagPage() {
     router.push("/admin/tags")
   }
 
-  async function handleDelete() {
+  async function executeDelete() {
+    setDeleting(true)
     setError("")
-    const res = await fetch(`/api/admin/tags/${id}`, {
-      method: "DELETE",
-    })
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      setError(data?.error || "Failed to delete tag")
-      return
+    try {
+      const res = await fetch(`/api/admin/tags/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error || "Failed to delete tag")
+        setIsConfirmingDelete(false)
+        return
+      }
+
+      router.push("/admin/tags")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete tag")
+      setIsConfirmingDelete(false)
+    } finally {
+      setDeleting(false)
     }
-
-    router.push("/admin/tags")
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="p-8 max-w-3xl space-y-4">
+        <div className="h-8 w-48 bg-stone-200 animate-pulse rounded-lg" />
+        <div className="h-4 w-72 bg-stone-100 animate-pulse rounded-md" />
+        <div className="h-64 w-full bg-stone-50 animate-pulse rounded-2xl border border-stone-200/60" />
+      </div>
+    )
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Edit Tag</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title={`Edit Tag: ${form.name || "..."}`}
+        description="Update tag attributes, URL slug, or descriptive summary."
+      />
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Name *</label>
-          <input
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <FormSection title="Tag Information" description="Name, classification type, and URL identifier">
+          <Input
             name="name"
+            label="Name"
             value={form.name}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            required
+            error={errors.name}
+            placeholder="e.g. Resilience"
           />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>
-          )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Slug</label>
-          <input
+          <Input
             name="slug"
+            label="Slug"
             value={form.slug}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            error={errors.slug}
+            placeholder="e.g. resilience"
           />
-          {errors.slug && (
-            <p className="text-red-500 text-sm mt-1">{errors.slug[0]}</p>
-          )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Type *</label>
-          <select
+          <Select
             name="type"
+            label="Type"
             value={form.type}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
-          >
-            {tagTypeOptions.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-          {errors.type && (
-            <p className="text-red-500 text-sm mt-1">{errors.type[0]}</p>
-          )}
-        </div>
+            required
+            error={errors.type}
+            options={tagTypeOptions.map((type) => ({ value: type, label: type }))}
+          />
 
-        <div>
-          <label className="block text-sm font-medium">Description</label>
-          <textarea
+          <Textarea
             name="description"
+            label="Description"
             value={form.description}
             onChange={handleChange}
             rows={3}
-            className="border w-full p-2 rounded"
+            placeholder="Describe the tag context..."
           />
-        </div>
+        </FormSection>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <FormActions
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={saving}
+          cancelHref="/admin/tags"
+          onDelete={() => setIsConfirmingDelete(true)}
+          deleteLabel="Delete Tag"
+          isDeleting={deleting}
+        />
+      </form>
 
-        <div className="flex gap-4">
-          <button
-            disabled={saving}
-            onClick={handleSave}
-            className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-
-          <button
-            onClick={handleDelete}
-            className="bg-red-500 text-white px-6 py-2 rounded"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
+      <ConfirmModal
+        isOpen={isConfirmingDelete}
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={executeDelete}
+        title="Delete Tag?"
+        message={`Are you sure you want to delete tag "${form.name}"? Quotes tagged with this will no longer reference it.`}
+        confirmLabel="Delete Tag"
+        isDestructive
+        isLoading={deleting}
+      />
     </div>
   )
 }

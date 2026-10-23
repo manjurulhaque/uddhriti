@@ -3,6 +3,15 @@
 import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
 import Image from "next/image"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Textarea,
+  Button,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+} from "@/components/ui"
 
 function slugify(text: string) {
   return text
@@ -134,29 +143,25 @@ export default function NewAuthorPage() {
       return
     }
 
-    setForm((prev) => {
-      const next = {
-        ...prev,
-        name: data.name || prev.name,
-        slug: prev.slug || (data.name ? slugify(data.name) : prev.slug),
-        bio: data.bio ?? prev.bio,
-        birthYear: data.birthYear?.toString() || prev.birthYear,
-        deathYear: data.deathYear?.toString() || prev.deathYear,
-        dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-        dateOfDeath: data.dateOfDeath || prev.dateOfDeath,
-        profession: data.profession || prev.profession,
-        nationality: data.nationality || prev.nationality,
-        imageUrl: data.imageUrl || prev.imageUrl,
-        wikipediaUrl: data.wikipediaUrl || prev.wikipediaUrl,
-        wikidataId: data.wikidataId || prev.wikidataId,
-        wikiquoteUrl: prev.wikiquoteUrl,
-        openLibraryUrl: prev.openLibraryUrl,
-        viafUrl: prev.viafUrl,
-        locAuthorityUrl: prev.locAuthorityUrl,
-      }
-
-      return next
-    })
+    setForm((prev) => ({
+      ...prev,
+      name: data.name || prev.name,
+      slug: prev.slug || (data.name ? slugify(data.name) : prev.slug),
+      bio: data.bio ?? prev.bio,
+      birthYear: data.birthYear?.toString() || prev.birthYear,
+      deathYear: data.deathYear?.toString() || prev.deathYear,
+      dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+      dateOfDeath: data.dateOfDeath || prev.dateOfDeath,
+      profession: data.profession || prev.profession,
+      nationality: data.nationality || prev.nationality,
+      imageUrl: data.imageUrl || prev.imageUrl,
+      wikipediaUrl: data.wikipediaUrl || prev.wikipediaUrl,
+      wikidataId: data.wikidataId || prev.wikidataId,
+      wikiquoteUrl: prev.wikiquoteUrl,
+      openLibraryUrl: prev.openLibraryUrl,
+      viafUrl: prev.viafUrl,
+      locAuthorityUrl: prev.locAuthorityUrl,
+    }))
 
     setImporting(false)
 
@@ -174,246 +179,229 @@ export default function NewAuthorPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">New Author</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title="New Author"
+        description="Add a philosopher, author, leader, or historical figure."
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium">Name *</label>
-          <input
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection title="Basic Profile" description="Name, slug, bio, and credentials">
+          <Input
             name="name"
+            label="Name"
             value={form.name}
             onChange={handleChange}
             required
-            className="border w-full p-2 rounded"
+            placeholder="e.g. Marcus Aurelius"
           />
-        </div>
 
-        {/* Slug */}
-        <div>
-          <label className="block text-sm font-medium">Slug</label>
-          <input
+          <Input
             name="slug"
+            label="Slug"
             value={form.slug}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            hint="Auto-generated if left blank"
+            placeholder="e.g. marcus-aurelius"
           />
-        </div>
 
-        {/* Bio */}
-        <div>
-          <label className="block text-sm font-medium">Bio</label>
-          <textarea
+          <Textarea
             name="bio"
+            label="Biography"
             value={form.bio}
             onChange={handleChange}
             rows={4}
-            className="border w-full p-2 rounded"
+            placeholder="Biographical summary, philosophical background, and key works..."
           />
-        </div>
 
-        {/* Exact Birth / Death Dates */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium">Date of Birth</label>
-            <input
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="profession"
+              label="Profession / Role"
+              value={form.profession}
+              onChange={handleChange}
+              placeholder="e.g. Roman Emperor & Philosopher"
+            />
+
+            <Input
+              name="nationality"
+              label="Nationality / Region"
+              value={form.nationality}
+              onChange={handleChange}
+              placeholder="e.g. Roman"
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Lifespan & Dates"
+          description="Exact birth/death dates or calendar years"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
               name="dateOfBirth"
-              type="text"
+              label="Date of Birth"
               value={form.dateOfBirth}
               onChange={handleChange}
               placeholder="YYYY-MM-DD"
-              className="border w-full p-2 rounded"
+              hint="ISO format (e.g. 1879-03-14)"
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium">Date of Death</label>
-            <input
+            <Input
               name="dateOfDeath"
-              type="text"
+              label="Date of Death"
               value={form.dateOfDeath}
               onChange={handleChange}
               placeholder="YYYY-MM-DD"
-              className="border w-full p-2 rounded"
+              hint="ISO format (e.g. 1955-04-18)"
             />
           </div>
-        </div>
-        <p className="text-xs text-gray-500">
-          Use ISO format when exact dates are known. For historical figures where exact dates are
-          unavailable or unsupported, keep the year fields filled and leave exact dates blank.
-        </p>
 
-        {/* Birth / Death Year */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium">Birth Year</label>
-            <input
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
               name="birthYear"
               type="number"
+              label="Birth Year"
               value={form.birthYear}
               onChange={handleChange}
-              className="border w-full p-2 rounded"
+              placeholder="e.g. 121 or -384"
+              hint="Negative numbers indicate BCE"
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium">Death Year</label>
-            <input
+            <Input
               name="deathYear"
               type="number"
+              label="Death Year"
               value={form.deathYear}
               onChange={handleChange}
-              className="border w-full p-2 rounded"
+              placeholder="e.g. 180 or -322"
             />
           </div>
-        </div>
+        </FormSection>
 
-        {/* Profession / Nationality */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium">Profession</label>
-            <input
-              name="profession"
-              value={form.profession}
-              onChange={handleChange}
-              className="border w-full p-2 rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Nationality</label>
-            <input
-              name="nationality"
-              value={form.nationality}
-              onChange={handleChange}
-              className="border w-full p-2 rounded"
-            />
-          </div>
-        </div>
-
-        {/* Image URL */}
-        <div>
-          <label className="block text-sm font-medium">Image URL</label>
-          <input
+        <FormSection title="Portrait & Visuals" description="Public avatar or historical portrait">
+          <Input
             name="imageUrl"
+            label="Image URL"
             value={form.imageUrl}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            placeholder="https://..."
+            hint="Direct link to a high-resolution portrait image"
           />
 
           {form.imageUrl && (
-            <Image
-              src={form.imageUrl}
-              alt={`${form.name || "Author"} portrait`}
-              width={64}
-              height={64}
-              className="mt-2 w-16 h-16 rounded-full object-cover border"
-            />
+            <div className="flex items-center gap-3 pt-1">
+              <div className="relative h-16 w-16 overflow-hidden rounded-full border border-stone-200 bg-stone-100 shadow-2xs shrink-0">
+                <Image
+                  src={form.imageUrl}
+                  alt={`${form.name || "Author"} portrait`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <p className="text-xs text-stone-500">Portrait preview</p>
+            </div>
           )}
-        </div>
+        </FormSection>
 
-        {/* Wikipedia */}
-        <div>
-          <label className="block text-sm font-medium">Wikipedia URL</label>
-          <input
-            name="wikipediaUrl"
-            value={form.wikipediaUrl}
-            onChange={handleChange}
-            className="border w-full p-2 rounded"
-          />
-        </div>
-
-        {/* Wikidata */}
-        <div>
-          <label className="block text-sm font-medium">Wikidata ID</label>
-          <input
-            name="wikidataId"
-            value={form.wikidataId}
-            onChange={handleChange}
-            onBlur={handleWikidataBlur}
-            placeholder="Q42"
-            className="border w-full p-2 rounded"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Enter a valid Wikidata ID like <code>Q42</code> and tab out to auto-fill author data.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Wikiquote URL</label>
-          <input
-            name="wikiquoteUrl"
-            value={form.wikiquoteUrl}
-            onChange={handleChange}
-            placeholder="https://en.wikiquote.org/wiki/Albert_Einstein"
-            className="border w-full p-2 rounded"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Open Library Author URL</label>
-          <input
-            name="openLibraryUrl"
-            value={form.openLibraryUrl}
-            onChange={handleChange}
-            placeholder="https://openlibrary.org/authors/OL23919A"
-            className="border w-full p-2 rounded"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">VIAF URL</label>
-          <input
-            name="viafUrl"
-            value={form.viafUrl}
-            onChange={handleChange}
-            placeholder="https://viaf.org/viaf/113230702/"
-            className="border w-full p-2 rounded"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">LoC Name Authority URL</label>
-          <input
-            name="locAuthorityUrl"
-            value={form.locAuthorityUrl}
-            onChange={handleChange}
-            placeholder="https://id.loc.gov/authorities/names/n79021164"
-            className="border w-full p-2 rounded"
-          />
-        </div>
-
-        <div className="rounded border p-4 space-y-3">
-          <p className="text-sm font-medium">Import from Wikimedia/Wikiquote/Open Library/VIAF/LoC</p>
-          <p className="text-xs text-gray-500">
-            Fill Wikipedia, Wikidata, Wikiquote, Open Library, VIAF, or LoC Name Authority URL to import profile data.
-          </p>
-
-          {importError && (
-            <p className="text-sm text-red-600">{importError}</p>
-          )}
-
-          <button
-            type="button"
-            onClick={() => void handleImportAuthorData()}
-            disabled={importing}
-            className="bg-white border px-4 py-2 rounded disabled:opacity-50"
-          >
-            {importing ? "Importing..." : "Import Author Data"}
-          </button>
-        </div>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={loading}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
+        <FormSection
+          title="External Authorities & Auto-Import"
+          description="Wikidata, Wikipedia, VIAF, and library identifier links"
         >
-          {loading ? "Creating..." : "Create Author"}
-        </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="wikidataId"
+              label="Wikidata ID"
+              value={form.wikidataId}
+              onChange={handleChange}
+              onBlur={handleWikidataBlur}
+              placeholder="e.g. Q1405"
+              hint="Tab out after typing to auto-fetch details"
+            />
 
+            <Input
+              name="wikipediaUrl"
+              label="Wikipedia URL"
+              value={form.wikipediaUrl}
+              onChange={handleChange}
+              placeholder="https://en.wikipedia.org/wiki/..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="wikiquoteUrl"
+              label="Wikiquote URL"
+              value={form.wikiquoteUrl}
+              onChange={handleChange}
+              placeholder="https://en.wikiquote.org/wiki/..."
+            />
+
+            <Input
+              name="openLibraryUrl"
+              label="Open Library URL"
+              value={form.openLibraryUrl}
+              onChange={handleChange}
+              placeholder="https://openlibrary.org/authors/..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="viafUrl"
+              label="VIAF URL"
+              value={form.viafUrl}
+              onChange={handleChange}
+              placeholder="https://viaf.org/viaf/..."
+            />
+
+            <Input
+              name="locAuthorityUrl"
+              label="Library of Congress URL"
+              value={form.locAuthorityUrl}
+              onChange={handleChange}
+              placeholder="https://id.loc.gov/authorities/names/..."
+            />
+          </div>
+
+          <div className="rounded-xl border border-stone-200/80 bg-stone-50/70 p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-stone-700">
+                  Import Profile Data
+                </p>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Fetch bio, dates, profession, and portrait from the configured authority links above.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleImportAuthorData()}
+                isLoading={importing}
+                disabled={importing}
+                className="shrink-0"
+              >
+                {importing ? "Importing..." : "Import Author Data"}
+              </Button>
+            </div>
+
+            {importError && (
+              <p className="text-xs text-red-600 font-medium">{importError}</p>
+            )}
+          </div>
+        </FormSection>
+
+        <FormActions
+          submitLabel="Create Author"
+          submittingLabel="Creating..."
+          isSubmitting={loading}
+          cancelHref="/admin/authors"
+        />
       </form>
     </div>
   )

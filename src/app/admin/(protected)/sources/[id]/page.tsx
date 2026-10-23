@@ -2,12 +2,32 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Select,
+  Textarea,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  ConfirmModal,
+} from "@/components/ui"
 import { formatSourceYearLabel, parseSourceYearInput } from "@/lib/sourceYear"
 
 type Author = {
   id: string
   name: string
 }
+
+const sourceTypes = [
+  { value: "BOOK", label: "Book" },
+  { value: "SPEECH", label: "Speech" },
+  { value: "ARTICLE", label: "Article" },
+  { value: "INTERVIEW", label: "Interview" },
+  { value: "SCRIPTURE", label: "Scripture" },
+  { value: "LETTER", label: "Letter" },
+  { value: "OTHER", label: "Other" },
+]
 
 export default function EditSourcePage() {
   const { id } = useParams<{ id: string }>()
@@ -17,6 +37,8 @@ export default function EditSourcePage() {
   const [authorSearch, setAuthorSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState("")
 
   const [form, setForm] = useState({
@@ -34,34 +56,42 @@ export default function EditSourcePage() {
 
   useEffect(() => {
     async function load() {
-      const [sourceRes, authorsRes] = await Promise.all([
-        fetch(`/api/admin/sources/${id}`),
-        fetch("/api/admin/authors"),
-      ])
+      try {
+        const [sourceRes, authorsRes] = await Promise.all([
+          fetch(`/api/admin/sources/${id}`),
+          fetch("/api/admin/authors"),
+        ])
 
-      if (!sourceRes.ok) {
-        setError("Failed to load source")
+        if (!sourceRes.ok) {
+          setError("Failed to load source")
+          setLoading(false)
+          return
+        }
+
+        const source = await sourceRes.json()
+        const authorsList = authorsRes.ok ? await authorsRes.json() : []
+
+        if (Array.isArray(authorsList)) {
+          setAuthors(authorsList)
+        }
+
+        setForm({
+          title: source.title || "",
+          slug: source.slug || "",
+          type: source.type || "BOOK",
+          year: formatSourceYearLabel(source) || "",
+          yearApproximate: Boolean(source.yearApproximate),
+          publisher: source.publisher || "",
+          location: source.location || "",
+          description: source.description || "",
+          externalUrl: source.externalUrl || "",
+          authorId: source.authorId || "",
+        })
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load source")
+      } finally {
         setLoading(false)
-        return
       }
-
-      const source = await sourceRes.json()
-      const authorsList = authorsRes.ok ? await authorsRes.json() : []
-
-      setAuthors(authorsList)
-      setForm({
-        title: source.title || "",
-        slug: source.slug || "",
-        type: source.type || "BOOK",
-        year: formatSourceYearLabel(source) || "",
-        yearApproximate: Boolean(source.yearApproximate),
-        publisher: source.publisher || "",
-        location: source.location || "",
-        description: source.description || "",
-        externalUrl: source.externalUrl || "",
-        authorId: source.authorId || "",
-      })
-      setLoading(false)
     }
 
     load()
@@ -70,7 +100,6 @@ export default function EditSourcePage() {
   const filteredAuthors = useMemo(() => {
     const needle = authorSearch.trim().toLowerCase()
     if (!needle) return authors
-
     return authors.filter((author) => author.name.toLowerCase().includes(needle))
   }, [authorSearch, authors])
 
@@ -84,7 +113,8 @@ export default function EditSourcePage() {
     }))
   }
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
     setSaving(true)
     setError("")
 
@@ -95,181 +125,220 @@ export default function EditSourcePage() {
       return
     }
 
-    const res = await fetch(`/api/admin/sources/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        slug:
-          form.slug ||
-          form.title.trim().toLowerCase().replace(/\s+/g, "-"),
-        year: parsedYear.year,
-        yearLabel: form.year.trim() || null,
-        yearApproximate: parsedYear.approximate,
-        publisher: form.publisher || null,
-        location: form.location || null,
-        description: form.description || null,
-        externalUrl: form.externalUrl || null,
-        authorId: form.authorId || null,
-      }),
-    })
+    try {
+      const res = await fetch(`/api/admin/sources/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          slug:
+            form.slug ||
+            form.title.trim().toLowerCase().replace(/\s+/g, "-"),
+          year: parsedYear.year,
+          yearLabel: form.year.trim() || null,
+          yearApproximate: parsedYear.approximate,
+          publisher: form.publisher || null,
+          location: form.location || null,
+          description: form.description || null,
+          externalUrl: form.externalUrl || null,
+          authorId: form.authorId || null,
+        }),
+      })
 
-    if (!res.ok) {
-      setError("Failed to save source")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error || "Failed to save source")
+        setSaving(false)
+        return
+      }
+
+      router.push("/admin/sources")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save source")
       setSaving(false)
-      return
     }
-
-    router.push("/admin/sources")
   }
 
-  async function handleDelete() {
-    const res = await fetch(`/api/admin/sources/${id}`, {
-      method: "DELETE",
-    })
+  async function executeDelete() {
+    setDeleting(true)
+    setError("")
 
-    if (!res.ok) {
-      setError("Failed to delete source")
-      return
+    try {
+      const res = await fetch(`/api/admin/sources/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error || "Failed to delete source")
+        setIsConfirmingDelete(false)
+        return
+      }
+
+      router.push("/admin/sources")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete source")
+      setIsConfirmingDelete(false)
+    } finally {
+      setDeleting(false)
     }
-
-    router.push("/admin/sources")
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="p-8 max-w-3xl space-y-4">
+        <div className="h-8 w-48 bg-stone-200 animate-pulse rounded-lg" />
+        <div className="h-4 w-72 bg-stone-100 animate-pulse rounded-md" />
+        <div className="h-64 w-full bg-stone-50 animate-pulse rounded-2xl border border-stone-200/60" />
+      </div>
+    )
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Edit Source</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title={`Edit Source: ${form.title || "..."}`}
+        description="Update publication information, citation metadata, or authorship."
+      />
 
-      <div className="space-y-4">
-        <input
-          name="title"
-          placeholder="Title *"
-          value={form.title}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
-        />
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
-        <input
-          name="slug"
-          placeholder="Slug"
-          value={form.slug}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
-        />
+      <form onSubmit={handleSave} className="space-y-6">
+        <FormSection title="Source Details" description="Title, slug, and work classification">
+          <Input
+            name="title"
+            label="Title"
+            placeholder="e.g. Meditations"
+            value={form.title}
+            onChange={handleChange}
+            required
+          />
 
-        <select
-          name="type"
-          value={form.type}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
-        >
-          <option value="BOOK">BOOK</option>
-          <option value="SPEECH">SPEECH</option>
-          <option value="ARTICLE">ARTICLE</option>
-          <option value="INTERVIEW">INTERVIEW</option>
-          <option value="SCRIPTURE">SCRIPTURE</option>
-          <option value="LETTER">LETTER</option>
-          <option value="OTHER">OTHER</option>
-        </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="slug"
+              label="Slug"
+              placeholder="e.g. meditations"
+              value={form.slug}
+              onChange={handleChange}
+            />
 
-        <input
-          name="year"
-          type="text"
-          placeholder="Year or range, e.g. 1595, -300, or c. 1595-1596"
-          value={form.year}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
-        />
+            <Select
+              name="type"
+              label="Type"
+              value={form.type}
+              onChange={handleChange}
+              options={sourceTypes}
+            />
+          </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="yearApproximate"
-            checked={form.yearApproximate}
+          <Textarea
+            name="description"
+            label="Description"
+            placeholder="Overview of the work or historical edition..."
+            value={form.description}
+            onChange={handleChange}
+            rows={3}
+          />
+        </FormSection>
+
+        <FormSection title="Attribution & Chronology" description="Author reference and publication date">
+          <div className="space-y-3">
+            <Input
+              type="search"
+              label="Author Filter"
+              value={authorSearch}
+              onChange={(e) => setAuthorSearch(e.target.value)}
+              placeholder="Type to filter authors list..."
+            />
+
+            <Select
+              name="authorId"
+              label="Assigned Author"
+              value={form.authorId}
+              onChange={handleChange}
+            >
+              <option value="">No Author Assigned</option>
+              {filteredAuthors.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            <Input
+              name="year"
+              label="Publication Year"
+              placeholder="e.g. 1595, -300, or c. 1595-1596"
+              value={form.year}
+              onChange={handleChange}
+              hint="BCE years should be prefixed with -"
+            />
+
+            <label className="flex items-center gap-2.5 text-sm font-medium text-stone-700 cursor-pointer pt-3">
+              <input
+                type="checkbox"
+                name="yearApproximate"
+                checked={form.yearApproximate}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+              />
+              <span>Year is approximate</span>
+            </label>
+          </div>
+        </FormSection>
+
+        <FormSection title="Publication & References" description="Publisher metadata and external citations">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              name="publisher"
+              label="Publisher"
+              placeholder="e.g. Oxford University Press"
+              value={form.publisher}
+              onChange={handleChange}
+            />
+
+            <Input
+              name="location"
+              label="Location"
+              placeholder="e.g. London, Athens"
+              value={form.location}
+              onChange={handleChange}
+            />
+          </div>
+
+          <Input
+            name="externalUrl"
+            label="External Reference URL"
+            placeholder="https://..."
+            value={form.externalUrl}
             onChange={handleChange}
           />
-          Year Approximate
-        </label>
+        </FormSection>
 
-        <div className="space-y-2">
-          <input
-            type="search"
-            value={authorSearch}
-            onChange={(e) => setAuthorSearch(e.target.value)}
-            placeholder="Search authors"
-            className="border w-full p-2 rounded"
-          />
-          <select
-            name="authorId"
-            value={form.authorId}
-            onChange={handleChange}
-            className="border w-full p-2 rounded"
-          >
-            <option value="">No Author</option>
-            {filteredAuthors.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <input
-          name="publisher"
-          placeholder="Publisher"
-          value={form.publisher}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
+        <FormActions
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={saving}
+          cancelHref="/admin/sources"
+          onDelete={() => setIsConfirmingDelete(true)}
+          deleteLabel="Delete Source"
+          isDeleting={deleting}
         />
+      </form>
 
-        <input
-          name="location"
-          placeholder="Location"
-          value={form.location}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
-        />
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={form.description}
-          onChange={handleChange}
-          rows={3}
-          className="border w-full p-2 rounded"
-        />
-
-        <input
-          name="externalUrl"
-          placeholder="External URL"
-          value={form.externalUrl}
-          onChange={handleChange}
-          className="border w-full p-2 rounded"
-        />
-
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        <div className="flex gap-4">
-          <button
-            disabled={saving}
-            onClick={handleSave}
-            className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-
-          <button
-            onClick={handleDelete}
-            className="bg-red-500 text-white px-4 py-2 rounded"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
+      <ConfirmModal
+        isOpen={isConfirmingDelete}
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={executeDelete}
+        title="Delete Source?"
+        message={`Are you sure you want to delete "${form.title}"? Quotes attributed to this source will remain but have their source unlinked.`}
+        confirmLabel="Delete Source"
+        isDestructive
+        isLoading={deleting}
+      />
     </div>
   )
 }

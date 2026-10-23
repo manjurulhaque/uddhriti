@@ -8,7 +8,7 @@ export interface SelectOption {
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
-  error?: string
+  error?: string | string[]
   hint?: string
   options?: SelectOption[]
 }
@@ -24,12 +24,14 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       className = "",
       children,
       disabled,
+      required,
       ...props
     },
     ref
   ) => {
     const generatedId = React.useId()
     const selectId = id || generatedId
+    const errorMessage = Array.isArray(error) ? error[0] : error
 
     return (
       <div className="w-full space-y-1.5 font-sans">
@@ -39,6 +41,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-700)]"
           >
             {label}
+            {required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
 
@@ -47,8 +50,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             disabled={disabled}
+            required={required}
             className={`w-full appearance-none rounded-xl border bg-white px-3.5 py-2.5 pr-10 text-sm text-[var(--ink-900)] transition duration-200 ease-out focus:border-[var(--accent-rust)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rust)]/20 disabled:cursor-not-allowed disabled:bg-stone-50 disabled:opacity-60 cursor-pointer ${
-              error
+              errorMessage
                 ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                 : "border-[var(--ink-900)]/15 hover:border-[var(--ink-900)]/30"
             } ${className}`}
@@ -76,8 +80,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </div>
         </div>
 
-        {error ? (
-          <p className="text-xs text-red-600 font-medium">{error}</p>
+        {errorMessage ? (
+          <p className="text-xs text-red-600 font-medium">{errorMessage}</p>
         ) : hint ? (
           <p className="text-xs text-[var(--ink-700)]/70">{hint}</p>
         ) : null}

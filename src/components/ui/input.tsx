@@ -2,7 +2,7 @@ import * as React from "react"
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
-  error?: string
+  error?: string | string[]
   hint?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
@@ -20,6 +20,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       onClear,
       id,
       value,
+      required,
       className = "",
       disabled,
       ...props
@@ -29,6 +30,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const generatedId = React.useId()
     const inputId = id || generatedId
     const isClearable = Boolean(onClear && value && String(value).length > 0)
+    const errorMessage = Array.isArray(error) ? error[0] : error
 
     return (
       <div className="w-full space-y-1.5 font-sans">
@@ -38,6 +40,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-700)]"
           >
             {label}
+            {required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
 
@@ -53,10 +56,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             value={value}
             disabled={disabled}
+            required={required}
             className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--ink-900)] placeholder:text-[var(--ink-700)]/45 transition duration-200 ease-out focus:border-[var(--accent-rust)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-rust)]/20 disabled:cursor-not-allowed disabled:bg-stone-50 disabled:opacity-60 ${
               leftIcon ? "pl-10" : ""
             } ${rightIcon || isClearable ? "pr-10" : ""} ${
-              error
+              errorMessage
                 ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                 : "border-[var(--ink-900)]/15 hover:border-[var(--ink-900)]/30"
             } ${className}`}
@@ -89,8 +93,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
 
-        {error ? (
-          <p className="text-xs text-red-600 font-medium">{error}</p>
+        {errorMessage ? (
+          <p className="text-xs text-red-600 font-medium">{errorMessage}</p>
         ) : hint ? (
           <p className="text-xs text-[var(--ink-700)]/70">{hint}</p>
         ) : null}

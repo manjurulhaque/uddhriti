@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { isPrivateOrLocalIp } from "@/lib/ip"
+import { AdminSidebar } from "@/components/admin"
 import { CurrentIpDisplay } from "./CurrentIpDisplay"
 
 export default async function ProtectedAdminLayout({
@@ -22,44 +22,13 @@ export default async function ProtectedAdminLayout({
   }
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-64 bg-white border-r p-6 space-y-6">
-        <div>
-          <h2 className="font-bold text-lg">Admin Panel</h2>
-          <p className="text-xs text-gray-500 mt-1">{admin.email}</p>
-          <p className="text-xs text-blue-600 font-medium">{admin.role}</p>
-          <p className="text-xs text-gray-500 mt-3">Current IP</p>
-          <CurrentIpDisplay initialIp={requestIp.value} initialSource={requestIp.source} />
-        </div>
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
+      <AdminSidebar
+        admin={{ email: admin.email, role: admin.role }}
+        ipDisplay={<CurrentIpDisplay initialIp={requestIp.value} initialSource={requestIp.source} />}
+      />
 
-        <nav className="flex flex-col space-y-3 text-sm">
-          <SidebarLink href="/admin/dashboard">Dashboard</SidebarLink>
-          <SidebarLink href="/admin/quotes">Quotes</SidebarLink>
-          <SidebarLink href="/admin/quotes/bulk">Bulk Upload Quotes</SidebarLink>
-          <SidebarLink href="/admin/quotes/new">+ Submit Quote</SidebarLink>
-          <SidebarLink href="/admin/authors">Authors</SidebarLink>
-          <SidebarLink href="/admin/categories">Categories</SidebarLink>
-          <SidebarLink href="/admin/tags">Tags</SidebarLink>
-          <SidebarLink href="/admin/collections">Collections</SidebarLink>
-          <SidebarLink href="/admin/sources">Sources</SidebarLink>
-          <SidebarLink href="/admin/sources/bulk">Import Sources</SidebarLink>
-          <SidebarLink href="/admin/faqs">FAQs</SidebarLink>
-          <SidebarLink href="/admin/faqs/bulk">Import FAQs</SidebarLink>
-
-          <div className="pt-6 border-t mt-6">
-            <form action="/admin/logout" method="POST">
-              <button
-                type="submit"
-                className="w-full text-left text-red-600 hover:text-red-800 transition"
-              >
-                Logout
-              </button>
-            </form>
-          </div>
-        </nav>
-      </aside>
-
-      <main className="flex-1 bg-gray-50">{children}</main>
+      <main className="flex-1 min-w-0 bg-gray-50">{children}</main>
     </div>
   )
 }
@@ -149,18 +118,3 @@ function normalizeIpCandidate(value: string | null | undefined) {
   return candidate
 }
 
-
-
-function SidebarLink({
-  href,
-  children,
-}: {
-  href: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link href={href} className="text-gray-600 hover:text-black transition">
-      {children}
-    </Link>
-  )
-}

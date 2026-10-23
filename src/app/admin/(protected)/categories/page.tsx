@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { PageHeader } from "@/components/admin"
+import { PageHeader, SortTabs } from "@/components/admin"
 
 type CategorySort = "newest" | "oldest" | "name-asc" | "name-desc" | "quotes-desc" | "quotes-asc"
 
@@ -75,18 +75,14 @@ export default async function CategoriesPage({
       />
 
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-gray-500">Sort:</span>
-        {Object.entries(sortLabels).map(([value, label]) => (
-          <Link
-            key={value}
-            href={value === "newest" ? "/admin/categories" : `/admin/categories?sort=${value}`}
-            className={`border px-3 py-1 rounded ${activeSort === value ? "bg-black text-white" : ""}`}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <SortTabs<CategorySort>
+        activeValue={activeSort}
+        items={Object.entries(sortLabels).map(([value, label]) => ({
+          value: value as CategorySort,
+          label,
+          href: value === "newest" ? "/admin/categories" : `/admin/categories?sort=${value}`,
+        }))}
+      />
 
       <div className="space-y-2">
         {categories.map((c) => (

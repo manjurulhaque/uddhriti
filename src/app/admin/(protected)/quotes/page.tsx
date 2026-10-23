@@ -1,10 +1,9 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import type { Prisma } from "@prisma/client"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { prisma } from "@/lib/prisma"
 import { QuotesListManager } from "./QuotesListManager"
-import { PageHeader } from "@/components/admin"
+import { PageHeader, FilterTabs } from "@/components/admin"
 import { Button } from "@/components/ui"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
@@ -143,48 +142,19 @@ export default async function QuotesPage({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-gray-500">Filter:</span>
-        <Link href="/admin/quotes" className={`border px-3 py-1 rounded ${activeFilter === "all" ? "bg-black text-white" : ""}`}>
-          {filterLabels.all}
-        </Link>
-        <Link
-          href="/admin/quotes?filter=draft"
-          className={`border px-3 py-1 rounded ${activeFilter === "draft" ? "bg-black text-white" : ""}`}
-        >
-          {filterLabels.draft}
-        </Link>
-        <Link
-          href="/admin/quotes?filter=archived"
-          className={`border px-3 py-1 rounded ${activeFilter === "archived" ? "bg-black text-white" : ""}`}
-        >
-          {filterLabels.archived}
-        </Link>
-        <Link
-          href="/admin/quotes?filter=unattributed"
-          className={`border px-3 py-1 rounded ${activeFilter === "unattributed" ? "bg-black text-white" : ""}`}
-        >
-          {filterLabels.unattributed}
-        </Link>
-        <Link
-          href="/admin/quotes?filter=missing-source"
-          className={`border px-3 py-1 rounded ${activeFilter === "missing-source" ? "bg-black text-white" : ""}`}
-        >
-          {filterLabels["missing-source"]}
-        </Link>
-        <Link
-          href="/admin/quotes?filter=no-tags"
-          className={`border px-3 py-1 rounded ${activeFilter === "no-tags" ? "bg-black text-white" : ""}`}
-        >
-          {filterLabels["no-tags"]}
-        </Link>
-        <Link
-          href="/admin/quotes?filter=orphaned"
-          className={`border px-3 py-1 rounded ${activeFilter === "orphaned" ? "bg-black text-white" : ""}`}
-        >
-          {filterLabels.orphaned}
-        </Link>
-      </div>
+      <FilterTabs<QuoteFilter>
+        label="Filter"
+        activeValue={activeFilter}
+        items={[
+          { value: "all", label: filterLabels.all, href: "/admin/quotes" },
+          { value: "draft", label: filterLabels.draft, href: "/admin/quotes?filter=draft" },
+          { value: "archived", label: filterLabels.archived, href: "/admin/quotes?filter=archived" },
+          { value: "unattributed", label: filterLabels.unattributed, href: "/admin/quotes?filter=unattributed" },
+          { value: "missing-source", label: filterLabels["missing-source"], href: "/admin/quotes?filter=missing-source" },
+          { value: "no-tags", label: filterLabels["no-tags"], href: "/admin/quotes?filter=no-tags" },
+          { value: "orphaned", label: filterLabels.orphaned, href: "/admin/quotes?filter=orphaned" },
+        ]}
+      />
 
       <QuotesListManager
         quotes={normalizedQuotes}

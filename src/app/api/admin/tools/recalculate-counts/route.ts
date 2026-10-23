@@ -14,6 +14,7 @@ export async function POST() {
         SELECT q."authorId" AS id, COUNT(*)::int AS cnt
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."authorId" IS NOT NULL
         GROUP BY q."authorId"
       ) c
@@ -26,6 +27,7 @@ export async function POST() {
         SELECT DISTINCT q."authorId"
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."authorId" IS NOT NULL
       )
     `,
@@ -36,6 +38,7 @@ export async function POST() {
         SELECT q."sourceId" AS id, COUNT(*)::int AS cnt
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."sourceId" IS NOT NULL
         GROUP BY q."sourceId"
       ) c
@@ -48,6 +51,7 @@ export async function POST() {
         SELECT DISTINCT q."sourceId"
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."sourceId" IS NOT NULL
       )
     `,
@@ -58,6 +62,7 @@ export async function POST() {
         SELECT q."categoryId" AS id, COUNT(*)::int AS cnt
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
         GROUP BY q."categoryId"
       ) s
       WHERE c.id = s.id
@@ -69,6 +74,7 @@ export async function POST() {
         SELECT DISTINCT q."categoryId"
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
       )
     `,
     prisma.$executeRaw`
@@ -79,6 +85,7 @@ export async function POST() {
         FROM "QuoteCollection" qc
         INNER JOIN "Quote" q ON q.id = qc."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
         GROUP BY qc."collectionId"
       ) s
       WHERE c.id = s.id
@@ -91,6 +98,7 @@ export async function POST() {
         FROM "QuoteCollection" qc
         INNER JOIN "Quote" q ON q.id = qc."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
       )
     `,
     prisma.$executeRaw`
@@ -101,6 +109,7 @@ export async function POST() {
         FROM "QuoteTag" qt
         INNER JOIN "Quote" q ON q.id = qt."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
         GROUP BY qt."tagId"
       ) c
       WHERE t.id = c.id
@@ -113,6 +122,7 @@ export async function POST() {
         FROM "QuoteTag" qt
         INNER JOIN "Quote" q ON q.id = qt."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
       )
     `,
   ])

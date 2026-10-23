@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
+import { FilterToolbar } from "@/components/admin"
+import { Select, EmptyState } from "@/components/ui"
 
 type AuthorItem = {
   id: string
@@ -149,100 +151,74 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     setSortBy("newest")
   }
 
+  const sortOptions = [
+    { value: "newest", label: "Arrange: Newest first" },
+    { value: "oldest", label: "Arrange: Oldest first" },
+    { value: "name-asc", label: "Sort: Name A-Z" },
+    { value: "name-desc", label: "Sort: Name Z-A" },
+    { value: "most-quotes", label: "Arrange: Most quotes" },
+    { value: "least-quotes", label: "Arrange: Fewest quotes" },
+    { value: "birth-asc", label: "Sort: Earliest birth year" },
+    { value: "birth-desc", label: "Sort: Latest birth year" },
+  ]
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search authors by name, slug, profession, nationality, or years"
-          className="w-full rounded border px-3 py-2 text-sm md:flex-1"
-        />
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as SortOption)}
-          className="rounded border px-3 py-2 text-sm md:w-56"
-        >
-          <option value="newest">Arrange: Newest first</option>
-          <option value="oldest">Arrange: Oldest first</option>
-          <option value="name-asc">Sort: Name A-Z</option>
-          <option value="name-desc">Sort: Name Z-A</option>
-          <option value="most-quotes">Arrange: Most quotes</option>
-          <option value="least-quotes">Arrange: Fewest quotes</option>
-          <option value="birth-asc">Sort: Earliest birth year</option>
-          <option value="birth-desc">Sort: Latest birth year</option>
-        </select>
-      </div>
-
-      <div className="rounded-lg border bg-gray-50 p-3">
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-            <select
+      <FilterToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search authors by name, slug, profession, nationality, or years"
+        sortValue={sortBy}
+        onSortChange={(value) => setSortBy(value as SortOption)}
+        sortOptions={sortOptions}
+        visibleCount={visibleAuthors.length}
+        totalCount={authors.length}
+        itemLabel="authors"
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
+        filters={
+          <>
+            <Select
               value={quoteFilter}
               onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Quotes: All authors</option>
-              <option value="with-quotes">Quotes: Has quotes</option>
-              <option value="without-quotes">Quotes: No quotes</option>
-            </select>
+              options={[
+                { value: "all", label: "Quotes: All authors" },
+                { value: "with-quotes", label: "Quotes: Has quotes" },
+                { value: "without-quotes", label: "Quotes: No quotes" },
+              ]}
+            />
 
-            <select
+            <Select
               value={lifeStatusFilter}
               onChange={(event) => setLifeStatusFilter(event.target.value as LifeStatusFilter)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Life status: All</option>
-              <option value="living">Life status: Living</option>
-              <option value="deceased">Life status: Deceased</option>
-              <option value="unknown">Life status: Unknown</option>
-            </select>
+              options={[
+                { value: "all", label: "Life status: All" },
+                { value: "living", label: "Life status: Living" },
+                { value: "deceased", label: "Life status: Deceased" },
+                { value: "unknown", label: "Life status: Unknown" },
+              ]}
+            />
 
-            <select
+            <Select
               value={nationalityFilter}
               onChange={(event) => setNationalityFilter(event.target.value)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Nationality: All</option>
-              {nationalityOptions.map((nationality) => (
-                <option key={nationality} value={nationality}>
-                  {nationality}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "all", label: "Nationality: All" },
+                ...nationalityOptions.map((nat) => ({ value: nat, label: nat })),
+              ]}
+            />
 
-            <select
+            <Select
               value={professionFilter}
               onChange={(event) => setProfessionFilter(event.target.value)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Profession: All</option>
-              {professionOptions.map((profession) => (
-                <option key={profession} value={profession}>
-                  {profession}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
-            <div>
-              Showing <span className="font-medium text-gray-900">{visibleAuthors.length}</span> of{" "}
-              <span className="font-medium text-gray-900">{authors.length}</span> authors
-            </div>
-            {hasActiveFilters ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded border bg-white px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
-              >
-                Clear filters
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
+              options={[
+                { value: "all", label: "Profession: All" },
+                ...professionOptions.map((prof) => ({ value: prof, label: prof })),
+              ]}
+            />
+          </>
+        }
+      />
 
       {visibleAuthors.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -277,9 +253,11 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
           ))}
         </div>
       ) : (
-        <div className="rounded border border-dashed p-4 text-sm text-gray-500">
-          No authors match your search.
-        </div>
+        <EmptyState
+          title="No authors match your search"
+          description="Try clearing filters or searching for a different keyword."
+          variant="stone"
+        />
       )}
     </div>
   )

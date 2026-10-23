@@ -2,7 +2,16 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { subtractDays } from "@/lib/datetime"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
-import { formatNumber, StatTile, InsightCard, Panel, Empty, QuoteMeta } from "./components"
+import { formatNumber } from "@/lib/formatters"
+import {
+  StatTile,
+  InsightCard,
+  Panel,
+  Empty,
+  QuoteCard,
+  RankingItem,
+  TagBadge,
+} from "@/components"
 
 export const revalidate = 60
 
@@ -104,32 +113,23 @@ export default async function HomePage() {
               </div>
 
               <div className="animate-rise-delayed flex items-stretch">
-                <div className="w-full rounded-[1.6rem] border border-white/12 bg-white/9 p-5 backdrop-blur-md">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-sand)]">
-                    Featured Voice
-                  </p>
-                  {heroQuote ? (
-                    <div className="mt-4 space-y-4">
-                      <blockquote className="text-xl leading-9 text-white sm:text-2xl sm:leading-10">
-                        &quot;{heroQuote.content}&quot;
-                      </blockquote>
-                      <QuoteMeta
-                        authorName={heroQuote.authorName}
-                        category={heroQuote.category?.name}
-                        sourceTitle={heroQuote.source?.title}
-                        year={formatSourceYearLabel(heroQuote.source)}
-                        tags={heroQuote.tags.map((entry) => entry.tag.name)}
-                        variant="dark"
-                      />
-                      <div className="flex items-center justify-between border-t border-white/12 pt-4 text-xs uppercase tracking-[0.16em] text-white/62">
-                        <span>{formatNumber(heroQuote.views)} views</span>
-                        <span>{heroQuote.tags.length} linked tags</span>
-                      </div>
-                    </div>
-                  ) : (
+                {heroQuote ? (
+                  <QuoteCard
+                    content={heroQuote.content}
+                    authorName={heroQuote.authorName}
+                    category={heroQuote.category?.name}
+                    sourceTitle={heroQuote.source?.title}
+                    year={formatSourceYearLabel(heroQuote.source)}
+                    tags={heroQuote.tags.map((entry) => entry.tag.name)}
+                    views={heroQuote.views}
+                    variant="featured"
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="w-full rounded-[1.6rem] border border-white/12 bg-white/9 p-5 backdrop-blur-md">
                     <Empty message="Publish a featured quote to make this space sing." variant="dark" />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -190,18 +190,12 @@ export default async function HomePage() {
               ) : (
                 <div className="space-y-2.5">
                   {topCategories.map((category, index) => (
-                    <div
+                    <RankingItem
                       key={category.id}
-                      className="flex items-center justify-between rounded-2xl border border-[var(--ink-900)]/8 bg-white/80 px-4 py-3 text-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-rust)]/12 text-xs font-semibold text-[var(--accent-rust)]">
-                          {index + 1}
-                        </span>
-                        <span className="font-medium">{category.name}</span>
-                      </div>
-                      <span className="text-[var(--ink-700)]/70">{formatNumber(category.quoteCount)}</span>
-                    </div>
+                      rank={index + 1}
+                      title={category.name}
+                      count={category.quoteCount}
+                    />
                   ))}
                 </div>
               )}
@@ -213,15 +207,12 @@ export default async function HomePage() {
               ) : (
                 <div className="space-y-2.5">
                   {recentAuthors.map((author) => (
-                    <div
+                    <RankingItem
                       key={author.id}
-                      className="flex items-center justify-between rounded-2xl border border-[var(--ink-900)]/8 bg-white/80 px-4 py-3 text-sm"
-                    >
-                      <span className="font-medium">{author.name}</span>
-                      <span className="rounded-full bg-[var(--ink-900)] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white">
-                        {formatNumber(author.quoteCount)}
-                      </span>
-                    </div>
+                      title={author.name}
+                      count={author.quoteCount}
+                      badgeTone="default"
+                    />
                   ))}
                 </div>
               )}
@@ -236,27 +227,18 @@ export default async function HomePage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {trendingQuotes.map((quote, index) => (
-                  <article
+                  <QuoteCard
                     key={quote.id}
-                    className="rounded-[1.4rem] border border-white/10 bg-white/6 p-5 transition duration-300 hover:-translate-y-1 hover:bg-white/9"
-                  >
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-white/55">
-                      <span>Rank {index + 1}</span>
-                      <span>Score {quote.trendingScore.toFixed(2)}</span>
-                    </div>
-                    <p className="mt-4 line-clamp-4 text-base leading-8 text-white/88">
-                      &quot;{quote.content}&quot;
-                    </p>
-                    <QuoteMeta
-                      authorName={quote.authorName}
-                      category={quote.category?.name}
-                      sourceTitle={quote.source?.title}
-                      year={formatSourceYearLabel(quote.source)}
-                      tags={quote.tags.map((entry) => entry.tag.name)}
-                      className="mt-4"
-                      variant="dark"
-                    />
-                  </article>
+                    content={quote.content}
+                    authorName={quote.authorName}
+                    category={quote.category?.name}
+                    sourceTitle={quote.source?.title}
+                    year={formatSourceYearLabel(quote.source)}
+                    tags={quote.tags.map((entry) => entry.tag.name)}
+                    trendingRank={index + 1}
+                    trendingScore={quote.trendingScore}
+                    variant="dark"
+                  />
                 ))}
               </div>
             )}
@@ -269,12 +251,12 @@ export default async function HomePage() {
               ) : (
                 <div className="flex flex-wrap gap-2.5">
                   {topTags.map((tag) => (
-                    <span
+                    <TagBadge
                       key={tag.id}
-                      className="rounded-full border border-[var(--ink-900)]/10 bg-[var(--page-cream)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-800)]"
-                    >
-                      {tag.name} / {tag.type} / {formatNumber(tag.quoteCount)}
-                    </span>
+                      name={tag.name}
+                      type={tag.type}
+                      quoteCount={tag.quoteCount}
+                    />
                   ))}
                 </div>
               )}
@@ -311,25 +293,17 @@ export default async function HomePage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {latestQuotes.map((quote, index) => (
-                <article
+                <QuoteCard
                   key={quote.id}
-                  className="group rounded-[1.6rem] border border-[var(--ink-900)]/8 bg-white p-5 shadow-[0_14px_36px_rgba(33,37,41,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_48px_rgba(33,37,41,0.12)]"
+                  content={quote.content}
+                  authorName={quote.authorName}
+                  category={quote.category?.name}
+                  sourceTitle={quote.source?.title}
+                  year={formatSourceYearLabel(quote.source)}
+                  tags={quote.tags.map((entry) => entry.tag.name)}
+                  variant="paper"
                   style={{ animationDelay: `${index * 70}ms` }}
-                >
-                  <div className="animate-rise rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(244,162,97,0.08),rgba(255,255,255,0))] p-0">
-                    <p className="line-clamp-5 text-sm leading-7 text-[var(--ink-800)]">
-                      &quot;{quote.content}&quot;
-                    </p>
-                    <QuoteMeta
-                      authorName={quote.authorName}
-                      category={quote.category?.name}
-                      sourceTitle={quote.source?.title}
-                      year={formatSourceYearLabel(quote.source)}
-                      tags={quote.tags.map((entry) => entry.tag.name)}
-                      className="mt-4"
-                    />
-                  </div>
-                </article>
+                />
               ))}
             </div>
           )}

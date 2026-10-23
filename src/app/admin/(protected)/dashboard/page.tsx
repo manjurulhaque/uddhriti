@@ -3,6 +3,19 @@ import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { getDashboardMetrics } from "@/lib/dashboard/metrics"
 import { formatDateInAppTimeZone, formatShortDateInAppTimeZone, subtractDays } from "@/lib/datetime"
+import { formatNumber } from "@/lib/formatters"
+import {
+  StatCard,
+  KpiCard,
+  AttentionCard,
+  MiniBarChart,
+  Metric,
+  DashboardCard,
+  DashboardLink,
+  DashboardPostAction,
+  ListOrEmpty,
+  EmptyRow,
+} from "@/components/admin"
 
 export default async function DashboardPage() {
   const admin = await getAdmin()
@@ -455,9 +468,6 @@ export default async function DashboardPage() {
   )
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat().format(value)
-}
 
 function formatPeriodDelta(current: number, previous: number, actionLabel: string) {
   const delta = current - previous
@@ -472,217 +482,4 @@ function formatShortDate(value: Date) {
 function truncate(value: string, maxLength: number) {
   if (value.length <= maxLength) return value
   return `${value.slice(0, maxLength)}...`
-}
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-  href,
-}: {
-  title: string
-  value: number
-  subtitle?: string
-  href?: string
-}) {
-  const content = (
-    <div className="h-full rounded-2xl border border-white/70 bg-white/85 p-4 shadow-[0_8px_24px_rgba(28,25,23,0.06)] backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(28,25,23,0.10)]">
-      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500">{title}</p>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-stone-950">{formatNumber(value)}</p>
-      {subtitle && <p className="mt-2 text-xs leading-5 text-stone-600">{subtitle}</p>}
-    </div>
-  )
-
-  return href && href !== "#" ? <Link href={href}>{content}</Link> : content
-}
-
-function DashboardCard({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-[0_14px_36px_rgba(28,25,23,0.06)]">
-      <h2 className="mb-4 text-lg font-semibold tracking-tight text-stone-950">{title}</h2>
-      {children}
-    </section>
-  )
-}
-
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number
-}) {
-  return (
-    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-3">
-      <div className="text-xl font-bold tracking-tight text-stone-950">{typeof value === "number" ? formatNumber(value) : value}</div>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{label}</div>
-    </div>
-  )
-}
-
-function KpiCard({
-  title,
-  value,
-  subtitle,
-  href,
-}: {
-  title: string
-  value: string | number
-  subtitle?: string
-  href?: string
-}) {
-  const content = (
-    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-[0_10px_26px_rgba(28,25,23,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(28,25,23,0.08)]">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{title}</p>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-stone-950">{typeof value === "number" ? formatNumber(value) : value}</p>
-      {subtitle ? <p className="mt-2 text-xs leading-5 text-stone-600">{subtitle}</p> : null}
-    </div>
-  )
-
-  return href ? <Link href={href}>{content}</Link> : content
-}
-
-function MiniBarChart({
-  data,
-}: {
-  data: { label: string; value: number }[]
-}) {
-  if (data.length === 0) {
-    return <EmptyRow message="No chart data available yet." />
-  }
-
-  const width = 560
-  const height = 180
-  const chartTop = 12
-  const chartHeight = 120
-  const horizontalPadding = 12
-  const availableWidth = width - horizontalPadding * 2
-  const gap = data.length > 20 ? 6 : 16
-  const barWidth = Math.max(8, Math.floor((availableWidth - gap * Math.max(data.length - 1, 0)) / data.length))
-  const xStep = barWidth + gap
-  const maxValue = Math.max(...data.map((entry) => entry.value), 1)
-  const peakValue = Math.max(...data.map((entry) => entry.value))
-  const gridLines = [0.25, 0.5, 0.75, 1]
-  const labelEvery = data.length > 20 ? 3 : 1
-
-  return (
-    <div className="space-y-3 rounded-[22px] border border-stone-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fafaf9_100%)] p-4">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
-        {gridLines.map((line) => {
-          const y = chartTop + chartHeight - chartHeight * line
-          return <line key={line} x1="0" x2={width} y1={y} y2={y} stroke="#e7e5e4" strokeDasharray="4 4" />
-        })}
-        {data.map((entry, index) => {
-          const x = horizontalPadding + index * xStep
-          const barHeight = maxValue === 0 ? 0 : Math.max((entry.value / maxValue) * chartHeight, entry.value > 0 ? 4 : 0)
-          const y = chartTop + (chartHeight - barHeight)
-          const isPeak = entry.value === peakValue && peakValue > 0
-
-          return (
-            <g key={`${entry.label}-${index}`}>
-              <rect x={x} y={y} width={barWidth} height={barHeight} rx={6} fill={isPeak ? "#d97706" : "#0f172a"} />
-              {index % labelEvery === 0 ? (
-                <text x={x + barWidth / 2} y={chartTop + chartHeight + 18} textAnchor="middle" className="fill-stone-500 text-[10px]">
-                  {entry.label}
-                </text>
-              ) : null}
-              <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" className="fill-stone-700 text-[10px]">
-                {entry.value}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />
-          Daily published count
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-600" />
-          Peak day
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function AttentionCard({
-  title,
-  value,
-  subtitle,
-  href,
-  tone,
-}: {
-  title: string
-  value: number
-  subtitle: string
-  href: string
-  tone: "neutral" | "warning" | "danger"
-}) {
-  const toneClass =
-    tone === "danger"
-      ? "border-red-200 bg-[linear-gradient(180deg,_#fff1f2_0%,_#ffe4e6_100%)]"
-      : tone === "warning"
-      ? "border-amber-200 bg-[linear-gradient(180deg,_#fffbeb_0%,_#fef3c7_100%)]"
-      : "border-stone-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fafaf9_100%)]"
-
-  return (
-    <Link href={href} className={`block rounded-[22px] border p-4 shadow-[0_10px_26px_rgba(28,25,23,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(28,25,23,0.08)] ${toneClass}`}>
-      <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{title}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight text-stone-950">{formatNumber(value)}</p>
-      <p className="mt-2 text-sm leading-6 text-stone-700">{subtitle}</p>
-    </Link>
-  )
-}
-
-function DashboardLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={href} className="rounded-2xl border border-stone-200 px-3 py-2 text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
-      {label}
-    </Link>
-  )
-}
-
-function DashboardPostAction({ action, label }: { action: string; label: string }) {
-  return (
-    <form action={action} method="post">
-      <button type="submit" className="w-full rounded-2xl border border-stone-200 px-3 py-2 text-left text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
-        {label}
-      </button>
-    </form>
-  )
-}
-
-function ListOrEmpty({
-  items,
-  empty,
-}: {
-  items: { key: string; left: string; right: string }[]
-  empty: string
-}) {
-  if (items.length === 0) {
-    return <EmptyRow message={empty} />
-  }
-
-  return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <div key={item.key} className="flex justify-between gap-4 rounded-2xl border border-stone-100 bg-stone-50/70 px-3 py-2 text-sm">
-          <span className="text-stone-800">{item.left}</span>
-          <span className="whitespace-nowrap text-stone-500">{item.right}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function EmptyRow({ message }: { message: string }) {
-  return <p className="rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-500">{message}</p>
 }

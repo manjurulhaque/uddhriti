@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { PageHeader } from "@/components/admin"
 
 export default async function FaqsPage() {
   const admin = await getAdmin()
@@ -13,17 +14,19 @@ export default async function FaqsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between">
-        <h1 className="text-2xl font-bold">FAQs</h1>
-        <div className="flex gap-2">
-          <Link href="/admin/faqs/bulk" className="border px-4 py-2 rounded bg-white">
-            Bulk Import
-          </Link>
-          <Link href="/admin/faqs/new" className="bg-black text-white px-4 py-2 rounded">
-            + New FAQ
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="FAQs"
+        description="Frequently asked questions displayed across quotation surfaces."
+        secondaryAction={{
+          label: "Bulk Import",
+          href: "/admin/faqs/bulk",
+        }}
+        primaryAction={{
+          label: "+ New FAQ",
+          href: "/admin/faqs/new",
+        }}
+      />
+
 
       <div className="space-y-2">
         {faqs.map((faq) => (

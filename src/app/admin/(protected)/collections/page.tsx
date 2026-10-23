@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { PageHeader } from "@/components/admin"
 
 export default async function CollectionsPage() {
   const admin = await getAdmin()
@@ -13,15 +14,15 @@ export default async function CollectionsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between">
-        <h1 className="text-2xl font-bold">Collections</h1>
-        <Link
-          href="/admin/collections/new"
-          className="bg-black text-white px-4 py-2 rounded"
-        >
-          + New Collection
-        </Link>
-      </div>
+      <PageHeader
+        title="Collections"
+        description="Curated thematic anthologies and editorial selections."
+        primaryAction={{
+          label: "+ New Collection",
+          href: "/admin/collections/new",
+        }}
+      />
+
 
       <div className="space-y-2">
         {collections.map((collection) => (

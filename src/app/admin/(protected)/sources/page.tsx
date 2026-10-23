@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { redirect } from "next/navigation"
 import { SourcesListManager } from "./SourcesListManager"
+import { PageHeader } from "@/components/admin"
 
 export default async function SourcesPage() {
   const admin = await getAdmin()
@@ -29,23 +29,19 @@ export default async function SourcesPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between">
-        <h1 className="text-2xl font-bold">Sources</h1>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/sources/bulk"
-            className="bg-white border px-4 py-2 rounded"
-          >
-            Bulk Import
-          </Link>
-          <Link
-            href="/admin/sources/new"
-            className="bg-black text-white px-4 py-2 rounded"
-          >
-            + New Source
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Sources"
+        description="Books, speeches, letters, interviews, and scripture catalog."
+        secondaryAction={{
+          label: "Bulk Import",
+          href: "/admin/sources/bulk",
+        }}
+        primaryAction={{
+          label: "+ New Source",
+          href: "/admin/sources/new",
+        }}
+      />
+
 
       <SourcesListManager sources={normalizedSources} />
     </div>

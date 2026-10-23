@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { PageHeader } from "@/components/admin"
 
 type CategorySort = "newest" | "oldest" | "name-asc" | "name-desc" | "quotes-desc" | "quotes-asc"
 
@@ -60,23 +61,19 @@ export default async function CategoriesPage({
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between">
-        <h1 className="text-2xl font-bold">Categories</h1>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/categories/bulk"
-            className="bg-white border px-4 py-2 rounded"
-          >
-            Bulk Create
-          </Link>
-          <Link
-            href="/admin/categories/new"
-            className="bg-black text-white px-4 py-2 rounded"
-          >
-            + New Category
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Categories"
+        description="Organize quotes into themes, subjects, and topics."
+        secondaryAction={{
+          label: "Bulk Create",
+          href: "/admin/categories/bulk",
+        }}
+        primaryAction={{
+          label: "+ New Category",
+          href: "/admin/categories/new",
+        }}
+      />
+
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-gray-500">Sort:</span>

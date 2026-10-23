@@ -4,6 +4,8 @@ import type { Prisma } from "@prisma/client"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { prisma } from "@/lib/prisma"
 import { QuotesListManager } from "./QuotesListManager"
+import { PageHeader } from "@/components/admin"
+import { Button } from "@/components/ui"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
@@ -123,29 +125,23 @@ export default async function QuotesPage({
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between">
-        <h1 className="text-2xl font-bold">Quotes</h1>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/quotes/deleted"
-            className="border border-gray-300 px-4 py-2 rounded"
-          >
-            Trash
-          </Link>
-          <Link
-            href="/admin/quotes/bulk"
-            className="border border-gray-300 px-4 py-2 rounded"
-          >
-            Bulk Upload
-          </Link>
-          <Link
-            href="/admin/quotes/new"
-            className="bg-black text-white px-4 py-2 rounded"
-          >
-            + New Quote
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Quotes"
+        description="Review, publish, and curate quotations archive entries."
+        actions={
+          <>
+            <Button href="/admin/quotes/deleted" variant="outline" size="sm">
+              Trash
+            </Button>
+            <Button href="/admin/quotes/bulk" variant="secondary" size="sm">
+              Bulk Upload
+            </Button>
+            <Button href="/admin/quotes/new" variant="primary" size="sm">
+              + New Quote
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-gray-500">Filter:</span>

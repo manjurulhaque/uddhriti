@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { tagTypeOptions, type TagTypeOption } from "@/lib/tags/catalog"
+import { FilterToolbar } from "@/components/admin"
+import { Select, EmptyState } from "@/components/ui"
 
 type TagItem = {
   id: string
@@ -201,53 +203,39 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="space-y-2">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search tags by name, slug, or category"
-            className="w-full rounded border px-3 py-2 text-sm md:flex-1"
-          />
-          <select
-            value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value as "all" | TagTypeOption)}
-            className="rounded border px-3 py-2 text-sm md:w-56"
-          >
-            <option value="all">Type: All</option>
-            {tagTypeOptions.map((type) => (
-              <option key={type} value={type}>
-                Type: {type}
-              </option>
-            ))}
-          </select>
-          <select
-            value={quoteFilter}
-            onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
-            className="rounded border px-3 py-2 text-sm md:w-56"
-          >
-            <option value="all">Usage: All tags</option>
-            <option value="used">Usage: With quotes</option>
-            <option value="unused">Usage: No quotes</option>
-          </select>
-        </div>
+      <FilterToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search tags by name, slug, or category"
+        visibleCount={filteredTags.length}
+        totalCount={tags.length}
+        itemLabel="tags"
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
+        filters={
+          <>
+            <Select
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value as "all" | TagTypeOption)}
+              options={[
+                { value: "all", label: "Type: All" },
+                ...tagTypeOptions.map((type) => ({ value: type, label: `Type: ${type}` })),
+              ]}
+            />
+            <Select
+              value={quoteFilter}
+              onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
+              options={[
+                { value: "all", label: "Usage: All tags" },
+                { value: "used", label: "Usage: With quotes" },
+                { value: "unused", label: "Usage: No quotes" },
+              ]}
+            />
+          </>
+        }
+      />
 
-        <div className="flex flex-col gap-2 rounded border bg-gray-50 p-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
-          <div>
-            Showing <span className="font-medium text-gray-900">{filteredTags.length}</span> of{" "}
-            <span className="font-medium text-gray-900">{tags.length}</span> tags
-          </div>
-          {hasActiveFilters ? (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded border bg-white px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
-            >
-              Clear filters
-            </button>
-          ) : null}
-        </div>
+      <div className="space-y-2">
 
         {filteredTags.length > 0 ? (
           <label className="inline-flex items-center gap-2 text-sm text-gray-600">
@@ -341,9 +329,15 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
             </section>
           ))
         ) : (
-          <div className="rounded border border-dashed p-4 text-sm text-gray-500">
-            No tags match your search.
-          </div>
+          <EmptyState
+            title="No tags match your search"
+            description="Try adjusting your search terms or clearing your filters."
+            action={
+              hasActiveFilters
+                ? { label: "Clear filters", onClick: clearFilters }
+                : undefined
+            }
+          />
         )}
       </div>
     </div>

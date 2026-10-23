@@ -1,11 +1,17 @@
 import * as React from "react"
+import { Button } from "./button"
+
+export interface EmptyStateActionConfig {
+  label: string
+  onClick?: () => void
+}
 
 export interface EmptyStateProps {
   title?: string
   message?: string
   description?: string
   icon?: React.ReactNode
-  action?: React.ReactNode
+  action?: React.ReactNode | EmptyStateActionConfig
   variant?: "light" | "dark" | "stone"
   className?: string
 }
@@ -35,6 +41,20 @@ export function EmptyState({
   const descColor =
     variant === "dark" ? "text-white/60" : "text-[var(--ink-700)]/70"
 
+  const renderAction = () => {
+    if (!action) return null
+    if (React.isValidElement(action)) return action
+    if (typeof action === "object" && "label" in action) {
+      const config = action as EmptyStateActionConfig
+      return (
+        <Button variant="secondary" size="xs" onClick={config.onClick}>
+          {config.label}
+        </Button>
+      )
+    }
+    return action as React.ReactNode
+  }
+
   return (
     <div
       className={`flex flex-col items-center justify-center rounded-[1.4rem] border border-dashed p-8 text-center transition-all ${variantStyles} ${className}`}
@@ -55,7 +75,7 @@ export function EmptyState({
         </p>
       ) : null}
 
-      {action ? <div className="mt-4">{action}</div> : null}
+      {action ? <div className="mt-4">{renderAction()}</div> : null}
     </div>
   )
 }

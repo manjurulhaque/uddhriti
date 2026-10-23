@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+import { FilterToolbar } from "@/components/admin"
+import { Select, EmptyState } from "@/components/ui"
 
 type SourceItem = {
   id: string
@@ -28,6 +30,17 @@ type SortOption =
 
 type QuoteFilter = "all" | "with-quotes" | "without-quotes"
 type AuthorFilter = "all" | "with-author" | "without-author"
+
+const sortOptions = [
+  { value: "newest", label: "Arrange: Newest first" },
+  { value: "oldest", label: "Arrange: Oldest first" },
+  { value: "title-asc", label: "Sort: Title A-Z" },
+  { value: "title-desc", label: "Sort: Title Z-A" },
+  { value: "year-desc", label: "Sort: Latest year" },
+  { value: "year-asc", label: "Sort: Earliest year" },
+  { value: "most-quotes", label: "Arrange: Most quotes" },
+  { value: "least-quotes", label: "Arrange: Fewest quotes" },
+]
 
 export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
   const [search, setSearch] = useState("")
@@ -110,84 +123,51 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search sources by title, type, author, or year"
-          className="w-full rounded border px-3 py-2 text-sm md:flex-1"
-        />
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as SortOption)}
-          className="rounded border px-3 py-2 text-sm md:w-56"
-        >
-          <option value="newest">Arrange: Newest first</option>
-          <option value="oldest">Arrange: Oldest first</option>
-          <option value="title-asc">Sort: Title A-Z</option>
-          <option value="title-desc">Sort: Title Z-A</option>
-          <option value="year-desc">Sort: Latest year</option>
-          <option value="year-asc">Sort: Earliest year</option>
-          <option value="most-quotes">Arrange: Most quotes</option>
-          <option value="least-quotes">Arrange: Fewest quotes</option>
-        </select>
-      </div>
-
-      <div className="rounded-lg border bg-gray-50 p-3">
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            <select
+      <FilterToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search sources by title, type, author, or year"
+        sortValue={sortBy}
+        onSortChange={(value) => setSortBy(value as SortOption)}
+        sortOptions={sortOptions}
+        visibleCount={visibleSources.length}
+        totalCount={sources.length}
+        itemLabel="sources"
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
+        filters={
+          <>
+            <Select
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Type: All</option>
-              {typeOptions.map((type) => (
-                <option key={type} value={type}>
-                  Type: {type}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "all", label: "Type: All" },
+                ...typeOptions.map((type) => ({ value: type, label: `Type: ${type}` })),
+              ]}
+            />
 
-            <select
+            <Select
               value={quoteFilter}
               onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Quotes: All sources</option>
-              <option value="with-quotes">Quotes: Has quotes</option>
-              <option value="without-quotes">Quotes: No quotes</option>
-            </select>
+              options={[
+                { value: "all", label: "Quotes: All sources" },
+                { value: "with-quotes", label: "Quotes: Has quotes" },
+                { value: "without-quotes", label: "Quotes: No quotes" },
+              ]}
+            />
 
-            <select
+            <Select
               value={authorFilter}
               onChange={(event) => setAuthorFilter(event.target.value as AuthorFilter)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Author: All</option>
-              <option value="with-author">Author: Has author</option>
-              <option value="without-author">Author: No author</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
-            <div>
-              Showing <span className="font-medium text-gray-900">{visibleSources.length}</span> of{" "}
-              <span className="font-medium text-gray-900">{sources.length}</span> sources
-            </div>
-            {hasActiveFilters ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded border bg-white px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
-              >
-                Clear filters
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
+              options={[
+                { value: "all", label: "Author: All" },
+                { value: "with-author", label: "Author: Has author" },
+                { value: "without-author", label: "Author: No author" },
+              ]}
+            />
+          </>
+        }
+      />
 
       {visibleSources.length > 0 ? (
         <div className="space-y-2">
@@ -196,9 +176,15 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
           ))}
         </div>
       ) : (
-        <div className="rounded border border-dashed p-4 text-sm text-gray-500">
-          No sources match your filters.
-        </div>
+        <EmptyState
+          title="No sources match your filters"
+          description="Try adjusting your search terms or clearing your filters to see more sources."
+          action={
+            hasActiveFilters
+              ? { label: "Clear filters", onClick: clearFilters }
+              : undefined
+          }
+        />
       )}
     </div>
   )
@@ -210,17 +196,17 @@ function SourceListRow({ source }: { source: SourceItem }) {
   return (
     <Link
       href={`/admin/sources/${source.id}`}
-      className="block rounded border p-4"
+      className="group block rounded-xl border border-stone-200/90 bg-white p-4 transition-all duration-150 hover:border-stone-400 hover:shadow-xs"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="font-semibold">{source.title}</div>
-          <div className="text-sm text-gray-500">
+          <div className="font-semibold text-stone-900 group-hover:text-black">{source.title}</div>
+          <div className="text-sm text-stone-500 mt-0.5">
             {[source.type, yearText, source.authorName || "No Author"].join(" • ")}
           </div>
         </div>
-        <div className="text-sm text-gray-500">
-          Quotes: <span className="font-medium text-gray-900">{source.quoteCount}</span>
+        <div className="shrink-0 text-xs font-medium text-stone-600 bg-stone-100 rounded-lg px-2.5 py-1">
+          Quotes: <span className="font-bold text-stone-900">{source.quoteCount}</span>
         </div>
       </div>
     </Link>

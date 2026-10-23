@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
+import { FilterToolbar } from "@/components/admin"
+import { Pagination, EmptyState } from "@/components/ui"
 
 type QuoteItem = {
   id: string
@@ -38,6 +40,16 @@ type SortOption =
   | "status"
   | "content"
   | "needs-attention"
+
+const sortOptions = [
+  { value: "newest", label: "Arrange: Newest first" },
+  { value: "oldest", label: "Arrange: Oldest first" },
+  { value: "author-asc", label: "Sort: Author A-Z" },
+  { value: "author-desc", label: "Sort: Author Z-A" },
+  { value: "status", label: "Sort: Status" },
+  { value: "content", label: "Sort: Quote text" },
+  { value: "needs-attention", label: "Arrange: Needs attention" },
+]
 
 type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
@@ -132,8 +144,6 @@ export function QuotesListManager({
     visibleQuotes.every((quote) => selectedIds.includes(quote.id))
   const selectedCount = selectedIds.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
-  const rangeEnd = total === 0 ? 0 : Math.min(page * pageSize, total)
 
   async function ensureOptions(nextAction: BulkActionType) {
     if (isLoadingOptions) return
@@ -251,40 +261,26 @@ export function QuotesListManager({
     }
   }
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
-        <p>
-          Showing {rangeStart}-{rangeEnd} of {total} quotes
-          {activeFilterLabel !== "All Quotes" ? ` in ${activeFilterLabel}` : ""}
-        </p>
-        <p>
-          Page {page} of {totalPages}
-        </p>
-      </div>
+  const hasActiveFilters = search.trim().length > 0 || sortBy !== "newest"
 
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search quotes by text, author, source, or status"
-          className="w-full rounded border px-3 py-2 text-sm md:flex-1"
-        />
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as SortOption)}
-          className="rounded border px-3 py-2 text-sm md:w-56"
-        >
-          <option value="newest">Arrange: Newest first</option>
-          <option value="oldest">Arrange: Oldest first</option>
-          <option value="author-asc">Sort: Author A-Z</option>
-          <option value="author-desc">Sort: Author Z-A</option>
-          <option value="status">Sort: Status</option>
-          <option value="content">Sort: Quote text</option>
-          <option value="needs-attention">Arrange: Needs attention</option>
-        </select>
-      </div>
+  return (
+    <div className="space-y-4">
+      <FilterToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search quotes by text, author, source, or status"
+        sortValue={sortBy}
+        onSortChange={(value) => setSortBy(value as SortOption)}
+        sortOptions={sortOptions}
+        visibleCount={visibleQuotes.length}
+        totalCount={quotes.length}
+        itemLabel={`quotes on page${activeFilterLabel !== "All Quotes" ? ` (${activeFilterLabel})` : ""}`}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={() => {
+          setSearch("")
+          setSortBy("newest")
+        }}
+      />
 
       {selectedCount > 0 ? (
         <div className="border rounded p-3 bg-gray-50 space-y-3">
@@ -380,9 +376,10 @@ export function QuotesListManager({
       ) : null}
 
       {quotes.length === 0 ? (
-        <div className="border border-dashed rounded p-4 text-sm text-gray-500">
-          No quotes found for {activeFilterLabel}.
-        </div>
+        <EmptyState
+          title="No quotes found"
+          description={`No quotes were found for ${activeFilterLabel}.`}
+        />
       ) : null}
 
       <div className="space-y-2">
@@ -394,9 +391,11 @@ export function QuotesListManager({
         ) : null}
 
         {quotes.length > 0 && visibleQuotes.length === 0 ? (
-          <div className="border border-dashed rounded p-4 text-sm text-gray-500">
-            No quotes match your search for {activeFilterLabel}.
-          </div>
+          <EmptyState
+            title="No quotes match your search"
+            description={`No matching quotes were found on this page for ${activeFilterLabel}.`}
+            action={{ label: "Clear search", onClick: () => setSearch("") }}
+          />
         ) : null}
 
         {visibleQuotes.map((quote) => (
@@ -454,34 +453,19 @@ export function QuotesListManager({
       </div>
 
       {totalPages > 1 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <p className="text-sm text-gray-500">
-            {search.trim()
-              ? "Search and sort apply to the current page only."
-              : "Sorted within the current page."}
-          </p>
-          <div className="flex items-center gap-2">
-            {page > 1 ? (
-              <Link
-                href={buildQuotesListHref(activeFilter, page - 1)}
-                className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
-              >
-                Previous
-              </Link>
-            ) : (
-              <span className="rounded border px-3 py-1.5 text-sm text-gray-400">Previous</span>
-            )}
-            {page < totalPages ? (
-              <Link
-                href={buildQuotesListHref(activeFilter, page + 1)}
-                className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
-              >
-                Next
-              </Link>
-            ) : (
-              <span className="rounded border px-3 py-1.5 text-sm text-gray-400">Next</span>
-            )}
-          </div>
+        <div className="pt-2">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={total}
+            pageSize={pageSize}
+            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage)}
+          />
+          {search.trim() ? (
+            <p className="text-xs text-stone-400 mt-2 text-center sm:text-left">
+              Search and sort apply to the current page only.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

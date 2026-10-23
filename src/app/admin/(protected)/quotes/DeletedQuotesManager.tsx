@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
+import { FilterToolbar } from "@/components/admin"
+import { Button, EmptyState } from "@/components/ui"
 
 type DeletedQuoteItem = {
   id: string
@@ -14,6 +16,13 @@ type DeletedQuoteItem = {
 }
 
 type SortOption = "deleted-newest" | "deleted-oldest" | "author" | "content"
+
+const sortOptions = [
+  { value: "deleted-newest", label: "Deleted: Newest first" },
+  { value: "deleted-oldest", label: "Deleted: Oldest first" },
+  { value: "author", label: "Sort: Author A-Z" },
+  { value: "content", label: "Sort: Quote text" },
+]
 
 export function DeletedQuotesManager({
   quotes,
@@ -101,75 +110,79 @@ export function DeletedQuotesManager({
     }
   }
 
+  const hasActiveFilters = search.trim().length > 0 || sortBy !== "deleted-newest"
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search deleted quotes by text, author, source, or status"
-          className="w-full rounded border px-3 py-2 text-sm md:flex-1"
-        />
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as SortOption)}
-          className="rounded border px-3 py-2 text-sm md:w-56"
-        >
-          <option value="deleted-newest">Deleted: Newest first</option>
-          <option value="deleted-oldest">Deleted: Oldest first</option>
-          <option value="author">Sort: Author A-Z</option>
-          <option value="content">Sort: Quote text</option>
-        </select>
-      </div>
+      <FilterToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search deleted quotes by text, author, source, or status"
+        sortValue={sortBy}
+        onSortChange={(value) => setSortBy(value as SortOption)}
+        sortOptions={sortOptions}
+        visibleCount={visibleQuotes.length}
+        totalCount={quotes.length}
+        itemLabel="deleted quotes"
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={() => {
+          setSearch("")
+          setSortBy("deleted-newest")
+        }}
+      />
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600 font-medium">{error}</p> : null}
 
       {quotes.length === 0 ? (
-        <div className="border border-dashed rounded p-4 text-sm text-gray-500">
-          Trash is empty.
-        </div>
+        <EmptyState
+          title="Trash is empty"
+          description="There are currently no deleted quotes in the database."
+        />
       ) : null}
 
       {quotes.length > 0 && visibleQuotes.length === 0 ? (
-        <div className="border border-dashed rounded p-4 text-sm text-gray-500">
-          No deleted quotes match your search.
-        </div>
+        <EmptyState
+          title="No deleted quotes match your search"
+          description="Try searching with a different keyword or clear your search query."
+          action={{ label: "Clear search", onClick: () => setSearch("") }}
+        />
       ) : null}
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {visibleQuotes.map((quote) => {
           const isBusy = busyId === quote.id
 
           return (
-            <div key={quote.id} className="border rounded p-4 space-y-3">
+            <div key={quote.id} className="rounded-xl border border-stone-200/90 bg-white p-4 space-y-3 shadow-2xs">
               <div>
-                <div className="font-medium line-clamp-2">{quote.content}</div>
-                <div className="text-sm text-gray-500">
+                <div className="font-medium text-stone-900 line-clamp-2">{quote.content}</div>
+                <div className="text-sm text-stone-500 mt-1">
                   {quote.authorName ?? "Unknown Author"} - {quote.sourceTitle ?? "No Source"}
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-stone-400 mt-1">
                   Status: {quote.status} | Deleted: {formatDateTimeInAppTimeZone(quote.deletedAt)}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100">
+                <Button
                   type="button"
-                  className="rounded border px-3 py-1.5 text-sm"
+                  variant="secondary"
+                  size="sm"
                   disabled={isBusy}
                   onClick={() => restoreQuote(quote.id)}
                 >
                   {isBusy ? "Working..." : "Restore"}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 disabled:opacity-50"
+                  variant="danger"
+                  size="sm"
                   disabled={isBusy}
                   onClick={() => permanentlyDeleteQuote(quote.id)}
                 >
                   {isBusy ? "Working..." : "Delete Permanently"}
-                </button>
+                </Button>
               </div>
             </div>
           )
@@ -178,3 +191,4 @@ export function DeletedQuotesManager({
     </div>
   )
 }
+

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { tagTypeOptions, type TagTypeOption } from "@/lib/tags/catalog"
 import { FilterToolbar } from "@/components/admin"
-import { Select, EmptyState } from "@/components/ui"
+import { Select, EmptyState, ConfirmModal } from "@/components/ui"
 
 type TagItem = {
   id: string
@@ -21,6 +21,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [deletingIds, setDeletingIds] = useState<string[]>([])
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null)
   const [updatingIds, setUpdatingIds] = useState<string[]>([])
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | TagTypeOption>("all")
@@ -91,17 +92,8 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
     })
   }
 
-  async function deleteTags(ids: string[]) {
+  async function executeDeleteTags(ids: string[]) {
     if (ids.length === 0) return
-
-    const isBulk = ids.length > 1
-    const confirmed = window.confirm(
-      isBulk
-        ? `Delete ${ids.length} selected tags?`
-        : "Delete this tag?"
-    )
-
-    if (!confirmed) return
 
     setDeletingIds(ids)
     setError("")
@@ -124,6 +116,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
       }
 
       setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)))
+      setPendingDeleteIds(null)
       router.refresh()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to delete tag")
@@ -191,7 +184,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
             </button>
             <button
               type="button"
-              onClick={() => deleteTags(selectedIds)}
+              onClick={() => setPendingDeleteIds(selectedIds)}
               disabled={deletingIds.length > 0 || updatingIds.length > 0}
               className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
             >
@@ -315,7 +308,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => deleteTags([tag.id])}
+                          onClick={() => setPendingDeleteIds([tag.id])}
                           disabled={deletingIds.length > 0 || updatingIds.length > 0}
                           className="bg-red-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
                         >
@@ -340,6 +333,25 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
           />
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={pendingDeleteIds !== null}
+        onClose={() => setPendingDeleteIds(null)}
+        onConfirm={async () => {
+          if (pendingDeleteIds && pendingDeleteIds.length > 0) {
+            await executeDeleteTags(pendingDeleteIds)
+          }
+        }}
+        title={pendingDeleteIds && pendingDeleteIds.length > 1 ? `Delete ${pendingDeleteIds.length} Tags?` : "Delete Tag?"}
+        message={
+          pendingDeleteIds && pendingDeleteIds.length > 1
+            ? `Are you sure you want to delete these ${pendingDeleteIds.length} selected tags? Quotes associated with these tags will have them detached.`
+            : "Are you sure you want to delete this tag? Quotes associated with this tag will have it detached."
+        }
+        confirmLabel="Delete"
+        isDestructive
+        isLoading={deletingIds.length > 0}
+      />
     </div>
   )
 }

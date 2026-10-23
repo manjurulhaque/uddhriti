@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar } from "@/components/admin"
-import { Button, EmptyState } from "@/components/ui"
+import { Button, EmptyState, ConfirmModal } from "@/components/ui"
 
 type DeletedQuoteItem = {
   id: string
@@ -33,6 +33,7 @@ export function DeletedQuotesManager({
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>("deleted-newest")
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [error, setError] = useState("")
 
   const visibleQuotes = useMemo(() => {
@@ -85,10 +86,7 @@ export function DeletedQuotesManager({
     }
   }
 
-  async function permanentlyDeleteQuote(id: string) {
-    const confirmed = window.confirm("Permanently delete this quote from the database? This cannot be undone.")
-    if (!confirmed) return
-
+  async function executePermanentDelete(id: string) {
     setBusyId(id)
     setError("")
 
@@ -102,6 +100,7 @@ export function DeletedQuotesManager({
         throw new Error(data?.error || "Failed to permanently delete quote")
       }
 
+      setPendingDeleteId(null)
       router.refresh()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to permanently delete quote")
@@ -179,7 +178,7 @@ export function DeletedQuotesManager({
                   variant="danger"
                   size="sm"
                   disabled={isBusy}
-                  onClick={() => permanentlyDeleteQuote(quote.id)}
+                  onClick={() => setPendingDeleteId(quote.id)}
                 >
                   {isBusy ? "Working..." : "Delete Permanently"}
                 </Button>
@@ -188,6 +187,21 @@ export function DeletedQuotesManager({
           )
         })}
       </div>
+
+      <ConfirmModal
+        isOpen={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={async () => {
+          if (pendingDeleteId) {
+            await executePermanentDelete(pendingDeleteId)
+          }
+        }}
+        title="Permanently Delete Quote?"
+        message="This action will permanently delete this quote from the database. It cannot be undone."
+        confirmLabel="Delete Permanently"
+        isDestructive
+        isLoading={busyId !== null}
+      />
     </div>
   )
 }

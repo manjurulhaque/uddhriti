@@ -5,7 +5,7 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar } from "@/components/admin"
-import { Pagination, EmptyState } from "@/components/ui"
+import { Pagination, EmptyState, ConfirmModal } from "@/components/ui"
 
 type QuoteItem = {
   id: string
@@ -95,6 +95,7 @@ export function QuotesListManager({
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [error, setError] = useState("")
 
   const selectedTagNames = useMemo(
@@ -235,10 +236,7 @@ export function QuotesListManager({
     }
   }
 
-  async function deleteQuote(id: string) {
-    const confirmed = window.confirm("Delete this quote? You can restore it later from Trash.")
-    if (!confirmed) return
-
+  async function executeDeleteQuote(id: string) {
     setDeletingId(id)
     setError("")
 
@@ -253,6 +251,7 @@ export function QuotesListManager({
       }
 
       setSelectedIds((prev) => prev.filter((entry) => entry !== id))
+      setPendingDeleteId(null)
       router.refresh()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to delete quote")
@@ -414,7 +413,7 @@ export function QuotesListManager({
                   type="button"
                   className="text-sm text-red-700 underline disabled:opacity-50"
                   disabled={deletingId === quote.id}
-                  onClick={() => deleteQuote(quote.id)}
+                  onClick={() => setPendingDeleteId(quote.id)}
                 >
                   {deletingId === quote.id ? "Deleting..." : "Delete"}
                 </button>
@@ -468,6 +467,21 @@ export function QuotesListManager({
           ) : null}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={async () => {
+          if (pendingDeleteId) {
+            await executeDeleteQuote(pendingDeleteId)
+          }
+        }}
+        title="Move Quote to Trash?"
+        message="Are you sure you want to delete this quote? You can restore it later from Trash."
+        confirmLabel="Move to Trash"
+        isDestructive
+        isLoading={deletingId !== null}
+      />
     </div>
   )
 }

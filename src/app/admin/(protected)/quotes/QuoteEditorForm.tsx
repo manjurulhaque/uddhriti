@@ -4,6 +4,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 import { suggestTags } from "@/lib/tagSuggestions"
+import { ConfirmModal } from "@/components/ui"
 
 type Author = {
   id: string
@@ -144,6 +145,8 @@ export default function QuoteEditorForm({
   const [tagSearch, setTagSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [submitMode, setSubmitMode] = useState<"list" | "another" | "stay">(
     mode === "create" ? "list" : "stay"
   )
@@ -478,23 +481,31 @@ export default function QuoteEditorForm({
     router.push("/admin/quotes")
   }
 
-  async function handleDelete() {
+  async function executeDelete() {
     if (mode !== "edit" || !quoteId) return
 
-    const confirmed = window.confirm("Delete this quote? You can restore it later from deleted quotes.")
-    if (!confirmed) return
+    setIsDeleting(true)
+    setError(null)
 
-    const res = await fetch(`/api/admin/quotes/${quoteId}`, {
-      method: "DELETE",
-    })
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}`, {
+        method: "DELETE",
+      })
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      setError(data?.error || "Failed to delete quote")
-      return
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error || "Failed to delete quote")
+        setIsConfirmingDelete(false)
+        return
+      }
+
+      router.push("/admin/quotes")
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to delete quote")
+      setIsConfirmingDelete(false)
+    } finally {
+      setIsDeleting(false)
     }
-
-    router.push("/admin/quotes")
   }
 
   return (
@@ -960,7 +971,7 @@ export default function QuoteEditorForm({
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleDelete()}
+                  onClick={() => setIsConfirmingDelete(true)}
                   className="w-full rounded bg-red-500 p-2 text-white"
                 >
                   Delete Quote
@@ -978,6 +989,16 @@ export default function QuoteEditorForm({
           </div>
         </aside>
       </div>
+      <ConfirmModal
+        isOpen={isConfirmingDelete}
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={executeDelete}
+        title="Delete Quote?"
+        message="Are you sure you want to delete this quote? You can restore it later from deleted quotes."
+        confirmLabel="Delete Quote"
+        isDestructive
+        isLoading={isDeleting}
+      />
     </>
   )
 }

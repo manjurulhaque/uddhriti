@@ -7,8 +7,12 @@ import  QuoteForm  from "./QuoteForm"
 export default async function NewQuotePage() {
   const admin = await getAdmin()
 
-  if (!admin || admin.role !== "SUPER_ADMIN") {
+  if (!admin) {
     redirect("/admin/login")
+  }
+
+  if (admin.role !== "SUPER_ADMIN") {
+    redirect("/")
   }
 
   const [authors, categories, sources, tags] = await Promise.all([

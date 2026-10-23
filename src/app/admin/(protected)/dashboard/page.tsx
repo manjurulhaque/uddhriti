@@ -6,8 +6,12 @@ import { formatDateInAppTimeZone, formatShortDateInAppTimeZone, subtractDays } f
 
 export default async function DashboardPage() {
   const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
+  if (!admin) {
     redirect("/admin/login")
+  }
+
+  if (admin.role !== "SUPER_ADMIN") {
+    redirect("/")
   }
 
   const now = new Date()

@@ -8,7 +8,7 @@ type AdminAuthResult =
 
 export async function requireAdmin(): Promise<AdminAuthResult> {
   const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
+  if (!admin) {
     return {
       admin: null,
       response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),

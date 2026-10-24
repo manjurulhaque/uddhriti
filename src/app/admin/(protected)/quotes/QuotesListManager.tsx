@@ -1,11 +1,10 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
-import { FilterToolbar } from "@/components/admin"
-import { Pagination, EmptyState, ConfirmModal } from "@/components/ui"
+import { FilterToolbar, AdminEntityCard } from "@/components/admin"
+import { Pagination, EmptyState, ConfirmModal, Button, Badge } from "@/components/ui"
 
 type QuoteItem = {
   id: string
@@ -398,56 +397,88 @@ export function QuotesListManager({
         ) : null}
 
         {visibleQuotes.map((quote) => (
-          <div key={quote.id} className="border rounded p-4 space-y-2">
-            <div className="flex items-start justify-between gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(quote.id)}
-                  onChange={() => onToggleSelect(quote.id)}
-                />
-                Select
-              </label>
-              <div className="flex items-center gap-3">
-                <button
+          <AdminEntityCard
+            key={quote.id}
+            href={`/admin/quotes/${quote.id}`}
+            selected={selectedIds.includes(quote.id)}
+            onSelect={() => onToggleSelect(quote.id)}
+            title={
+              <span className="font-serif italic font-normal text-stone-900 group-hover:text-black line-clamp-2 text-base leading-snug">
+                “{quote.content}”
+              </span>
+            }
+            subtitle={
+              <span className="flex items-center gap-1.5 text-xs text-stone-600 mt-1">
+                <span className="font-medium text-stone-800">{quote.authorName ?? "Unknown Author"}</span>
+                {quote.sourceTitle ? (
+                  <>
+                    <span className="text-stone-300">•</span>
+                    <span className="italic text-stone-500">{quote.sourceTitle}</span>
+                  </>
+                ) : null}
+              </span>
+            }
+            badge={
+              <Badge
+                variant={
+                  quote.status === "PUBLISHED"
+                    ? "success"
+                    : quote.status === "ARCHIVED"
+                    ? "dark"
+                    : "warm"
+                }
+                size="xs"
+                dot
+              >
+                {quote.status}
+              </Badge>
+            }
+            meta={
+              <>
+                {!quote.hasAuthor && (
+                  <Badge variant="danger" size="xs">
+                    Missing author
+                  </Badge>
+                )}
+                {!quote.hasSource && (
+                  <Badge variant="warning" size="xs">
+                    Missing source
+                  </Badge>
+                )}
+                {!quote.hasTags && (
+                  <Badge variant="neutral" size="xs">
+                    Missing tags
+                  </Badge>
+                )}
+                <span className="text-[11px] text-stone-400">
+                  {quote.publishedAt
+                    ? `Published ${formatDateTimeInAppTimeZone(quote.publishedAt)}`
+                    : `Created ${formatDateTimeInAppTimeZone(quote.createdAt)}`}
+                </span>
+              </>
+            }
+            actions={
+              <div className="flex items-center gap-1.5">
+                <Button
+                  href={`/admin/quotes/${quote.id}`}
+                  variant="ghost"
+                  size="xs"
+                >
+                  Edit
+                </Button>
+                <Button
                   type="button"
-                  className="text-sm text-red-700 underline disabled:opacity-50"
+                  variant="danger"
+                  size="xs"
                   disabled={deletingId === quote.id}
+                  isLoading={deletingId === quote.id}
                   onClick={() => setPendingDeleteId(quote.id)}
                 >
-                  {deletingId === quote.id ? "Deleting..." : "Delete"}
-                </button>
-                <Link href={`/admin/quotes/${quote.id}`} className="text-sm underline">
-                  Open
-                </Link>
+                  Delete
+                </Button>
               </div>
-            </div>
-
-            <Link href={`/admin/quotes/${quote.id}`} className="block hover:bg-gray-50 rounded">
-              <div className="font-medium line-clamp-2">{quote.content}</div>
-              <div className="text-sm text-gray-500">
-                {quote.authorName ?? "Unknown Author"} - {quote.sourceTitle ?? "No Source"}
-              </div>
-              <div className="text-xs text-gray-400">
-                Status: {quote.status} | Published:{" "}
-                {quote.publishedAt ? formatDateTimeInAppTimeZone(quote.publishedAt) : "Not published"}
-              </div>
-            </Link>
-
-            {!quote.hasAuthor || !quote.hasSource || !quote.hasTags ? (
-              <div className="flex flex-wrap gap-2">
-                {!quote.hasAuthor ? (
-                  <span className="text-xs border rounded-full px-2 py-0.5 bg-red-50 text-red-700 border-red-200">Missing author</span>
-                ) : null}
-                {!quote.hasSource ? (
-                  <span className="text-xs border rounded-full px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-200">Missing source</span>
-                ) : null}
-                {!quote.hasTags ? (
-                  <span className="text-xs border rounded-full px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200">Missing tags</span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+            }
+          />
         ))}
       </div>
 

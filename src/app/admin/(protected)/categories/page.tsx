@@ -1,9 +1,9 @@
-import Link from "next/link"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { PageHeader, SortTabs } from "@/components/admin"
+import { PageHeader, SortTabs, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
+import { EmptyState } from "@/components/ui"
 
 type CategorySort = "newest" | "oldest" | "name-asc" | "name-desc" | "quotes-desc" | "quotes-asc"
 
@@ -84,22 +84,28 @@ export default async function CategoriesPage({
         }))}
       />
 
-      <div className="space-y-2">
-        {categories.map((c) => (
-          <Link
-            key={c.id}
-            href={`/admin/categories/${c.id}`}
-            className="block rounded border p-4 hover:bg-gray-50"
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="font-medium">{c.name}</div>
-              <div className="text-sm text-gray-500">
-                Quotes: <span className="font-medium text-gray-900">{c.quoteCount}</span>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {categories.length === 0 ? (
+        <EmptyState
+          title="No categories found"
+          description="Create your first category to start organizing quotes into themes."
+          action={{
+            label: "+ New Category",
+            href: "/admin/categories/new",
+          }}
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {categories.map((c) => (
+            <AdminEntityCard
+              key={c.id}
+              href={`/admin/categories/${c.id}`}
+              title={c.name}
+              subtitle={c.slug ? `/${c.slug}` : undefined}
+              badge={<AdminEntityCountBadge count={c.quoteCount} />}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

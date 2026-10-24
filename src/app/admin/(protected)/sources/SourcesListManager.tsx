@@ -1,9 +1,8 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
-import { FilterToolbar } from "@/components/admin"
+import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
 import { Select, EmptyState } from "@/components/ui"
 
 type SourceItem = {
@@ -194,21 +193,11 @@ function SourceListRow({ source }: { source: SourceItem }) {
   const yearText = formatSourceYearLabel(source) ?? "-"
 
   return (
-    <Link
+    <AdminEntityCard
       href={`/admin/sources/${source.id}`}
-      className="group block rounded-xl border border-stone-200/90 bg-white p-4 transition-all duration-150 hover:border-stone-400 hover:shadow-xs"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="font-semibold text-stone-900 group-hover:text-black">{source.title}</div>
-          <div className="text-sm text-stone-500 mt-0.5">
-            {[source.type, yearText, source.authorName || "No Author"].join(" • ")}
-          </div>
-        </div>
-        <div className="shrink-0 text-xs font-medium text-stone-600 bg-stone-100 rounded-lg px-2.5 py-1">
-          Quotes: <span className="font-bold text-stone-900">{source.quoteCount}</span>
-        </div>
-      </div>
-    </Link>
+      title={source.title}
+      subtitle={[source.type, yearText, source.authorName || "No Author"].join(" • ")}
+      badge={<AdminEntityCountBadge count={source.quoteCount} />}
+    />
   )
 }

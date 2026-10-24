@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { PageHeader } from "@/components/admin"
+import { PageHeader, AdminEntityCard } from "@/components/admin"
+import { Badge, EmptyState } from "@/components/ui"
 
 export default async function FaqsPage() {
   const admin = await getAdmin()
@@ -27,21 +27,32 @@ export default async function FaqsPage() {
         }}
       />
 
-
-      <div className="space-y-2">
-        {faqs.map((faq) => (
-          <Link
-            key={faq.id}
-            href={`/admin/faqs/${faq.id}`}
-            className="block border p-4 rounded bg-white hover:bg-gray-50"
-          >
-            <div className="font-medium">{faq.question}</div>
-            <div className="text-sm text-gray-500">
-              {faq.pageType} - {faq.pageSlug} - Position {faq.position}
-            </div>
-          </Link>
-        ))}
-      </div>
+      {faqs.length === 0 ? (
+        <EmptyState
+          title="No FAQs found"
+          description="Create frequently asked questions to display on entity pages."
+          action={{
+            label: "+ New FAQ",
+            href: "/admin/faqs/new",
+          }}
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {faqs.map((faq) => (
+            <AdminEntityCard
+              key={faq.id}
+              href={`/admin/faqs/${faq.id}`}
+              title={faq.question}
+              subtitle={`Target: /${faq.pageSlug}`}
+              badge={
+                <Badge variant="neutral" size="sm">
+                  {faq.pageType} • Pos {faq.position}
+                </Badge>
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

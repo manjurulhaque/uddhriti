@@ -1,11 +1,10 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { tagTypeOptions, type TagTypeOption } from "@/lib/tags/catalog"
-import { FilterToolbar } from "@/components/admin"
-import { Select, EmptyState, ConfirmModal } from "@/components/ui"
+import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
+import { Select, EmptyState, ConfirmModal, Button } from "@/components/ui"
 
 type TagItem = {
   id: string
@@ -250,27 +249,17 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
                 const isUpdating = updatingSet.has(tag.id)
 
                 return (
-                  <div key={tag.id} className="border p-4 rounded bg-white">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(tag.id)}
-                          onChange={() => toggleSelect(tag.id)}
-                          disabled={isDeleting || isUpdating}
-                          className="mt-1"
-                        />
-
-                        <Link href={`/admin/tags/${tag.id}`} className="block min-w-0 hover:bg-gray-50 rounded">
-                          <div className="font-semibold">{tag.name}</div>
-                          <div className="text-sm text-gray-500 break-all">{tag.slug}</div>
-                          <div className="text-xs text-gray-400">
-                            Quotes: {tag.quoteCount}
-                          </div>
-                        </Link>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 shrink-0 items-center justify-end">
+                  <AdminEntityCard
+                    key={tag.id}
+                    href={`/admin/tags/${tag.id}`}
+                    title={tag.name}
+                    subtitle={`/${tag.slug}`}
+                    selected={selectedIds.includes(tag.id)}
+                    onSelect={() => toggleSelect(tag.id)}
+                    disabled={isDeleting || isUpdating}
+                    badge={<AdminEntityCountBadge count={tag.quoteCount} />}
+                    actions={
+                      <div className="flex flex-wrap gap-2 items-center justify-end">
                         <select
                           value={tagTypesById[tag.id] || tag.type}
                           onChange={(event) =>
@@ -280,7 +269,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
                             }))
                           }
                           disabled={isDeleting || isUpdating}
-                          className="border px-3 py-2 rounded text-sm"
+                          className="border border-stone-200/90 rounded-lg px-2.5 py-1 text-xs bg-white text-stone-800"
                         >
                           {tagTypeOptions.map((type) => (
                             <option key={type} value={type}>
@@ -288,35 +277,38 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
                             </option>
                           ))}
                         </select>
-                        <button
+                        <Button
                           type="button"
+                          variant="secondary"
+                          size="xs"
                           onClick={() => updateTagType([tag.id], tagTypesById[tag.id] || tag.type)}
                           disabled={
                             isDeleting ||
                             isUpdating ||
                             (tagTypesById[tag.id] || tag.type) === tag.type
                           }
-                          className="bg-black text-white px-3 py-2 rounded text-sm disabled:opacity-50"
                         >
                           {isUpdating ? "Saving..." : "Save Category"}
-                        </button>
-                        <Link
+                        </Button>
+                        <Button
                           href={`/admin/tags/${tag.id}`}
-                          className="border px-3 py-2 rounded text-sm"
+                          variant="outline"
+                          size="xs"
                         >
                           Edit
-                        </Link>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
+                          variant="danger"
+                          size="xs"
                           onClick={() => setPendingDeleteIds([tag.id])}
                           disabled={deletingIds.length > 0 || updatingIds.length > 0}
-                          className="bg-red-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
                         >
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </button>
+                          {isDeleting ? "..." : "Delete"}
+                        </Button>
                       </div>
-                    </div>
-                  </div>
+                    }
+                  />
                 )
               })}
             </section>

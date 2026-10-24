@@ -1,9 +1,8 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
-import { FilterToolbar } from "@/components/admin"
+import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
 import { Select, EmptyState } from "@/components/ui"
 
 type AuthorItem = {
@@ -222,35 +221,35 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
 
       {visibleAuthors.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visibleAuthors.map((author) => (
-            <Link
-              key={author.id}
-              href={`/admin/authors/${author.id}`}
-              className="space-y-2 rounded-lg border bg-white p-4 transition hover:shadow-md"
-            >
-              <div className="text-lg font-semibold">{author.name}</div>
+          {visibleAuthors.map((author) => {
+            const lifespan =
+              author.birthYear || author.deathYear
+                ? `${author.birthYear ?? "?"} - ${author.deathYear ?? "Present"}`
+                : undefined
+            const subtitle = [
+              author.profession,
+              author.nationality,
+              lifespan,
+            ]
+              .filter(Boolean)
+              .join(" • ")
 
-              {(author.birthYear || author.deathYear) && (
-                <div className="text-sm text-gray-500">
-                  {author.birthYear ?? "?"} - {author.deathYear ?? "Present"}
-                </div>
-              )}
-
-              {author.profession || author.nationality ? (
-                <div className="text-sm text-gray-500">
-                  {[author.profession, author.nationality].filter(Boolean).join(" . ")}
-                </div>
-              ) : null}
-
-              <div className="text-sm text-gray-600">
-                Quotes: <span className="font-medium">{author.quoteCount}</span>
-              </div>
-
-              <div className="text-xs text-gray-400">
-                Created {formatDateInAppTimeZone(author.createdAt)}
-              </div>
-            </Link>
-          ))}
+            return (
+              <AdminEntityCard
+                key={author.id}
+                href={`/admin/authors/${author.id}`}
+                variant="grid"
+                title={author.name}
+                subtitle={subtitle || undefined}
+                badge={<AdminEntityCountBadge count={author.quoteCount} />}
+                meta={
+                  <span className="text-[11px] text-stone-400">
+                    Added {formatDateInAppTimeZone(author.createdAt)}
+                  </span>
+                }
+              />
+            )
+          })}
         </div>
       ) : (
         <EmptyState

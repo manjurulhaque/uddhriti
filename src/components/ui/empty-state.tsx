@@ -4,6 +4,7 @@ import { Button } from "./button"
 export interface EmptyStateActionConfig {
   label: string
   onClick?: () => void
+  href?: string
 }
 
 export interface EmptyStateProps {
@@ -47,7 +48,12 @@ export function EmptyState({
     if (typeof action === "object" && "label" in action) {
       const config = action as EmptyStateActionConfig
       return (
-        <Button variant="secondary" size="xs" onClick={config.onClick}>
+        <Button
+          variant="secondary"
+          size="xs"
+          onClick={config.onClick}
+          href={config.href}
+        >
           {config.label}
         </Button>
       )

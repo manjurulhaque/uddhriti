@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { PageHeader } from "@/components/admin"
+import { PageHeader, AdminEntityCard } from "@/components/admin"
+import { Badge, EmptyState } from "@/components/ui"
 
 export default async function CollectionsPage() {
   const admin = await getAdmin()
@@ -23,21 +23,36 @@ export default async function CollectionsPage() {
         }}
       />
 
-
-      <div className="space-y-2">
-        {collections.map((collection) => (
-          <Link
-            key={collection.id}
-            href={`/admin/collections/${collection.id}`}
-            className="block border p-4 rounded bg-white hover:bg-gray-50"
-          >
-            <div className="font-semibold">{collection.title}</div>
-            <div className="text-sm text-gray-500">
-              {collection.visibility} - {collection.slug}
-            </div>
-          </Link>
-        ))}
-      </div>
+      {collections.length === 0 ? (
+        <EmptyState
+          title="No collections found"
+          description="Create your first curated collection or anthology of quotations."
+          action={{
+            label: "+ New Collection",
+            href: "/admin/collections/new",
+          }}
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {collections.map((collection) => (
+            <AdminEntityCard
+              key={collection.id}
+              href={`/admin/collections/${collection.id}`}
+              title={collection.title}
+              subtitle={collection.slug ? `/${collection.slug}` : undefined}
+              badge={
+                <Badge
+                  variant={collection.visibility === "PUBLIC" ? "success" : "neutral"}
+                  size="sm"
+                  dot
+                >
+                  {collection.visibility}
+                </Badge>
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

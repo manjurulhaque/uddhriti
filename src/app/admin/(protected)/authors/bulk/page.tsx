@@ -2,13 +2,20 @@
 
 import { useState } from "react"
 import { getRowValue, readItemsFromJsonOrCsv } from "@/lib/import/clientFile"
-
-type Result = {
-  received: number
-  created: number
-  failed: number
-  errors: string[]
-}
+import {
+  PageHeader,
+  BulkImportResultCard,
+  BulkImportFormatGuide,
+  BulkFileUploadInput,
+  type BulkImportResultData,
+} from "@/components/admin"
+import {
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  Input,
+  Textarea,
+} from "@/components/ui"
 
 function toWikiquoteUrl(input: string) {
   const value = input.trim()
@@ -91,7 +98,7 @@ export default function BulkImportAuthorsPage() {
   const [categoryLimit, setCategoryLimit] = useState("100")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
-  const [result, setResult] = useState<Result | null>(null)
+  const [result, setResult] = useState<BulkImportResultData | null>(null)
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -184,136 +191,112 @@ export default function BulkImportAuthorsPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Bulk Import Authors</h1>
+    <div className="p-8 max-w-4xl space-y-6">
+      <PageHeader
+        title="Bulk Import Authors"
+        description="Populate thinker, author, and historical figure profiles directly from Wikipedia, Wikidata, or Wikiquote categories."
+      />
 
-      <p className="text-sm text-gray-600">
-        One author per line. Format:
-        <br />
-        <code>wikipediaUrl|wikidataId|wikipediaCategoryUrl|wikidataCategoryId|wikiquoteUrl|wikiquoteCategoryUrl</code>
-        <br />
-        Provide author identifiers, or category identifiers. You can also use the category
-        fields below to import members directly. Uploaded JSON/CSV files can also use author
-        schema fields such as <code>name</code>, <code>slug</code>, <code>bio</code>,
-        <code>birthYear</code>, <code>deathYear</code>, <code>dateOfBirth</code>,
-        <code>dateOfDeath</code>, <code>profession</code>, <code>nationality</code>,
-        <code>imageUrl</code>, <code>wikipediaUrl</code>, <code>wikidataId</code>,
-        <code>wikiquoteUrl</code>, <code>wikipediaCategoryUrl</code>, and <code>wikiquoteCategoryUrl</code>.
-      </p>
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Wikipedia Category URL</label>
-            <input
-              className="border w-full p-2 rounded"
+      <BulkImportResultCard result={result} onDismiss={() => setResult(null)} />
+
+      <BulkImportFormatGuide
+        format="wikipediaUrl|wikidataId|wikipediaCategoryUrl|wikidataCategoryId|wikiquoteUrl|wikiquoteCategoryUrl"
+        notes={
+          <p>
+            Provide author URLs, entity IDs, or Wikipedia/Wikiquote category feeds. Uploaded JSON/CSV can also use full author schema properties.
+          </p>
+        }
+      />
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection
+          title="Category Discovery Feed"
+          description="Fetch authors belonging to a curated Wikipedia, Wikiquote, or Wikidata category"
+        >
+          <div className="grid gap-4 md:grid-cols-3">
+            <Input
+              label="Wikipedia Category URL"
               value={wikipediaCategoryUrl}
               onChange={(e) => setWikipediaCategoryUrl(e.target.value)}
               placeholder="https://en.wikipedia.org/wiki/Category:..."
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Wikiquote Category URL</label>
-            <input
-              className="border w-full p-2 rounded"
+
+            <Input
+              label="Wikiquote Category URL"
               value={wikiquoteCategoryUrl}
               onChange={(e) => setWikiquoteCategoryUrl(e.target.value)}
               placeholder="https://en.wikiquote.org/wiki/Category:People"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Wikidata Category ID</label>
-            <input
-              className="border w-full p-2 rounded"
+
+            <Input
+              label="Wikidata Category ID"
               value={wikidataCategoryId}
               onChange={(e) => setWikidataCategoryId(e.target.value)}
-              placeholder="Q..."
+              placeholder="e.g. Q5"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Category import limit</label>
-          <input
+          <Input
             type="number"
             min={1}
             max={500}
-            className="border w-full p-2 rounded max-w-xs"
+            label="Category Import Limit"
             value={categoryLimit}
             onChange={(e) => setCategoryLimit(e.target.value)}
+            className="max-w-xs"
+            hint="Maximum number of author pages to crawl and create"
           />
-        </div>
+        </FormSection>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Wikiquote People List</label>
-          <textarea
+        <FormSection
+          title="Wikiquote People List"
+          description="Batch import from author name lists or Wikiquote index pages"
+        >
+          <Textarea
             value={wikiquotePeopleInput}
             onChange={(e) => setWikiquotePeopleInput(e.target.value)}
-            rows={6}
-            className="border w-full p-3 rounded text-sm"
+            rows={5}
             placeholder={"Albert Einstein\nRabindranath Tagore\nhttps://en.wikiquote.org/wiki/Rumi\nhttps://en.wikiquote.org/wiki/List_of_people"}
+            hint="One person per line. Plain names or full Wikiquote URLs accepted."
           />
-          <p className="mt-1 text-xs text-gray-500">
-            One person per line. You can paste plain names, full Wikiquote author URLs, or
-            the Wikiquote <code>List_of_people</code> URL to expand it automatically.
-          </p>
-        </div>
+        </FormSection>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Upload JSON/CSV (optional)</label>
-          <input type="file" accept=".json,.csv,application/json,text/csv" onChange={onFileChange} />
-          {uploadedItems && (
-            <p className="text-xs text-gray-500 mt-1">
-              Loaded {uploadedItems.length} row(s) from file.
-            </p>
-          )}
-        </div>
-
-        <textarea
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            setUploadedItems(null)
-          }}
-          rows={14}
-          className="border w-full p-3 rounded font-mono text-sm"
-          placeholder={`https://en.wikipedia.org/wiki/Albert_Einstein|Q937||||\n|||Q634|||\n||||https://en.wikiquote.org/wiki/Rumi|\n|||||https://en.wikiquote.org/wiki/Category:People\n||https://en.wikipedia.org/wiki/Category:20th-century_Indian_philosophers|||`}
-        />
-        <p className="text-xs text-gray-500">
-          Use the structured textarea only when you need mixed sources or per-row category fields.
-        </p>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
+        <FormSection
+          title="File Upload or Custom Rows"
+          description="Direct JSON/CSV upload or pipe-delimited records"
         >
-          {submitting ? "Importing..." : "Import Authors"}
-        </button>
+          <BulkFileUploadInput
+            onFileChange={onFileChange}
+            loadedCount={uploadedItems?.length}
+          />
+
+          <Textarea
+            label="Structured Rows"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value)
+              setUploadedItems(null)
+            }}
+            rows={10}
+            className="font-mono text-xs leading-relaxed"
+            placeholder={`https://en.wikipedia.org/wiki/Albert_Einstein|Q937||||\n|||Q634|||\n||||https://en.wikiquote.org/wiki/Rumi|\n|||||https://en.wikiquote.org/wiki/Category:People`}
+            hint={
+              uploadedItems
+                ? "File upload loaded. Editing text overrides uploaded file."
+                : "Type or paste multiple lines above."
+            }
+          />
+        </FormSection>
+
+        <FormActions
+          submitLabel="Import Authors"
+          submittingLabel="Importing Authors..."
+          isSubmitting={submitting}
+          cancelHref="/admin/authors"
+        />
       </form>
-
-      {result && (
-        <div className="border rounded p-4 bg-white space-y-2">
-          <div className="text-sm">
-            Received: <b>{result.received}</b>
-          </div>
-          <div className="text-sm">
-            Created: <b>{result.created}</b>
-          </div>
-          <div className="text-sm">
-            Failed: <b>{result.failed}</b>
-          </div>
-
-          {result.errors.length > 0 && (
-            <ul className="text-sm text-red-700 list-disc pl-5">
-              {result.errors.map((msg, index) => (
-                <li key={`${index}-${msg}`}>{msg}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   )
 }

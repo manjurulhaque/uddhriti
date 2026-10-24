@@ -2,16 +2,23 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Select,
+  Textarea,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  ConfirmModal,
+} from "@/components/ui"
+import { slugify } from "@/lib/slug"
 
-const visibilityOptions = ["PUBLIC", "PRIVATE", "EDITORIAL"] as const
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-}
+const visibilityOptions = [
+  { value: "PUBLIC", label: "PUBLIC — Visible to everyone" },
+  { value: "PRIVATE", label: "PRIVATE — Only visible to administrators" },
+  { value: "EDITORIAL", label: "EDITORIAL — Editorial and staff selection" },
+]
 
 export default function EditCollectionPage() {
   const { id } = useParams<{ id: string }>()
@@ -25,29 +32,36 @@ export default function EditCollectionPage() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [error, setError] = useState("")
 
   useEffect(() => {
     async function loadCollection() {
-      const res = await fetch(`/api/admin/collections/${id}`)
-      if (!res.ok) {
-        setError("Failed to load collection")
-        setLoading(false)
-        return
-      }
+      try {
+        const res = await fetch(`/api/admin/collections/${id}`)
+        if (!res.ok) {
+          throw new Error("Failed to load collection")
+        }
 
-      const data = await res.json()
-      setForm({
-        title: data.title || "",
-        slug: data.slug || "",
-        description: data.description || "",
-        visibility: data.visibility || "PUBLIC",
-      })
-      setLoading(false)
+        const data = await res.json()
+        setForm({
+          title: data.title || "",
+          slug: data.slug || "",
+          description: data.description || "",
+          visibility: data.visibility || "PUBLIC",
+        })
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load collection")
+      } finally {
+        setLoading(false)
+      }
     }
 
-    loadCollection()
+    if (id) {
+      loadCollection()
+    }
   }, [id])
 
   function handleChange(
@@ -57,7 +71,8 @@ export default function EditCollectionPage() {
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
     setSaving(true)
     setErrors({})
     setError("")
@@ -68,112 +83,135 @@ export default function EditCollectionPage() {
       description: form.description || null,
     }
 
-    const res = await fetch(`/api/admin/collections/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    try {
+      const res = await fetch(`/api/admin/collections/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      setErrors(data?.errors?.fieldErrors || {})
-      setError(data?.error || "Failed to update collection")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setErrors(data?.errors?.fieldErrors || {})
+        throw new Error(data?.error || "Failed to update collection")
+      }
+
+      router.push("/admin/collections")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update collection")
       setSaving(false)
-      return
     }
-
-    router.push("/admin/collections")
   }
 
-  async function handleDelete() {
-    const res = await fetch(`/api/admin/collections/${id}`, {
-      method: "DELETE",
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      setError(data?.error || "Failed to delete collection")
-      return
-    }
+  async function executeDelete() {
+    setDeleting(true)
+    setError("")
 
-    router.push("/admin/collections")
+    try {
+      const res = await fetch(`/api/admin/collections/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to delete collection")
+      }
+
+      router.push("/admin/collections")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete collection")
+      setIsConfirmingDelete(false)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="p-8 max-w-3xl space-y-4">
+        <div className="h-8 w-48 bg-stone-200 animate-pulse rounded-lg" />
+        <div className="h-4 w-72 bg-stone-100 animate-pulse rounded-md" />
+        <div className="h-64 w-full bg-stone-50 animate-pulse rounded-2xl border border-stone-200/60" />
+      </div>
+    )
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Edit Collection</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title={`Edit Collection: ${form.title || "..."}`}
+        description="Update collection details, public URL slug, description, or visibility."
+        backHref="/admin/collections"
+        backLabel="Back to Collections"
+      />
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Title *</label>
-          <input
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <FormSection
+          title="Collection Details"
+          description="Basic information, taxonomy slug, and visibility settings."
+        >
+          <Input
             name="title"
+            label="Title"
             value={form.title}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            required
+            placeholder="e.g. Meditations on Courage & Duty"
+            error={errors.title?.[0]}
           />
-          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title[0]}</p>}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Slug</label>
-          <input
+          <Input
             name="slug"
+            label="Slug"
             value={form.slug}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            placeholder="e.g. meditations-on-courage-and-duty"
+            hint="Unique URL path identifier"
+            error={errors.slug?.[0]}
           />
-          {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug[0]}</p>}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Visibility *</label>
-          <select
+          <Select
             name="visibility"
+            label="Visibility"
             value={form.visibility}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
-          >
-            {visibilityOptions.map((visibility) => (
-              <option key={visibility} value={visibility}>
-                {visibility}
-              </option>
-            ))}
-          </select>
-          {errors.visibility && (
-            <p className="text-red-500 text-sm mt-1">{errors.visibility[0]}</p>
-          )}
-        </div>
+            options={visibilityOptions}
+            error={errors.visibility?.[0]}
+          />
 
-        <div>
-          <label className="block text-sm font-medium">Description</label>
-          <textarea
+          <Textarea
             name="description"
+            label="Description"
             value={form.description}
             onChange={handleChange}
             rows={4}
-            className="border w-full p-2 rounded"
+            placeholder="Describe the anthology theme, historical context, or editorial intent..."
           />
-        </div>
+        </FormSection>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <FormActions
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={saving}
+          cancelHref="/admin/collections"
+          onDelete={() => setIsConfirmingDelete(true)}
+          deleteLabel="Delete Collection"
+          isDeleting={deleting}
+        />
+      </form>
 
-        <div className="flex gap-4">
-          <button
-            disabled={saving}
-            onClick={handleSave}
-            className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-          <button onClick={handleDelete} className="bg-red-500 text-white px-6 py-2 rounded">
-            Delete
-          </button>
-        </div>
-      </div>
+      <ConfirmModal
+        isOpen={isConfirmingDelete}
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={executeDelete}
+        title="Delete Collection?"
+        message={`Are you sure you want to delete collection "${form.title}"? Quotes belonging to this collection will not be deleted, but will be removed from this collection.`}
+        confirmLabel="Delete Collection"
+        isDestructive
+        isLoading={deleting}
+      />
     </div>
   )
 }

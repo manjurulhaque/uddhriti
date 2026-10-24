@@ -399,6 +399,7 @@ export default function EditAuthorPage() {
                   src={form.imageUrl}
                   alt={`${form.name || "Author"} portrait`}
                   fill
+                  sizes="64px"
                   className="object-cover"
                 />
               </div>

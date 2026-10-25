@@ -292,6 +292,7 @@ export default function NewAuthorPage() {
                   alt={`${form.name || "Author"} portrait`}
                   fill
                   sizes="64px"
+                  unoptimized
                   className="object-cover"
                 />
               </div>

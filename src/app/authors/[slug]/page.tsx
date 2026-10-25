@@ -147,6 +147,7 @@ export default async function AuthorDetailPage({
                   alt={author.name}
                   fill
                   sizes="(max-width: 640px) 112px, 144px"
+                  unoptimized
                   className="object-cover"
                   priority
                 />

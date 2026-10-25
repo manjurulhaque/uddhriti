@@ -189,6 +189,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                           alt={author.name}
                           fill
                           sizes="56px"
+                          unoptimized
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (

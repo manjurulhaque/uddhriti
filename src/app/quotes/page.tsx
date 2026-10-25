@@ -238,9 +238,12 @@ export default async function QuotesBrowsePage({
               <QuoteCard
                 key={quote.id}
                 id={quote.id}
+                slug={quote.slug}
                 content={quote.content}
                 authorName={quote.author?.name || quote.authorName}
+                authorSlug={quote.author?.slug}
                 category={quote.category.name}
+                categorySlug={quote.category.slug}
                 sourceTitle={quote.source?.title}
                 year={quote.source?.year ? String(quote.source.year) : undefined}
                 tags={quote.tags.map((t) => t.tag.name)}

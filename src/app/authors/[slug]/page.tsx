@@ -227,9 +227,12 @@ export default async function AuthorDetailPage({
                 <QuoteCard
                   key={quote.id}
                   id={quote.id}
+                  slug={quote.slug}
                   content={quote.content}
                   authorName={author.name}
+                  authorSlug={author.slug}
                   category={quote.category.name}
+                  categorySlug={quote.category.slug}
                   sourceTitle={quote.source?.title}
                   year={quote.source?.year ? String(quote.source.year) : undefined}
                   tags={quote.tags.map((t) => t.tag.name)}

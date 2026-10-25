@@ -12,12 +12,20 @@ export const revalidate = 60
 
 const quoteCardSelect = {
   id: true,
+  slug: true,
   content: true,
   authorName: true,
+  author: {
+    select: {
+      name: true,
+      slug: true,
+    },
+  },
   views: true,
   category: {
     select: {
       name: true,
+      slug: true,
     },
   },
   source: {

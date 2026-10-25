@@ -6,9 +6,14 @@ import { formatSourceYearLabel } from "@/lib/sourceYear"
 
 export interface HomeHeroQuote {
   id?: string
+  slug?: string
   content: string
   authorName?: string | null
-  category?: { name: string } | null
+  author?: {
+    name?: string | null
+    slug?: string | null
+  } | null
+  category?: { name: string; slug?: string } | null
   source?: {
     title: string
     year: number | null
@@ -79,9 +84,13 @@ export function HomeHero({
           <div className="animate-rise-delayed flex items-stretch">
             {heroQuote ? (
               <QuoteCard
+                id={heroQuote.id}
+                slug={heroQuote.slug}
                 content={heroQuote.content}
-                authorName={heroQuote.authorName}
+                authorName={heroQuote.author?.name || heroQuote.authorName}
+                authorSlug={heroQuote.author?.slug}
                 category={heroQuote.category?.name}
+                categorySlug={heroQuote.category?.slug}
                 sourceTitle={heroQuote.source?.title}
                 year={formatSourceYearLabel(heroQuote.source)}
                 tags={heroQuote.tags.map((entry) => entry.tag.name)}

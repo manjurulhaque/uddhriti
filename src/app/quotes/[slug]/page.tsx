@@ -2,7 +2,7 @@ import * as React from "react"
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout, QuoteCard, QuoteActions } from "@/components/public"
 import { Badge } from "@/components/ui/badge"
@@ -121,6 +121,11 @@ export default async function IndividualQuotePage({
 
   if (!quote) {
     notFound()
+  }
+
+  // Canonical redirect: If accessed via raw UUID, redirect to human-readable slug URL
+  if (isUuid && quote.slug && quote.slug !== slug) {
+    redirect(`/quotes/${quote.slug}`)
   }
 
   const [moreAuthorQuotes, relatedCategoryQuotes] = await Promise.all([

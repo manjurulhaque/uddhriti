@@ -39,5 +39,28 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
       },
     ],
+    shortcuts: [
+      {
+        name: "Explore Quotes",
+        short_name: "Quotes",
+        description: "Browse curated quotes and reflections",
+        url: "/quotes",
+        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Discover Authors",
+        short_name: "Authors",
+        description: "Find thinkers, philosophers, and writers",
+        url: "/authors",
+        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Browse Categories",
+        short_name: "Categories",
+        description: "Explore quotes by theme and category",
+        url: "/categories",
+        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
+      },
+    ],
   };
 }

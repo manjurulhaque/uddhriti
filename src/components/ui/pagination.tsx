@@ -71,7 +71,7 @@ export function Pagination({
       <button
         key={pageNum}
         type="button"
-        onClick={() => onPageChange?.(pageNum)}
+        onClick={onPageChange ? () => onPageChange(pageNum) : undefined}
         className={`${baseClass} ${activeClasses}`}
         aria-current={isActive ? "page" : undefined}
       >
@@ -89,7 +89,7 @@ export function Pagination({
     const classes = `inline-flex items-center gap-1.5 rounded-xl border border-[var(--ink-900)]/12 px-3.5 py-2 text-xs font-medium transition duration-150 ease-out ${
       enabled
         ? "bg-white text-[var(--ink-900)] hover:bg-[var(--page-cream)] cursor-pointer"
-        : "opacity-40 cursor-not-allowed bg-stone-50 text-[var(--ink-700)]"
+        : "opacity-40 cursor-not-allowed bg-stone-50 text-[var(--ink-700)] select-none"
     }`
 
     const content = (
@@ -116,11 +116,18 @@ export function Pagination({
       )
     }
 
+    if (!enabled) {
+      return (
+        <span aria-disabled="true" className={classes}>
+          {content}
+        </span>
+      )
+    }
+
     return (
       <button
         type="button"
-        disabled={!enabled}
-        onClick={() => enabled && onPageChange?.(targetPage)}
+        onClick={onPageChange ? () => onPageChange(targetPage) : undefined}
         className={classes}
       >
         {content}

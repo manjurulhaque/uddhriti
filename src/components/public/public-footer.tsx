@@ -48,9 +48,9 @@ export function PublicFooter() {
 
       {/* Main Footer Links */}
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand Column */}
-          <div className="space-y-4 lg:col-span-2">
+          <div className="space-y-4 sm:col-span-2 lg:col-span-2">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[var(--ink-900)] font-serif font-bold italic shadow-xs">
                 U
@@ -130,7 +130,36 @@ export function PublicFooter() {
             </ul>
           </div>
 
-          {/* Navigation Column 3: Administration */}
+          {/* Navigation Column 3: Legal & Policy */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-sand)]">
+              Legal &amp; Policy
+            </p>
+            <ul className="space-y-2 text-xs text-white/75">
+              <li>
+                <Link href="/privacy" className="hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-white transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link href="/copyright" className="hover:text-white transition-colors">
+                  Copyright &amp; DMCA
+                </Link>
+              </li>
+              <li>
+                <Link href="/cookies" className="hover:text-white transition-colors">
+                  Cookie Policy
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Navigation Column 4: Administration */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-sand)]">
               Editorial
@@ -161,14 +190,28 @@ export function PublicFooter() {
         </div>
 
         {/* Bottom Bar: Copyright & Attribution */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-xs text-white/50 sm:flex-row">
-          <p>
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-xs text-white/50 md:flex-row">
+          <p className="text-center md:text-left">
             &copy; {currentYear} Uddhriti Archive. All citations and excerpts belong to their
             respective authors and public domain archives.
           </p>
-          <p className="text-[11px] text-white/40">
-            Timeless ideas, thoughtful curation.
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-white/60">
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Privacy
+            </Link>
+            <span className="text-white/30">•</span>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms
+            </Link>
+            <span className="text-white/30">•</span>
+            <Link href="/copyright" className="hover:text-white transition-colors">
+              Copyright &amp; DMCA
+            </Link>
+            <span className="text-white/30">•</span>
+            <Link href="/cookies" className="hover:text-white transition-colors">
+              Cookies
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

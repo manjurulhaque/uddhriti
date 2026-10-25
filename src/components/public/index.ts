@@ -11,6 +11,7 @@ export * from "./home-latest"
 export * from "./public-header"
 export * from "./public-footer"
 export * from "./public-layout"
+export * from "./legal-nav"
 export * from "./quote-actions"
 
 // Re-export UI primitives commonly used on public pages

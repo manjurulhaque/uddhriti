@@ -8,6 +8,9 @@ export * from "./home-hero"
 export * from "./home-highlights"
 export * from "./home-trending"
 export * from "./home-latest"
+export * from "./public-header"
+export * from "./public-footer"
+export * from "./public-layout"
 
 // Re-export UI primitives commonly used on public pages
 export { Panel, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../ui/card"

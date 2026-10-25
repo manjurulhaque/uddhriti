@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { subtractDays } from "@/lib/datetime"
 import {
+  PublicLayout,
   HomeHero,
   HomeHighlights,
   HomeTrendingSection,
@@ -59,7 +60,7 @@ export default async function HomePage() {
   const heroQuote = featuredQuote ?? latestQuotes[0] ?? null
 
   return (
-    <div className="min-h-screen bg-[var(--page-cream)] text-[var(--ink-900)]">
+    <PublicLayout>
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
         <HomeHero
           totalPublishedQuotes={totalPublishedQuotes}
@@ -68,24 +69,30 @@ export default async function HomePage() {
           heroQuote={heroQuote}
         />
 
-        <HomeHighlights
-          topCategories={topCategories}
-          recentAuthors={recentAuthors}
-          quotesLast7Days={quotesLast7Days}
-          errorMessage={errorMessage}
-        />
+        <div id="highlights" className="scroll-mt-20">
+          <HomeHighlights
+            topCategories={topCategories}
+            recentAuthors={recentAuthors}
+            quotesLast7Days={quotesLast7Days}
+            errorMessage={errorMessage}
+          />
+        </div>
 
-        <HomeTrendingSection
-          trendingQuotes={trendingQuotes}
-          topTags={topTags}
-          latestCount={latestQuotes.length}
-          tagCount={topTags.length}
-          categoryCount={topCategories.length}
-        />
+        <div id="trending" className="scroll-mt-20">
+          <HomeTrendingSection
+            trendingQuotes={trendingQuotes}
+            topTags={topTags}
+            latestCount={latestQuotes.length}
+            tagCount={topTags.length}
+            categoryCount={topCategories.length}
+          />
+        </div>
 
-        <HomeLatestQuotes quotes={latestQuotes} />
+        <div id="latest" className="scroll-mt-20">
+          <HomeLatestQuotes quotes={latestQuotes} />
+        </div>
       </main>
-    </div>
+    </PublicLayout>
   )
 }
 

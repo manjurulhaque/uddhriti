@@ -108,20 +108,24 @@ export function PublicFooter() {
             </p>
             <ul className="space-y-2 text-xs text-white/75">
               <li>
-                <Link href="#categories" className="hover:text-white transition-colors">
+                <Link href="/categories" className="hover:text-white transition-colors">
                   Thematic Topics
                 </Link>
               </li>
               <li>
-                <Link href="#authors" className="hover:text-white transition-colors">
+                <Link href="/authors" className="hover:text-white transition-colors">
                   Authors &amp; Thinkers
                 </Link>
               </li>
               <li>
-                <span className="text-white/40">Wikiquote &amp; Gutenberg</span>
+                <Link href="/tags" className="hover:text-white transition-colors">
+                  Thematic Tags
+                </Link>
               </li>
               <li>
-                <span className="text-white/40">Library of Congress</span>
+                <Link href="/quotes" className="hover:text-white transition-colors">
+                  Browse All Quotes
+                </Link>
               </li>
             </ul>
           </div>

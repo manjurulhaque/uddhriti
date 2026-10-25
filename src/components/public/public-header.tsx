@@ -2,10 +2,11 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Modal } from "../ui/modal"
 
 export function PublicHeader() {
+  const router = useRouter()
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [searchModalOpen, setSearchModalOpen] = React.useState(false)
@@ -24,9 +25,10 @@ export function PublicHeader() {
 
   const navLinks = [
     { href: "/", label: "Home" },
-    { href: "#highlights", label: "Highlights" },
-    { href: "#trending", label: "Trending" },
-    { href: "#latest", label: "Latest" },
+    { href: "/quotes", label: "Quotes" },
+    { href: "/authors", label: "Authors" },
+    { href: "/categories", label: "Categories" },
+    { href: "/tags", label: "Tags" },
   ]
 
   return (
@@ -58,7 +60,7 @@ export function PublicHeader() {
             {/* Desktop Navigation Links */}
             <nav className="hidden md:flex items-center gap-1" aria-label="Main Navigation">
               {navLinks.map((item) => {
-                const isActive = item.href === "/" ? pathname === "/" : false
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
                 return (
                   <Link
                     key={item.label}
@@ -187,7 +189,7 @@ export function PublicHeader() {
           <div className="md:hidden border-t border-stone-200/90 bg-[var(--page-cream)] px-5 py-4 shadow-lg animate-rise">
             <nav className="flex flex-col gap-2">
               {navLinks.map((item) => {
-                const isActive = item.href === "/" ? pathname === "/" : false
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
                 return (
                   <Link
                     key={item.label}
@@ -225,7 +227,16 @@ export function PublicHeader() {
         description="Search quotations, authors, or literary topics"
       >
         <div className="space-y-4">
-          <div className="relative">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (searchQuery.trim()) {
+                setSearchModalOpen(false)
+                router.push(`/quotes?q=${encodeURIComponent(searchQuery.trim())}`)
+              }
+            }}
+            className="relative"
+          >
             <input
               type="text"
               value={searchQuery}
@@ -247,7 +258,7 @@ export function PublicHeader() {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-          </div>
+          </form>
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
@@ -260,7 +271,8 @@ export function PublicHeader() {
                     key={term}
                     type="button"
                     onClick={() => {
-                      setSearchQuery(term)
+                      setSearchModalOpen(false)
+                      router.push(`/quotes?q=${encodeURIComponent(term)}`)
                     }}
                     className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-700 hover:border-stone-400 hover:bg-stone-50 transition-colors"
                   >
@@ -272,7 +284,7 @@ export function PublicHeader() {
           </div>
 
           <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
-            <span>Press ESC or click outside to dismiss</span>
+            <span>Press Enter to search, ESC to dismiss</span>
             <span className="font-mono text-[11px]">Uddhriti Archive</span>
           </div>
         </div>

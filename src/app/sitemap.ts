@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl()
 
-  const [authors, categories, tags] = await Promise.all([
+  const [authors, categories, tags, quotes] = await Promise.all([
     prisma.author.findMany({
       where: { quoteCount: { gt: 0 } },
       select: { slug: true, updatedAt: true },
@@ -21,6 +21,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { slug: true },
       orderBy: { quoteCount: "desc" },
     }),
+    prisma.quote.findMany({
+      where: { status: "PUBLISHED", deletedAt: null },
+      select: { slug: true, updatedAt: true },
+      take: 500,
+      orderBy: { popularityScore: "desc" },
+    }),
   ])
 
   const entries: MetadataRoute.Sitemap = [
@@ -29,6 +35,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
+    },
+    {
+      url: `${base}/quotes`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${base}/authors`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${base}/categories`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${base}/tags`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
     },
   ]
 
@@ -58,6 +88,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   }
 
+  for (const quote of quotes) {
+    if (quote.slug) {
+      entries.push({
+        url: `${base}/quotes/${quote.slug}`,
+        lastModified: quote.updatedAt,
+        changeFrequency: "monthly",
+        priority: 0.7,
+      })
+    }
+  }
+
   return entries
 }
-

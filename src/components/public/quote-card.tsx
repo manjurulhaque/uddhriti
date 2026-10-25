@@ -1,12 +1,16 @@
 import * as React from "react"
+import Link from "next/link"
 import { QuoteMeta } from "./quote-meta"
 import { formatScore, formatCountWithNoun } from "@/lib/formatters"
 
 export interface QuoteCardProps {
   id?: string
+  slug?: string
   content: string
   authorName?: string | null
+  authorSlug?: string | null
   category?: string | null
+  categorySlug?: string | null
   sourceTitle?: string | null
   year?: string | null
   tags?: string[]
@@ -19,9 +23,13 @@ export interface QuoteCardProps {
 }
 
 export function QuoteCard({
+  id,
+  slug,
   content,
   authorName,
+  authorSlug,
   category,
+  categorySlug,
   sourceTitle,
   year,
   tags = [],
@@ -34,6 +42,7 @@ export function QuoteCard({
 }: QuoteCardProps) {
   const isDark = variant === "dark"
   const isFeatured = variant === "featured"
+  const quoteHref = slug ? `/quotes/${slug}` : id ? `/quotes/${id}` : undefined
 
   if (isFeatured) {
     return (
@@ -46,13 +55,23 @@ export function QuoteCard({
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)]" />
         </div>
 
-        <blockquote className="mt-4 text-xl sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white">
-          &ldquo;{content}&rdquo;
-        </blockquote>
+        {quoteHref ? (
+          <Link href={quoteHref} className="block group/link">
+            <blockquote className="mt-4 text-xl sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white group-hover/link:text-[var(--accent-sand)] transition-colors">
+              &ldquo;{content}&rdquo;
+            </blockquote>
+          </Link>
+        ) : (
+          <blockquote className="mt-4 text-xl sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white">
+            &ldquo;{content}&rdquo;
+          </blockquote>
+        )}
 
         <QuoteMeta
           authorName={authorName}
+          authorSlug={authorSlug}
           category={category}
+          categorySlug={categorySlug}
           sourceTitle={sourceTitle}
           year={year}
           tags={tags}
@@ -89,13 +108,23 @@ export function QuoteCard({
           </div>
         )}
 
-        <blockquote className="mt-4 line-clamp-4 text-base leading-7 font-serif text-white/90">
-          &ldquo;{content}&rdquo;
-        </blockquote>
+        {quoteHref ? (
+          <Link href={quoteHref} className="block group/link">
+            <blockquote className="mt-4 line-clamp-4 text-base leading-7 font-serif text-white/90 group-hover/link:text-white transition-colors">
+              &ldquo;{content}&rdquo;
+            </blockquote>
+          </Link>
+        ) : (
+          <blockquote className="mt-4 line-clamp-4 text-base leading-7 font-serif text-white/90">
+            &ldquo;{content}&rdquo;
+          </blockquote>
+        )}
 
         <QuoteMeta
           authorName={authorName}
+          authorSlug={authorSlug}
           category={category}
+          categorySlug={categorySlug}
           sourceTitle={sourceTitle}
           year={year}
           tags={tags}
@@ -112,13 +141,23 @@ export function QuoteCard({
       style={style}
     >
       <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(244,162,97,0.08),rgba(255,255,255,0))] p-1">
-        <blockquote className="line-clamp-5 text-sm leading-7 font-serif text-[var(--ink-800)]">
-          &ldquo;{content}&rdquo;
-        </blockquote>
+        {quoteHref ? (
+          <Link href={quoteHref} className="block group/link">
+            <blockquote className="line-clamp-5 text-sm leading-7 font-serif text-[var(--ink-800)] group-hover/link:text-[var(--accent-rust)] transition-colors">
+              &ldquo;{content}&rdquo;
+            </blockquote>
+          </Link>
+        ) : (
+          <blockquote className="line-clamp-5 text-sm leading-7 font-serif text-[var(--ink-800)]">
+            &ldquo;{content}&rdquo;
+          </blockquote>
+        )}
 
         <QuoteMeta
           authorName={authorName}
+          authorSlug={authorSlug}
           category={category}
+          categorySlug={categorySlug}
           sourceTitle={sourceTitle}
           year={year}
           tags={tags}

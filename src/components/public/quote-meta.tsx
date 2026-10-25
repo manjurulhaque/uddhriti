@@ -1,8 +1,11 @@
 import * as React from "react"
+import Link from "next/link"
 
 export interface QuoteMetaProps {
   authorName?: string | null
+  authorSlug?: string | null
   category?: string | null
+  categorySlug?: string | null
   sourceTitle?: string | null
   year?: string | null
   tags?: string[]
@@ -12,30 +15,53 @@ export interface QuoteMetaProps {
 
 export function QuoteMeta({
   authorName,
+  authorSlug,
   category,
+  categorySlug,
   sourceTitle,
   year,
   tags = [],
   className = "",
   variant = "light",
 }: QuoteMetaProps) {
-  const meta = [category || null, sourceTitle || null, year || null].filter(Boolean)
   const nameClass = variant === "dark" ? "text-white/90" : "text-[var(--ink-800)]"
   const metaClass = variant === "dark" ? "text-white/60" : "text-[var(--ink-700)]/70"
   const tagClass =
     variant === "dark"
-      ? "bg-white/10 text-white/80 border-white/10 hover:bg-white/15"
-      : "bg-[var(--page-cream)] text-[var(--ink-700)] border-[var(--ink-900)]/8 hover:bg-[var(--accent-sand)]/20"
+      ? "bg-white/10 text-white/80 border-white/10 hover:bg-white/20"
+      : "bg-[var(--page-cream)] text-[var(--ink-700)] border-[var(--ink-900)]/8 hover:bg-[var(--accent-sand)]/25"
 
   return (
     <div className={`space-y-1 ${className}`}>
       <p className={`text-sm font-semibold tracking-wide ${nameClass}`}>
-        {authorName ? `— ${authorName}` : "— Unknown author"}
+        {authorName ? (
+          authorSlug ? (
+            <Link href={`/authors/${authorSlug}`} className="hover:text-[var(--accent-rust)] transition-colors">
+              — {authorName}
+            </Link>
+          ) : (
+            `— ${authorName}`
+          )
+        ) : (
+          "— Unknown author"
+        )}
       </p>
 
-      {meta.length > 0 ? (
-        <p className={`text-xs ${metaClass}`}>{meta.join(" · ")}</p>
-      ) : null}
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs ${metaClass}`}>
+        {category && (
+          categorySlug ? (
+            <Link href={`/categories/${categorySlug}`} className="hover:text-[var(--accent-rust)] hover:underline transition-colors font-medium">
+              {category}
+            </Link>
+          ) : (
+            <span>{category}</span>
+          )
+        )}
+        {category && (sourceTitle || year) && <span>·</span>}
+        {sourceTitle && <span>{sourceTitle}</span>}
+        {sourceTitle && year && <span>·</span>}
+        {year && <span className="font-mono">{year}</span>}
+      </div>
 
       {tags.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-1.5">

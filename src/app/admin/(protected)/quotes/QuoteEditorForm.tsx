@@ -5,128 +5,28 @@ import { useRouter } from "next/navigation"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 import { suggestTags } from "@/lib/tagSuggestions"
 import { ConfirmModal } from "@/components/ui"
+import {
+  QuoteEditorFormProps,
+  QuoteEditorFormState,
+  FORM_DEFAULTS_STORAGE_KEY,
+  MAX_SELECTED_TAGS,
+  SOURCE_TYPES,
+  STATUSES,
+  StoredDefaults,
+  buildInitialForm,
+  serializeFormState,
+  validateForm,
+  QuoteContentSection,
+  QuoteMetadataSection,
+  QuoteAttributionSection,
+  QuoteTagsSection,
+  QuoteEditorSidebar,
+} from "./editor"
 
-type Author = {
-  id: string
-  name: string
-}
-
-type Category = {
-  id: string
-  name: string
-  slug?: string
-}
-
-type Source = {
-  id: string
-  title: string
-}
-
-type Tag = {
-  id: string
-  name: string
-  type: string
-  description?: string | null
-}
-
-type QuoteEditorMode = "create" | "edit"
-
-const STATUSES = ["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"] as const
-const ATTRIBUTION_STATUSES = ["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"] as const
-const SOURCE_TYPES = ["BOOK", "SPEECH", "ARTICLE", "INTERVIEW", "SCRIPTURE", "LETTER", "OTHER"] as const
-const FORM_DEFAULTS_STORAGE_KEY = "admin:new-quote-defaults"
-const MAX_SELECTED_TAGS = 7
-const inputClass = "w-full rounded border border-gray-300 bg-white p-2 text-sm"
-const textareaClass = "w-full rounded border border-gray-300 bg-white p-3 text-sm"
-const sectionClass = "space-y-4 rounded border border-gray-200 bg-white p-4"
-const sectionTitleClass = "text-sm font-semibold text-gray-900"
-const helperTextClass = "text-xs text-gray-500"
-
-export type QuoteEditorFormState = {
-  content: string
-  meaning: string
-  historicalContext: string
-  modernRelevance: string
-  authorId: string
-  categoryId: string
-  sourceId: string
-  sourceTitle: string
-  sourceType: (typeof SOURCE_TYPES)[number]
-  language: string
-  status: (typeof STATUSES)[number]
-  tagIds: string[]
-  publishedAt: string
-  isFeatured: boolean
-  isVerified: boolean
-  attributionStatus: (typeof ATTRIBUTION_STATUSES)[number]
-  verificationNote: string
-}
-
-type QuoteEditorFormProps = {
-  mode: QuoteEditorMode
-  authors: Author[]
-  categories: Category[]
-  sources: Source[]
-  tags: Tag[]
-  quoteId?: string
-  initialForm?: Partial<QuoteEditorFormState>
-}
-
-const EMPTY_FORM: QuoteEditorFormState = {
-  content: "",
-  meaning: "",
-  historicalContext: "",
-  modernRelevance: "",
-  authorId: "",
-  categoryId: "",
-  sourceId: "",
-  sourceTitle: "",
-  sourceType: "BOOK",
-  language: "en",
-  status: "DRAFT",
-  tagIds: [],
-  publishedAt: "",
-  isFeatured: false,
-  isVerified: false,
-  attributionStatus: "UNKNOWN",
-  verificationNote: "",
-}
-
-type StoredDefaults = {
-  authorId?: string
-  categoryId?: string
-  sourceId?: string
-  sourceType?: (typeof SOURCE_TYPES)[number]
-  language?: string
-  status?: (typeof STATUSES)[number]
-  tagIds?: string[]
-}
+export type { QuoteEditorFormState }
 
 function unique<T>(items: T[]) {
   return Array.from(new Set(items))
-}
-
-function serializeFormState(form: QuoteEditorFormState) {
-  return JSON.stringify({
-    ...form,
-    tagIds: [...form.tagIds].sort(),
-  })
-}
-
-function buildInitialForm(initialForm?: Partial<QuoteEditorFormState>) {
-  return {
-    ...EMPTY_FORM,
-    ...initialForm,
-    tagIds: initialForm?.tagIds ?? EMPTY_FORM.tagIds,
-  }
-}
-
-function validateForm(form: QuoteEditorFormState) {
-  if (!form.content.trim()) return "Quote content is required."
-  if (form.content.trim().length < 5) return "Quote content must be at least 5 characters."
-  if (!form.authorId) return "Please select an author."
-  if (!form.categoryId) return "Please select a category."
-  return null
 }
 
 export default function QuoteEditorForm({
@@ -292,7 +192,7 @@ export default function QuoteEditorForm({
   const selectedAuthorName = authorById.get(form.authorId)?.name || "Author"
   const selectedCategoryName = categoryById.get(form.categoryId)?.name || "No category"
   const selectedTags = useMemo(
-    () => form.tagIds.map((tagId) => tagById.get(tagId)).filter(Boolean) as Tag[],
+    () => form.tagIds.map((tagId) => tagById.get(tagId)).filter(Boolean) as (typeof tags)[number][],
     [form.tagIds, tagById]
   )
   const hasUnsavedDraft = mode === "create" ? Boolean(form.content.trim() || form.sourceTitle.trim()) : false
@@ -511,490 +411,85 @@ export default function QuoteEditorForm({
   return (
     <>
       {mode === "edit" && isDirty ? (
-        <p className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          You have unsaved changes on this quote.
-        </p>
+        <div className="mb-5 rounded-2xl border border-amber-200/90 bg-amber-50/50 p-4 text-xs font-medium text-amber-900 shadow-2xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>You have unsaved changes in this quotation. Remember to save before navigating away.</span>
+          </div>
+        </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-5">
-          <section className={sectionClass}>
-            <div className="mb-2 flex items-center justify-between">
-              <label className={sectionTitleClass}>Quote Text</label>
-              <p className="text-xs text-gray-500">
-                {wordCount} words / {charCount} chars
-              </p>
-            </div>
-            <label className="mb-2 block text-sm font-medium">Quote Content</label>
-            <textarea
-              className={`${textareaClass} min-h-[180px]`}
-              value={form.content}
-              onChange={(e) => updateForm("content", e.target.value)}
-              required
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-6">
+          <QuoteContentSection
+            form={form}
+            updateForm={updateForm}
+            wordCount={wordCount}
+            charCount={charCount}
+          />
+
+          <QuoteMetadataSection
+            form={form}
+            updateForm={updateForm}
+            setForm={setForm}
+            categories={categories}
+            filteredAuthors={filteredAuthors}
+            authorSearch={authorSearch}
+            setAuthorSearch={setAuthorSearch}
+            filteredSources={filteredSources}
+            sourceSearch={sourceSearch}
+            setSourceSearch={setSourceSearch}
+          />
+
+          {mode === "edit" && (
+            <QuoteAttributionSection
+              form={form}
+              updateForm={updateForm}
+              derivedVerificationConfidence={derivedVerificationConfidence}
+              derivedAdminSortKey={derivedAdminSortKey}
             />
-          </section>
+          )}
 
-          <section className={sectionClass}>
-            <h2 className={sectionTitleClass}>Basic Details</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-              <label className="mb-2 block text-sm font-medium">Author</label>
-              <input
-                className={`${inputClass} mb-2`}
-                value={authorSearch}
-                onChange={(e) => setAuthorSearch(e.target.value)}
-                placeholder="Search author..."
-              />
-              <select
-                className={inputClass}
-                value={form.authorId}
-                onChange={(e) => updateForm("authorId", e.target.value)}
-                required
-              >
-                <option value="">Select Author</option>
-                {filteredAuthors.map((author) => (
-                  <option key={author.id} value={author.id}>
-                    {author.name}
-                  </option>
-                ))}
-              </select>
-              </div>
+          <QuoteTagsSection
+            mode={mode}
+            form={form}
+            selectedTags={selectedTags}
+            suggestedTags={suggestedTags}
+            groupedFilteredTags={groupedFilteredTags}
+            tagSearch={tagSearch}
+            setTagSearch={setTagSearch}
+            toggleTag={toggleTag}
+            addSuggestedTags={addSuggestedTags}
+          />
 
-              <div>
-              <label className="mb-2 block text-sm font-medium">Category</label>
-              <select
-                className={inputClass}
-                value={form.categoryId}
-                onChange={(e) => updateForm("categoryId", e.target.value)}
-                required
-              >
-                <option value="">Select Category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              </div>
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
+              {error}
             </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-              <label className="mb-2 block text-sm font-medium">Language</label>
-              <input
-                className={inputClass}
-                value={form.language}
-                onChange={(e) => updateForm("language", e.target.value)}
-                placeholder="en"
-              />
-              </div>
-
-              <div>
-              <label className="mb-2 block text-sm font-medium">Status</label>
-              <select
-                className={inputClass}
-                value={form.status}
-                onChange={(e) => updateForm("status", e.target.value as (typeof STATUSES)[number])}
-              >
-                {STATUSES.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-              </div>
-            </div>
-          </section>
-
-          <section className={sectionClass}>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className={sectionTitleClass}>Source</h2>
-              {form.sourceId ? (
-                <button
-                  type="button"
-                  onClick={() => updateForm("sourceId", "")}
-                  className="text-xs font-medium text-gray-600 underline underline-offset-2"
-                >
-                  Clear source selection
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium">Existing Source</label>
-                <input
-                  className={`${inputClass} mb-2`}
-                  value={sourceSearch}
-                  onChange={(e) => setSourceSearch(e.target.value)}
-                  placeholder="Search existing sources..."
-                />
-                <select
-                  className={inputClass}
-                  value={form.sourceId}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      sourceId: e.target.value,
-                      sourceTitle: e.target.value ? "" : prev.sourceTitle,
-                    }))
-                  }
-                >
-                  <option value="">No Source</option>
-                  {filteredSources.map((source) => (
-                    <option key={source.id} value={source.id}>
-                      {source.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">New Source</label>
-                <input
-                  className={`${inputClass} mb-2 disabled:bg-gray-50 disabled:text-gray-400`}
-                  placeholder="New source title (optional)"
-                  value={form.sourceTitle}
-                  onChange={(e) => updateForm("sourceTitle", e.target.value)}
-                  disabled={Boolean(form.sourceId)}
-                />
-                <select
-                  className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
-                  value={form.sourceType}
-                  onChange={(e) => updateForm("sourceType", e.target.value as (typeof SOURCE_TYPES)[number])}
-                  disabled={Boolean(form.sourceId)}
-                >
-                  {SOURCE_TYPES.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <p className={helperTextClass}>
-              Or create one inline when no existing source matches.
-            </p>
-          </section>
-
-          <section className={sectionClass}>
-            <h2 className={sectionTitleClass}>Interpretation</h2>
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium">Quote Meaning</label>
-                <textarea
-                  className={`${textareaClass} min-h-[140px]`}
-                  value={form.meaning}
-                  onChange={(e) => updateForm("meaning", e.target.value)}
-                  placeholder="Explain the idea, lesson, or interpretation of this quote..."
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">Historical Context</label>
-                <textarea
-                  className={`${textareaClass} min-h-[140px]`}
-                  value={form.historicalContext}
-                  onChange={(e) => updateForm("historicalContext", e.target.value)}
-                  placeholder="Background, time period, audience, event, or source circumstances..."
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">Modern Relevance</label>
-                <textarea
-                  className={`${textareaClass} min-h-[140px]`}
-                  value={form.modernRelevance}
-                  onChange={(e) => updateForm("modernRelevance", e.target.value)}
-                  placeholder="Why this quote still matters today..."
-                />
-              </div>
-            </div>
-          </section>
-
-          {mode === "edit" ? (
-            <section className={sectionClass}>
-              <h2 className={sectionTitleClass}>Publication & Verification</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex items-center gap-2 rounded border border-gray-300 p-3">
-                  <input
-                    type="checkbox"
-                    checked={form.isFeatured}
-                    onChange={(e) => updateForm("isFeatured", e.target.checked)}
-                  />
-                  <span className="text-sm font-medium">Featured</span>
-                </label>
-
-                <label className="flex items-center gap-2 rounded border border-gray-300 p-3">
-                  <input
-                    type="checkbox"
-                    checked={form.isVerified}
-                    onChange={(e) => updateForm("isVerified", e.target.checked)}
-                  />
-                  <span className="text-sm font-medium">Verified</span>
-                </label>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Attribution Status</label>
-                  <select
-                    className={inputClass}
-                    value={form.attributionStatus}
-                    onChange={(e) =>
-                      updateForm(
-                        "attributionStatus",
-                        e.target.value as (typeof ATTRIBUTION_STATUSES)[number]
-                      )
-                    }
-                  >
-                    {ATTRIBUTION_STATUSES.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Derived Verification Confidence</label>
-                  <div className="w-full rounded border border-gray-300 bg-gray-50 p-2 text-sm">
-                    {derivedVerificationConfidence}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Published At (IST)</label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass}
-                    value={form.publishedAt}
-                    onChange={(e) => updateForm("publishedAt", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Derived Admin Sort Key</label>
-                  <div className="w-full rounded border border-gray-300 bg-gray-50 p-2 text-sm">
-                    {derivedAdminSortKey}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium">Verification Note</label>
-                <textarea
-                  className={`${textareaClass} min-h-[100px]`}
-                  value={form.verificationNote}
-                  onChange={(e) => updateForm("verificationNote", e.target.value)}
-                />
-              </div>
-            </section>
-          ) : null}
-
-          <section className={sectionClass}>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <h2 className={sectionTitleClass}>Tags</h2>
-              {suggestedTags.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={addSuggestedTags}
-                  className="text-xs font-medium text-gray-600 underline underline-offset-2"
-                >
-                  Add all suggestions
-                </button>
-              ) : null}
-            </div>
-            {suggestedTags.length > 0 ? (
-              <div className="mb-3 rounded border border-dashed p-3">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Suggested from quote text
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {suggestedTags.map((tag) => {
-                    const selected = form.tagIds.includes(tag.id)
-                    return (
-                      <button
-                        type="button"
-                        key={tag.id}
-                        onClick={() => toggleTag(tag.id)}
-                        className={`rounded border px-3 py-2 text-left text-sm ${
-                          selected ? "bg-black text-white" : "bg-white"
-                        }`}
-                      >
-                        <span className="block font-medium">
-                          {tag.name} / {tag.type}
-                        </span>
-                        <span className={`block text-xs ${selected ? "text-gray-200" : "text-gray-500"}`}>
-                          {tag.reasons.join(", ")}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : (
-              <p className="mb-2 text-xs text-gray-500">
-                Suggested tags will appear here as you {mode === "create" ? "write" : "edit"} the quote.
-              </p>
-            )}
-
-            <input
-              className={`${inputClass} mb-3`}
-              value={tagSearch}
-              onChange={(e) => setTagSearch(e.target.value)}
-              placeholder="Search tags by name or type..."
-            />
-
-            <div className="mb-3 min-h-10 rounded border border-gray-300 p-3">
-              {selectedTags.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {selectedTags.map((tag) => (
-                    <button
-                      type="button"
-                      key={tag.id}
-                      onClick={() => toggleTag(tag.id)}
-                      className="rounded-full border bg-black px-3 py-1 text-sm text-white"
-                    >
-                      {tag.name} / {tag.type}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No tags selected yet.</p>
-              )}
-            </div>
-
-            <div className="max-h-80 space-y-4 overflow-auto rounded border border-gray-300 p-3">
-              {groupedFilteredTags.length > 0 ? (
-                groupedFilteredTags.map((group) => (
-                  <div key={group.type} className="space-y-2">
-                    <div className="sticky top-0 bg-white text-xs font-semibold text-gray-500">
-                      {group.type}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {group.tags.map((tag) => {
-                        const selected = form.tagIds.includes(tag.id)
-                        return (
-                          <button
-                            type="button"
-                            key={tag.id}
-                            onClick={() => toggleTag(tag.id)}
-                            className={`rounded border px-3 py-1 text-sm ${
-                              selected ? "bg-black text-white" : "bg-white"
-                            }`}
-                          >
-                            {tag.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No tags match your search.</p>
-              )}
-            </div>
-          </section>
-
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          )}
         </div>
 
-        <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
-          <div className="space-y-3 rounded border border-gray-200 bg-white p-4">
-            <p className="text-sm font-medium">{mode === "create" ? "Submission" : "Quote Settings"}</p>
-            <p className="text-xs text-gray-500">
-              {mode === "create"
-                ? `Saving as ${form.status === "PUBLISHED" ? "published quote" : form.status.toLowerCase()}.`
-                : "Save back to the list or save and keep editing from this screen."}
-            </p>
-
-            {mode === "create" && hasUnsavedDraft ? (
-              <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                You have unsaved quote content in progress.
-              </p>
-            ) : null}
-
-            <div className="rounded border bg-gray-50 p-3 text-xs text-gray-600">
-              {mode === "edit" ? <div>Status: {form.status}</div> : <div>Author: {selectedAuthorName}</div>}
-              <div>Category: {selectedCategoryName}</div>
-              <div>Tags: {selectedTags.length}</div>
-              {mode === "edit" ? <div>Dirty: {isDirty ? "Yes" : "No"}</div> : null}
-            </div>
-
-            {mode === "create" ? (
-              <>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => void handleSubmit("list")}
-                  className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
-                >
-                  {loading && submitMode === "list"
-                    ? "Saving..."
-                    : form.status === "PUBLISHED"
-                    ? "Publish Quote"
-                    : "Save Quote"}
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => void handleSubmit("another")}
-                  className="w-full rounded border border-black p-2 disabled:opacity-50"
-                >
-                  {loading && submitMode === "another" ? "Saving..." : "Save & Add Another"}
-                </button>
-                <p className="text-xs text-gray-500">
-                  Your recent author, category, language, source type, and tags are remembered here.
-                </p>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => void handleSubmit("list")}
-                  className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
-                >
-                  {loading && submitMode === "list" ? "Saving..." : "Save & Back to List"}
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => void handleSubmit("stay")}
-                  className="w-full rounded border border-black p-2 disabled:opacity-50"
-                >
-                  {loading && submitMode === "stay" ? "Saving..." : "Save & Keep Editing"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmingDelete(true)}
-                  className="w-full rounded bg-red-500 p-2 text-white"
-                >
-                  Delete Quote
-                </button>
-              </>
-            )}
-          </div>
-
-          <div className="rounded border border-gray-200 bg-white p-4">
-            <p className="mb-2 text-sm font-medium">Live Preview</p>
-            <blockquote className="italic text-gray-700">
-              &quot;{form.content || "Your quote preview..."}&quot;
-            </blockquote>
-            <p className="mt-2 text-sm text-gray-500">- {selectedAuthorName}</p>
-          </div>
-        </aside>
+        <QuoteEditorSidebar
+          mode={mode}
+          form={form}
+          selectedAuthorName={selectedAuthorName}
+          selectedCategoryName={selectedCategoryName}
+          selectedTagsCount={selectedTags.length}
+          isDirty={isDirty}
+          hasUnsavedDraft={hasUnsavedDraft}
+          loading={loading}
+          submitMode={submitMode}
+          handleSubmit={handleSubmit}
+          setIsConfirmingDelete={setIsConfirmingDelete}
+        />
       </div>
+
       <ConfirmModal
         isOpen={isConfirmingDelete}
         onClose={() => setIsConfirmingDelete(false)}
         onConfirm={executeDelete}
         title="Delete Quote?"
-        message="Are you sure you want to delete this quote? You can restore it later from deleted quotes."
+        message="Are you sure you want to delete this quote? You can restore it later from deleted quotes manager."
         confirmLabel="Delete Quote"
         isDestructive
         isLoading={isDeleting}

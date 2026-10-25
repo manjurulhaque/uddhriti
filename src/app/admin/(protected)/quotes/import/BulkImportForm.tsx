@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { getRowValue, readItemsFromJsonOrCsv, readItemsFromJsonOrCsvText } from "@/lib/import/clientFile"
+import { BulkFileUploadInput, BulkImportResultCard } from "@/components/admin/bulk-import"
+import { Badge } from "@/components/ui/badge"
 
 type Author = {
   id: string
@@ -253,50 +255,45 @@ export default function BulkImportForm({
 
     try {
       const rows = await readItemsFromJsonOrCsv(file)
-      const items = mapRowsToImportItems(rows)
-
-      setUploadedItems(items)
-      setPayload(JSON.stringify(items, null, 2))
+      const mapped = mapRowsToImportItems(rows)
+      setUploadedItems(mapped)
+      setPayload(JSON.stringify(mapped, null, 2))
       setError(null)
-    } catch {
-      setUploadedItems(null)
-      setError("Could not parse file. Upload valid JSON or CSV.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to parse file")
     }
   }
 
   function onParsePastedInput() {
-    try {
-      const rows = readItemsFromJsonOrCsvText(pastedInput)
-      const items = mapRowsToImportItems(rows)
-      if (items.length === 0) {
-        setUploadedItems(null)
-        setError("No rows found in pasted content.")
-        return
-      }
-      setUploadedItems(items)
-      setPayload(JSON.stringify(items, null, 2))
-      setError(null)
-    } catch (err) {
-      setUploadedItems(null)
-      setError(err instanceof Error ? err.message : "Could not parse pasted JSON or CSV.")
-    }
-  }
-
-  function setPastedTemplate(format: "json" | "csv") {
-    if (format === "json") {
-      setPastedInput(JSON.stringify(EXAMPLE, null, 2))
-      setPastedFormatHint("json")
+    const trimmed = pastedInput.trim()
+    if (!trimmed) {
+      setError("Please paste CSV or JSON content first.")
       return
     }
 
-    setPastedInput(
-      [
-        "content,meaning,historicalContext,modernRelevance,authorName,categoryName,sourceTitle,sourceType,tagSlugs,publish",
-        '"The unexamined life is not worth living.","A life without reflection lacks true value.","Often associated with Socrates defense speech at his trial in Athens.","Useful for framing self-reflection today.",Socrates,Philosophy,Apology,BOOK,"philosophy|self-knowledge",true',
-        '"Knowledge is power.",,,,Francis Bacon,Knowledge,,,"knowledge",false',
-      ].join("\n")
-    )
-    setPastedFormatHint("csv")
+    try {
+      const rows = readItemsFromJsonOrCsvText(trimmed)
+      const mapped = mapRowsToImportItems(rows)
+      setUploadedItems(mapped)
+      setPayload(JSON.stringify(mapped, null, 2))
+      setError(null)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to parse pasted text")
+    }
+  }
+
+  function setPastedTemplate(kind: "csv" | "json") {
+    if (kind === "csv") {
+      setPastedInput(
+        `content,meaning,historicalContext,modernRelevance,authorName,categoryName,sourceTitle,sourceType,tagSlugs,publish\n` +
+          `"The unexamined life is not worth living.","A life without reflection lacks true value.","Often associated with Socrates' defense speech at his trial in Athens.","Useful for framing self-reflection today.",Socrates,Philosophy,Apology,BOOK,"philosophy|self-knowledge",true`
+      )
+      setPastedFormatHint("csv")
+      return
+    }
+
+    setPastedInput(JSON.stringify(EXAMPLE, null, 2))
+    setPastedFormatHint("json")
   }
 
   function collectSourceUrls() {
@@ -461,24 +458,6 @@ export default function BulkImportForm({
     setPreviewError(null)
     setPreview(null)
 
-    let items: unknown[] | null = uploadedItems
-    if (!items) {
-      try {
-        const parsed = JSON.parse(payload)
-        items = Array.isArray(parsed)
-          ? parsed
-          : typeof parsed === "object" &&
-              parsed !== null &&
-              Array.isArray((parsed as { items?: unknown[] }).items)
-            ? (parsed as { items: unknown[] }).items
-            : []
-      } catch {
-        setPreviewLoading(false)
-        setPreviewError("Invalid JSON in editor.")
-        return
-      }
-    }
-
     const { wikiquoteUrls, gutenbergUrls, wikisourceUrls } = collectSourceUrls()
     if (wikiquoteUrls.length === 0 && gutenbergUrls.length === 0 && wikisourceUrls.length === 0) {
       setPreviewLoading(false)
@@ -516,401 +495,504 @@ export default function BulkImportForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded border bg-white p-4 text-sm text-gray-700">
-          <div className="font-semibold">{authorCount}</div>
-          <div>Available authors</div>
-        </div>
-        <div className="rounded border bg-white p-4 text-sm text-gray-700">
-          <div className="font-semibold">{categoryCount}</div>
-          <div>Available categories</div>
-        </div>
-        <div className="rounded border bg-white p-4 text-sm text-gray-700">
-          <div className="font-semibold">{tagCount}</div>
-          <div>Available tags</div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">Default category (optional)</label>
-              <select
-                className="w-full border rounded p-2"
-                value={defaultCategoryId}
-                onChange={(e) => setDefaultCategoryId(e.target.value)}
-              >
-                <option value="">No default</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Default author (optional)</label>
-              <select
-                className="w-full border rounded p-2"
-                value={defaultAuthorId}
-                onChange={(e) => setDefaultAuthorId(e.target.value)}
-              >
-                <option value="">No default</option>
-                {authors.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Default tags (optional)</label>
-              <select
-                multiple
-                className="w-full border rounded p-2 min-h-[140px]"
-                value={defaultTagIds}
-                onChange={(e) =>
-                  setDefaultTagIds(Array.from(e.target.selectedOptions, (option) => option.value))
-                }
-              >
-                {tags.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag.name} ({tag.slug})
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Applied to every imported quote, including source-based imports.
-              </p>
-            </div>
+    <form onSubmit={onSubmit} className="space-y-6 font-sans">
+      {/* Overview Stat Badges */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-stone-200/90 bg-white p-4 shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Authors Catalog
+            </span>
+            <div className="text-xl font-bold text-stone-900 mt-0.5">{authorCount}</div>
           </div>
+          <span className="rounded-xl bg-stone-100 p-2 text-stone-600">✍️</span>
         </div>
 
-        <div className="flex items-end">
-          <div className="space-y-2">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={publishByDefault}
-                onChange={(e) => setPublishByDefault(e.target.checked)}
-              />
-              Publish imported quotes by default
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={autoCreateAuthors}
-                onChange={(e) => setAutoCreateAuthors(e.target.checked)}
-              />
-              Auto-create authors for Wikiquote pages
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={verifiedOnly}
-                onChange={(e) => setVerifiedOnly(e.target.checked)}
-              />
-              Import only verified source quotes
-            </label>
+        <div className="rounded-2xl border border-stone-200/90 bg-white p-4 shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Taxonomy Categories
+            </span>
+            <div className="text-xl font-bold text-stone-900 mt-0.5">{categoryCount}</div>
           </div>
+          <span className="rounded-xl bg-stone-100 p-2 text-stone-600">📚</span>
+        </div>
+
+        <div className="rounded-2xl border border-stone-200/90 bg-white p-4 shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Thematic Tags
+            </span>
+            <div className="text-xl font-bold text-stone-900 mt-0.5">{tagCount}</div>
+          </div>
+          <span className="rounded-xl bg-stone-100 p-2 text-stone-600">🏷️</span>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label className="block text-sm font-medium mb-2">Wikiquote URLs (optional)</label>
-          <textarea
-            className="w-full border rounded p-2 min-h-[120px] font-mono text-xs"
-            value={wikiquoteUrlsInput}
-            onChange={(e) => setWikiquoteUrlsInput(e.target.value)}
-            placeholder={"https://en.wikiquote.org/wiki/Rumi\nhttps://en.wikiquote.org/wiki/Rabindranath_Tagore"}
-          />
-          <p className="text-xs text-gray-500 mt-1">One page URL per line.</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Gutenberg URLs (optional)</label>
-          <textarea
-            className="w-full border rounded p-2 min-h-[120px] font-mono text-xs"
-            value={gutenbergUrlsInput}
-            onChange={(e) => setGutenbergUrlsInput(e.target.value)}
-            placeholder={"https://www.gutenberg.org/ebooks/1342\nhttps://www.gutenberg.org/ebooks/2701"}
-          />
-          <p className="text-xs text-gray-500 mt-1">One ebook URL per line.</p>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Wikisource URLs (optional)</label>
-        <textarea
-          className="w-full border rounded p-2 min-h-[120px] font-mono text-xs"
-          value={wikisourceUrlsInput}
-          onChange={(e) => setWikisourceUrlsInput(e.target.value)}
-          placeholder={"https://en.wikisource.org/wiki/The_Raven\nhttps://en.wikisource.org/wiki/If%E2%80%94"}
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          One page URL per line. Set default author if the page has no detectable author.
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label className="block text-sm font-medium mb-2">Wikiquote max quotes per page</label>
-          <input
-            type="number"
-            min={1}
-            max={200}
-            className="w-full max-w-xs border rounded p-2"
-            value={maxQuotesPerPage}
-            onChange={(e) => setMaxQuotesPerPage(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Upload JSON/CSV file (optional)</label>
-        <input type="file" accept=".json,.csv,application/json,text/csv" onChange={onFileChange} />
-        {uploadedItems && (
-          <p className="text-xs text-gray-500">
-            Loaded {uploadedItems.length} row(s) from file.
+      {/* Card 1: Default Ingestion Settings */}
+      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+        <div className="border-b border-stone-100 pb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+            Ingestion Defaults &amp; Policy
+          </h2>
+          <p className="text-xs text-stone-500">
+            Fallback metadata applied to rows or web source quotes lacking explicit attributes.
           </p>
-        )}
-      </div>
+        </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Paste JSON/CSV rows (optional)</label>
-        <textarea
-          className="w-full border rounded p-3 min-h-[180px] font-mono text-sm"
-          value={pastedInput}
-          onChange={(e) => {
-            const next = e.target.value
-            setPastedInput(next)
-            const trimmed = next.trim()
-            if (!trimmed) {
-              setPastedFormatHint("empty")
-            } else if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
-              setPastedFormatHint("json")
-            } else if (trimmed.includes("\t")) {
-              setPastedFormatHint("tsv")
-            } else {
-              setPastedFormatHint("csv")
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+              Default Category
+            </label>
+            <select
+              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
+              value={defaultCategoryId}
+              onChange={(e) => setDefaultCategoryId(e.target.value)}
+            >
+              <option value="">No fallback category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+              Default Author
+            </label>
+            <select
+              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
+              value={defaultAuthorId}
+              onChange={(e) => setDefaultAuthorId(e.target.value)}
+            >
+              <option value="">No fallback author</option>
+              {authors.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+              Wikiquote Max Quotes Per Page
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={200}
+              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all font-mono"
+              value={maxQuotesPerPage}
+              onChange={(e) => setMaxQuotesPerPage(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Default Tags Selection */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+            Default Tags ({defaultTagIds.length} selected)
+          </label>
+          <select
+            multiple
+            className="w-full rounded-xl border border-stone-300 bg-white p-3 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all min-h-[100px]"
+            value={defaultTagIds}
+            onChange={(e) =>
+              setDefaultTagIds(Array.from(e.target.selectedOptions, (option) => option.value))
             }
-          }}
-          placeholder={`content,meaning,historicalContext,modernRelevance,authorName,categoryName,sourceTitle,sourceType,tagSlugs,publish
-"The unexamined life is not worth living.","A life without reflection lacks true value.","Often associated with Socrates' defense speech at his trial in Athens.","Useful for framing self-reflection today.",Socrates,Philosophy,Apology,BOOK,"philosophy|self-knowledge",true`}
+          >
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name} ({tag.slug})
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-stone-400">
+            Hold Ctrl (or Cmd on Mac) to select multiple default tags applied across all imported records.
+          </p>
+        </div>
+
+        {/* Ingestion Switches */}
+        <div className="grid gap-3 sm:grid-cols-3 pt-2 border-t border-stone-100">
+          <label className="flex items-center gap-2.5 rounded-xl border border-stone-200/90 p-3 bg-stone-50/40 text-xs font-medium text-stone-800 cursor-pointer hover:bg-stone-50">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+              checked={publishByDefault}
+              onChange={(e) => setPublishByDefault(e.target.checked)}
+            />
+            <span>Publish quotes immediately</span>
+          </label>
+
+          <label className="flex items-center gap-2.5 rounded-xl border border-stone-200/90 p-3 bg-stone-50/40 text-xs font-medium text-stone-800 cursor-pointer hover:bg-stone-50">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+              checked={autoCreateAuthors}
+              onChange={(e) => setAutoCreateAuthors(e.target.checked)}
+            />
+            <span>Auto-create missing authors</span>
+          </label>
+
+          <label className="flex items-center gap-2.5 rounded-xl border border-stone-200/90 p-3 bg-stone-50/40 text-xs font-medium text-stone-800 cursor-pointer hover:bg-stone-50">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+              checked={verifiedOnly}
+              onChange={(e) => setVerifiedOnly(e.target.checked)}
+            />
+            <span>Import verified quotes only</span>
+          </label>
+        </div>
+      </section>
+
+      {/* Card 2: Web Harvesters */}
+      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-4">
+        <div className="border-b border-stone-100 pb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+              Web Source Harvesters
+            </h2>
+            <p className="text-xs text-stone-500">
+              Scrape validated literary quotes from Wikimedia Wikiquote, Project Gutenberg, and Wikisource.
+            </p>
+          </div>
+          <Badge variant="neutral" size="xs">
+            Web Scraper
+          </Badge>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Wikiquote URLs
+              </label>
+              <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+            </div>
+            <textarea
+              className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              value={wikiquoteUrlsInput}
+              onChange={(e) => setWikiquoteUrlsInput(e.target.value)}
+              placeholder={"https://en.wikiquote.org/wiki/Rumi\nhttps://en.wikiquote.org/wiki/Rabindranath_Tagore"}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Project Gutenberg Ebooks
+              </label>
+              <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+            </div>
+            <textarea
+              className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              value={gutenbergUrlsInput}
+              onChange={(e) => setGutenbergUrlsInput(e.target.value)}
+              placeholder={"https://www.gutenberg.org/ebooks/1342\nhttps://www.gutenberg.org/ebooks/2701"}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Wikisource Texts
+              </label>
+              <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+            </div>
+            <textarea
+              className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              value={wikisourceUrlsInput}
+              onChange={(e) => setWikisourceUrlsInput(e.target.value)}
+              placeholder={"https://en.wikisource.org/wiki/The_Raven\nhttps://en.wikisource.org/wiki/If%E2%80%94"}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Card 3: File Upload & Pasted Data */}
+      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+        <div className="border-b border-stone-100 pb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+            Batch File &amp; Paste Ingestion
+          </h2>
+          <p className="text-xs text-stone-500">
+            Upload CSV or JSON files or paste tabular data directly from spreadsheets.
+          </p>
+        </div>
+
+        {/* File Upload Component */}
+        <BulkFileUploadInput
+          onFileChange={onFileChange}
+          loadedCount={uploadedItems?.length}
+          label="Choose JSON or CSV Dataset"
         />
-        <div className="flex flex-wrap items-center gap-3">
+
+        {/* Pasted Input Area */}
+        <div className="space-y-2 pt-2 border-t border-stone-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+              Or Paste Delimited Rows / JSON
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-stone-400">
+                Format:{" "}
+                <span className="font-mono font-bold uppercase text-stone-700">
+                  {pastedFormatHint === "empty" ? "none" : pastedFormatHint}
+                </span>
+              </span>
+              {pastedLineCount > 0 && (
+                <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-mono text-stone-600">
+                  {pastedLineCount} lines
+                </span>
+              )}
+            </div>
+          </div>
+
+          <textarea
+            className="w-full min-h-[140px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+            value={pastedInput}
+            onChange={(e) => {
+              const next = e.target.value
+              setPastedInput(next)
+              const trimmed = next.trim()
+              if (!trimmed) {
+                setPastedFormatHint("empty")
+              } else if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                setPastedFormatHint("json")
+              } else if (trimmed.includes("\t")) {
+                setPastedFormatHint("tsv")
+              } else {
+                setPastedFormatHint("csv")
+              }
+            }}
+            placeholder={`content,meaning,authorName,categoryName,sourceTitle,sourceType,tagSlugs,publish\n"The unexamined life is not worth living.","A life without reflection lacks true value.",Socrates,Philosophy,Apology,BOOK,"philosophy|self-knowledge",true`}
+          />
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              className="rounded-xl bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-black transition-all cursor-pointer"
+              onClick={onParsePastedInput}
+            >
+              Parse Pasted Text
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-all cursor-pointer"
+              onClick={() => setPastedTemplate("csv")}
+            >
+              CSV Example
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-all cursor-pointer"
+              onClick={() => setPastedTemplate("json")}
+            >
+              JSON Example
+            </button>
+            <button
+              type="button"
+              className="text-xs text-stone-500 hover:text-stone-800 underline underline-offset-2 ml-auto cursor-pointer"
+              onClick={() => {
+                setPastedInput("")
+                setPastedFormatHint("empty")
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Card 4: JSON Payload Inspector */}
+      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+              Active Import Payload
+            </h2>
+            <p className="text-xs text-stone-500">
+              Structured JSON submitted to the ingestion engine.
+            </p>
+          </div>
           <button
             type="button"
-            className="border rounded px-4 py-2 text-sm"
-            onClick={onParsePastedInput}
-          >
-            Parse Pasted JSON/CSV
-          </button>
-          <button
-            type="button"
-            className="border rounded px-4 py-2 text-sm"
-            onClick={() => setPastedTemplate("csv")}
-          >
-            Paste CSV Example
-          </button>
-          <button
-            type="button"
-            className="border rounded px-4 py-2 text-sm"
-            onClick={() => setPastedTemplate("json")}
-          >
-            Paste JSON Example
-          </button>
-          <button
-            type="button"
-            className="text-sm text-gray-600 underline"
+            className="text-xs text-[var(--accent-rust)] hover:underline font-medium"
             onClick={() => {
-              setPastedInput("")
-              setPastedFormatHint("empty")
+              setPayload(JSON.stringify(EXAMPLE, null, 2))
+              setUploadedItems(null)
             }}
           >
-            Clear pasted input
+            Load Sample Payload
           </button>
-          <p className="text-xs text-gray-500">
-            Accepts a JSON array, <code>{`{ "items": [...] }`}</code>, CSV with headers, or spreadsheet rows pasted as tab-separated data.
-          </p>
         </div>
-        <p className="text-xs text-gray-500">
-          Detected format:{" "}
-          <span className="font-medium uppercase">
-            {pastedFormatHint === "empty" ? "none" : pastedFormatHint}
-          </span>{" "}
-          {pastedLineCount > 0 ? `• ${pastedLineCount} non-empty line(s)` : ""}
-          {uploadedItems ? ` • ${uploadedItems.length} parsed row(s) ready` : ""}
-        </p>
-      </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Import payload</label>
         <textarea
-          className="w-full border rounded p-3 min-h-[320px] font-mono text-sm"
+          className="w-full min-h-[160px] rounded-xl border border-stone-300 bg-stone-50/50 p-3 font-mono text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
           value={payload}
-          placeholder={JSON.stringify(EXAMPLE, null, 2)}
           onChange={(e) => {
             setPayload(e.target.value)
             setUploadedItems(null)
           }}
         />
-        <p className="text-xs text-gray-500">
-          Manual rows can use <code>authorId</code> or <code>authorName</code>, and{" "}
-          <code>categoryId</code> or <code>categoryName</code>. Tags can use <code>tagIds</code>,{" "}
-          <code>tagSlugs</code>, <code>tagNames</code>, or <code>tags</code>. Source rows can use{" "}
-          <code>wikiquoteUrl</code>, <code>gutenbergUrl</code>, or <code>wikisourceUrl</code> with an optional row
-          category, or rely on the default category above.
-        </p>
-        <button
-          type="button"
-          className="text-xs underline text-gray-600"
-          onClick={() => {
-            setPayload(JSON.stringify(EXAMPLE, null, 2))
-            setUploadedItems(null)
-          }}
-        >
-          Load example payload
-        </button>
+      </section>
+
+      {/* Error Banners */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+      {previewError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
+          {previewError}
+        </div>
+      )}
+
+      {/* Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-stone-200/90 bg-stone-50/80 p-4 sm:p-5">
+        <label className="flex items-center gap-2 text-xs font-medium text-stone-800 cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+            checked={useSelectedPreviewOnly}
+            onChange={(e) => setUseSelectedPreviewOnly(e.target.checked)}
+          />
+          <span>Import only selected preview candidates</span>
+        </label>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={previewLoading}
+            onClick={onPreview}
+            className="rounded-xl border border-stone-300 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-stone-800 shadow-2xs hover:bg-stone-50 disabled:opacity-50 transition-all cursor-pointer"
+          >
+            {previewLoading ? "Scraping..." : "Preview Source Imports"}
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-stone-900 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:bg-black disabled:opacity-50 transition-all cursor-pointer"
+          >
+            {loading ? "Importing Quotes..." : "Run Bulk Import"}
+          </button>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {previewError && <p className="text-sm text-red-600">{previewError}</p>}
-
-      <label className="inline-flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={useSelectedPreviewOnly}
-          onChange={(e) => setUseSelectedPreviewOnly(e.target.checked)}
-        />
-        Import only selected preview candidates
-      </label>
-
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={previewLoading}
-          onClick={onPreview}
-          className="border border-black px-5 py-2 rounded disabled:opacity-60"
-        >
-          {previewLoading ? "Previewing..." : "Preview Source Imports"}
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-black text-white px-5 py-2 rounded disabled:opacity-60"
-        >
-          {loading ? "Importing..." : "Run Bulk Import"}
-        </button>
-      </div>
-
+      {/* Preview Result Display */}
       {preview && (
-        <div className="rounded border bg-white p-4 space-y-3">
-          <h2 className="font-semibold">Preview Result</h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="border rounded px-3 py-1 text-xs"
-              onClick={() => {
-                const next: Record<string, boolean> = {}
-                for (const item of preview.items) {
-                  for (const quote of item.candidates) {
-                    next[candidateKey(item.sourceUrl, quote.content)] = true
-                  }
-                }
-                setSelectedPreviewKeys(next)
-              }}
-            >
-              Select all
-            </button>
-            <button
-              type="button"
-              className="border rounded px-3 py-1 text-xs"
-              onClick={() => setSelectedPreviewKeys({})}
-            >
-              Clear all
-            </button>
-          </div>
-          <p className="text-sm text-gray-700">
-            Sources: <span className="font-medium">{preview.totalSources}</span> • Candidates:{" "}
-            <span className="font-medium">{preview.totalCandidates}</span> • Selected:{" "}
-            <span className="font-medium">{collectSelectedPreviewCandidates().length}</span>
-          </p>
-          {preview.errors.length > 0 && (
-            <div className="max-h-32 overflow-auto rounded border p-2 text-xs text-red-700 bg-red-50">
-              {preview.errors.map((entry) => (
-                <div key={entry}>{entry}</div>
-              ))}
+        <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+                Source Preview Results
+              </h3>
+              <p className="text-xs text-stone-500">
+                Sources: <span className="font-semibold text-stone-800">{preview.totalSources}</span> • Candidates:{" "}
+                <span className="font-semibold text-stone-800">{preview.totalCandidates}</span> • Selected:{" "}
+                <span className="font-semibold text-stone-800">{collectSelectedPreviewCandidates().length}</span>
+              </p>
             </div>
-          )}
-          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                onClick={() => {
+                  const next: Record<string, boolean> = {}
+                  for (const item of preview.items) {
+                    for (const quote of item.candidates) {
+                      next[candidateKey(item.sourceUrl, quote.content)] = true
+                    }
+                  }
+                  setSelectedPreviewKeys(next)
+                }}
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                onClick={() => setSelectedPreviewKeys({})}
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
             {preview.items.map((item) => (
-              <div key={`${item.sourceType}:${item.sourceUrl}`} className="rounded border p-3">
-                <p className="text-xs uppercase tracking-wide text-gray-500">{item.sourceType}</p>
-                <p className="text-sm font-medium">{item.sourceTitle}</p>
-                <p className="text-xs text-gray-600">
-                  {item.authorName || "Unknown author"} • {item.language} • {item.candidates.length} candidate(s)
-                </p>
-                <div className="mt-2 max-h-40 overflow-auto space-y-2">
-                  {item.candidates.slice(0, 10).map((quote) => (
-                    <div key={`${item.sourceUrl}:${quote.content}`} className="text-xs text-gray-800">
-                      <label className="inline-flex items-start gap-2">
+              <div key={`${item.sourceType}:${item.sourceUrl}`} className="rounded-xl border border-stone-200/80 p-4 space-y-3 bg-stone-50/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="dark" size="xs">
+                      {item.sourceType}
+                    </Badge>
+                    <span className="text-xs font-bold text-stone-800 truncate max-w-sm">
+                      {item.sourceTitle}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-stone-400">
+                    {item.candidates.length} candidates
+                  </span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                  {item.candidates.slice(0, 15).map((quote) => {
+                    const key = candidateKey(item.sourceUrl, quote.content)
+                    const isSelected = Boolean(selectedPreviewKeys[key])
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-start gap-3 rounded-lg border p-2.5 text-xs transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-stone-900 bg-white shadow-2xs"
+                            : "border-stone-200/70 bg-white/70 hover:bg-white"
+                        }`}
+                      >
                         <input
                           type="checkbox"
-                          checked={Boolean(selectedPreviewKeys[candidateKey(item.sourceUrl, quote.content)])}
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+                          checked={isSelected}
                           onChange={(e) =>
                             setSelectedPreviewKeys((prev) => ({
                               ...prev,
-                              [candidateKey(item.sourceUrl, quote.content)]: e.target.checked,
+                              [key]: e.target.checked,
                             }))
                           }
                         />
-                        <span>&quot;{quote.content}&quot;</span>
+                        <div className="space-y-0.5">
+                          <p className="font-serif italic text-stone-900 leading-snug">
+                            &ldquo;{quote.content}&rdquo;
+                          </p>
+                          {quote.citation && (
+                            <span className="text-[10px] text-stone-400 block font-sans">
+                              {quote.citation}
+                            </span>
+                          )}
+                        </div>
                       </label>
-                      {quote.citation && <div className="text-gray-500">{quote.citation}</div>}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
+      {/* Bulk Import Result Card using Design System Primitive */}
       {result && (
-        <div className="rounded border bg-white p-4 space-y-3">
-          <h2 className="font-semibold">Import Result</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-            <ResultStat label="Received" value={result.totalReceived} />
-            <ResultStat label="Accepted" value={result.acceptedRows} />
-            <ResultStat label="Created" value={result.created} />
-            <ResultStat label="Skipped" value={result.skipped} />
-            <ResultStat label="Failed" value={result.failed} />
-          </div>
-
-          {result.errors.length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-1">Errors</p>
-              <div className="max-h-48 overflow-auto rounded border p-2 text-xs text-red-700 bg-red-50">
-                {result.errors.map((entry) => (
-                  <div key={entry}>{entry}</div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <BulkImportResultCard
+          result={result}
+          onDismiss={() => setResult(null)}
+        />
       )}
     </form>
-  )
-}
-
-function ResultStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded bg-gray-50 p-3 border">
-      <div className="text-lg font-semibold">{value}</div>
-      <div className="text-xs text-gray-500 uppercase tracking-wide">{label}</div>
-    </div>
   )
 }

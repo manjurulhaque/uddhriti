@@ -1,6 +1,6 @@
 import * as React from "react"
 import { QuoteMeta } from "./quote-meta"
-import { formatNumber } from "@/lib/formatters"
+import { formatScore, formatCountWithNoun } from "@/lib/formatters"
 
 export interface QuoteCardProps {
   id?: string
@@ -62,8 +62,8 @@ export function QuoteCard({
 
         {views !== undefined ? (
           <div className="mt-5 flex items-center justify-between border-t border-white/12 pt-4 text-xs uppercase tracking-[0.16em] text-white/60">
-            <span>{formatNumber(views)} views</span>
-            <span>{tags.length} linked tags</span>
+            <span>{formatCountWithNoun(views, "view")}</span>
+            <span>{formatCountWithNoun(tags.length, "linked tag")}</span>
           </div>
         ) : null}
       </article>
@@ -84,7 +84,7 @@ export function QuoteCard({
               </span>
             ) : null}
             {trendingScore !== undefined ? (
-              <span>Score {trendingScore.toFixed(2)}</span>
+              <span>Score {formatScore(trendingScore)}</span>
             ) : null}
           </div>
         )}

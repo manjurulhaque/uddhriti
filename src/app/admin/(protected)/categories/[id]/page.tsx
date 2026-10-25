@@ -11,6 +11,7 @@ import {
   FormErrorBanner,
   ConfirmModal,
 } from "@/components/ui"
+import { slugify } from "@/lib/slug"
 
 export default function EditCategoryPage() {
   const params = useParams()
@@ -71,9 +72,7 @@ export default function EditCategoryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          slug:
-            form.slug ||
-            form.name.trim().toLowerCase().replace(/\s+/g, "-"),
+          slug: form.slug || slugify(form.name),
           description: form.description || null,
           metaTitle: form.metaTitle || null,
           metaDescription: form.metaDescription || null,

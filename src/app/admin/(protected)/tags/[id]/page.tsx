@@ -13,14 +13,7 @@ import {
   ConfirmModal,
 } from "@/components/ui"
 import { tagTypeOptions } from "@/lib/tags/catalog"
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-}
+import { slugify } from "@/lib/slug"
 
 export default function EditTagPage() {
   const { id } = useParams<{ id: string }>()

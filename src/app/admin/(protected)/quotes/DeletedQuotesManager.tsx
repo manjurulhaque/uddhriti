@@ -11,6 +11,7 @@ import {
   ConfirmModal,
   FormErrorBanner,
 } from "@/components/ui"
+import { formatCountWithNoun } from "@/lib/formatters"
 
 export type DeletedQuoteItem = {
   id: string
@@ -171,7 +172,7 @@ export function DeletedQuotesManager({
       {selectedIds.length > 0 ? (
         <div className="border border-stone-200/90 rounded-2xl p-3 bg-stone-50 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
           <div className="text-sm font-medium text-stone-800">
-            {selectedIds.length} quote(s) selected
+            {formatCountWithNoun(selectedIds.length, "quote")} selected
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button

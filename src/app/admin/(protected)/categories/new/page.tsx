@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { PageHeader } from "@/components/admin"
 import { Input, Textarea, FormSection, FormActions, FormErrorBanner } from "@/components/ui"
+import { slugify } from "@/lib/slug"
 
 export default function NewCategoryPage() {
   const router = useRouter()
@@ -24,7 +25,13 @@ export default function NewCategoryPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setForm((prev) => {
+      const next = { ...prev, [name]: value }
+      if (name === "name" && !prev.slug) {
+        next.slug = slugify(value)
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -38,9 +45,7 @@ export default function NewCategoryPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        slug:
-          form.slug ||
-          form.name.trim().toLowerCase().replace(/\s+/g, "-"),
+        slug: form.slug || slugify(form.name),
         description: form.description || null,
         metaTitle: form.metaTitle || null,
         metaDescription: form.metaDescription || null,

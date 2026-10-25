@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { authorSchema } from "@/lib/validation/author"
+import { slugify } from "@/lib/slug"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -67,9 +68,9 @@ export async function PATCH(
     ...raw,
     slug:
       typeof raw.slug === "string" && raw.slug.trim()
-        ? raw.slug
+        ? slugify(raw.slug)
         : typeof raw.name === "string"
-          ? raw.name.trim().toLowerCase().replace(/\s+/g, "-")
+          ? slugify(raw.name)
           : undefined,
     birthYear: raw.birthYear ? Number(raw.birthYear) : null,
     deathYear: raw.deathYear ? Number(raw.deathYear) : null,

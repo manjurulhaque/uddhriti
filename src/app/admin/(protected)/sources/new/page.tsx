@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import slugify from "slugify"
 import { PageHeader } from "@/components/admin"
 import {
   Input,
@@ -13,6 +12,7 @@ import {
   FormErrorBanner,
 } from "@/components/ui"
 import { parseSourceYearInput } from "@/lib/sourceYear"
+import { slugify } from "@/lib/slug"
 
 type Author = {
   id: string
@@ -69,10 +69,16 @@ export default function NewSourcePage() {
   ) {
     const target = e.target as HTMLInputElement
     const { name, value, type, checked } = target
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }))
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }
+      if (name === "title" && !prev.slug) {
+        next.slug = slugify(value)
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -89,7 +95,7 @@ export default function NewSourcePage() {
 
     const payload = {
       ...form,
-      slug: slugify((form.slug || form.title).trim(), { lower: true, strict: true }),
+      slug: form.slug ? slugify(form.slug) : slugify(form.title),
       year: parsedYear.year,
       yearLabel: form.year.trim() || null,
       yearApproximate: parsedYear.approximate,

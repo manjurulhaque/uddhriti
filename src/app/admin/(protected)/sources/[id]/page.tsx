@@ -13,6 +13,7 @@ import {
   ConfirmModal,
 } from "@/components/ui"
 import { formatSourceYearLabel, parseSourceYearInput } from "@/lib/sourceYear"
+import { slugify } from "@/lib/slug"
 
 type Author = {
   id: string
@@ -131,9 +132,7 @@ export default function EditSourcePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          slug:
-            form.slug ||
-            form.title.trim().toLowerCase().replace(/\s+/g, "-"),
+          slug: form.slug ? slugify(form.slug) : slugify(form.title),
           year: parsedYear.year,
           yearLabel: form.year.trim() || null,
           yearApproximate: parsedYear.approximate,

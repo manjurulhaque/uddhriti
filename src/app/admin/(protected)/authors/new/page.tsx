@@ -12,14 +12,7 @@ import {
   FormActions,
   FormErrorBanner,
 } from "@/components/ui"
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-}
+import { slugify } from "@/lib/slug"
 
 function normalizeWikidataId(value: string) {
   const normalized = value.trim().toUpperCase()

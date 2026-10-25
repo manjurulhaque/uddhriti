@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { tagTypeOptions, type TagTypeOption } from "@/lib/tags/catalog"
 import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
 import { Select, EmptyState, ConfirmModal, Button } from "@/components/ui"
+import { formatCountWithNoun } from "@/lib/formatters"
 
 type TagItem = {
   id: string
@@ -241,7 +242,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
             <section key={group.type} className="space-y-2">
               <div className="flex items-center justify-between border-b pb-2">
                 <h2 className="text-lg font-semibold">{group.type}</h2>
-                <span className="text-sm text-gray-500">{group.tags.length} tag(s)</span>
+                <span className="text-sm text-gray-500">{formatCountWithNoun(group.tags.length, "tag")}</span>
               </div>
 
               {group.tags.map((tag) => {

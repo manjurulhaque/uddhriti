@@ -12,14 +12,7 @@ import {
   FormErrorBanner,
 } from "@/components/ui"
 import { tagTypeOptions } from "@/lib/tags/catalog"
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-}
+import { slugify } from "@/lib/slug"
 
 export default function NewTagPage() {
   const router = useRouter()

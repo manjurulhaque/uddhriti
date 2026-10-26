@@ -9,7 +9,8 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
-    "icons:generate": "node scripts/generate-icons.mjs"
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "screenshots:generate": "node scripts/generate-screenshots.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",

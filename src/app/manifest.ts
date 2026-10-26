@@ -62,5 +62,21 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
       },
     ],
+    screenshots: [
+      {
+        src: "/screenshots/desktop.png",
+        sizes: "1280x720",
+        type: "image/png",
+        form_factor: "wide",
+        label: "Uddhriti Desktop Reading Sanctuary",
+      },
+      {
+        src: "/screenshots/mobile.png",
+        sizes: "750x1334",
+        type: "image/png",
+        form_factor: "narrow",
+        label: "Uddhriti Mobile Timeless Quotes Experience",
+      },
+    ],
   };
 }

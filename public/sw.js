@@ -1,12 +1,16 @@
 // Uddhriti Service Worker
-const CACHE_VERSION = "uddhriti-v1";
+const CACHE_VERSION = "uddhriti-v2";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
 
+const MAX_IMAGE_ENTRIES = 60;
+const MAX_DYNAMIC_ENTRIES = 40;
+
 // Core assets to pre-cache on install
 const PRECACHE_ASSETS = [
   "/offline",
+  "/saved",
   "/favicon.ico",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
@@ -15,7 +19,21 @@ const PRECACHE_ASSETS = [
   "/icons/icon.svg",
 ];
 
-// 1. Install Event: Cache app shell & offline fallback
+// Helper: Trim cache to maximum allowed entries (LRU eviction)
+async function trimCache(cacheName, maxItems) {
+  try {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    if (keys.length > maxItems) {
+      await cache.delete(keys[0]);
+      await trimCache(cacheName, maxItems);
+    }
+  } catch (err) {
+    console.warn("[SW] Cache trimming error:", err);
+  }
+}
+
+// 1. Install Event: Cache app shell, saved notebook & offline sanctuary
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -54,7 +72,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// 3. Fetch Event: Intelligent routing and caching
+// 3. Fetch Event: Intelligent routing, LRU eviction and offline fallbacks
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -82,6 +100,7 @@ self.addEventListener("fetch", (event) => {
             const responseClone = response.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => {
               cache.put(request, responseClone);
+              trimCache(DYNAMIC_CACHE, MAX_DYNAMIC_ENTRIES);
             });
           }
           return response;
@@ -92,12 +111,20 @@ self.addEventListener("fetch", (event) => {
           if (cachedPage) {
             return cachedPage;
           }
+          // If navigating to /saved and not cached, check if static /saved exists
+          if (url.pathname === "/saved") {
+            const cachedSaved = await caches.match("/saved");
+            if (cachedSaved) return cachedSaved;
+          }
           // Otherwise fall back to the dedicated offline sanctuary page
           const offlinePage = await caches.match("/offline");
-          return offlinePage || new Response("You are currently offline.", {
-            status: 503,
-            headers: { "Content-Type": "text/plain" },
-          });
+          return (
+            offlinePage ||
+            new Response("You are currently offline.", {
+              status: 503,
+              headers: { "Content-Type": "text/plain" },
+            })
+          );
         })
     );
     return;
@@ -107,6 +134,7 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/screenshots/") ||
     url.pathname === "/favicon.ico"
   ) {
     event.respondWith(
@@ -128,7 +156,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Strategy C: Images (Wikimedia, SVG, PNG) (Stale-While-Revalidate)
+  // Strategy C: Images (Wikimedia, SVG, PNG) (Stale-While-Revalidate with LRU limits)
   const isImage =
     request.destination === "image" ||
     url.hostname.includes("wikimedia.org") ||
@@ -143,6 +171,7 @@ self.addEventListener("fetch", (event) => {
               const clone = networkResponse.clone();
               caches.open(IMAGE_CACHE).then((cache) => {
                 cache.put(request, clone);
+                trimCache(IMAGE_CACHE, MAX_IMAGE_ENTRIES);
               });
             }
             return networkResponse;
@@ -163,6 +192,7 @@ self.addEventListener("fetch", (event) => {
           const clone = response.clone();
           caches.open(DYNAMIC_CACHE).then((cache) => {
             cache.put(request, clone);
+            trimCache(DYNAMIC_CACHE, MAX_DYNAMIC_ENTRIES);
           });
         }
         return response;

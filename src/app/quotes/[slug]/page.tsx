@@ -301,10 +301,18 @@ export default async function IndividualQuotePage({
             )}
           </div>
 
-          {/* Interactive Actions: Copy, Share, Views */}
+          {/* Interactive Actions: Copy, Share, Save, Views */}
           <QuoteActions
+            id={quote.id}
+            slug={quote.slug}
             content={quote.content}
             authorName={authorName}
+            authorSlug={quote.author?.slug}
+            category={quote.category?.name}
+            categorySlug={quote.category?.slug}
+            sourceTitle={quote.source?.title}
+            year={quote.source?.year ? String(quote.source.year) : undefined}
+            tags={quote.tags.map((t) => t.tag.name)}
             views={quote.views}
           />
         </article>

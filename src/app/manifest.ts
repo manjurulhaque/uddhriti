@@ -61,6 +61,13 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/categories",
         icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
       },
+      {
+        name: "Saved Notebook",
+        short_name: "Saved",
+        description: "Read your offline saved quotes and reflections",
+        url: "/saved",
+        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
+      },
     ],
     screenshots: [
       {

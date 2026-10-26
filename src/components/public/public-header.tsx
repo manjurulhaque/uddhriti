@@ -4,10 +4,12 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Modal } from "../ui/modal"
+import { useSavedQuotes } from "@/lib/saved-quotes"
 
 export function PublicHeader() {
   const router = useRouter()
   const pathname = usePathname()
+  const { count: savedCount } = useSavedQuotes()
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [searchModalOpen, setSearchModalOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -29,6 +31,7 @@ export function PublicHeader() {
     { href: "/authors", label: "Authors" },
     { href: "/categories", label: "Categories" },
     { href: "/tags", label: "Tags" },
+    { href: "/saved", label: "Saved" },
   ]
 
   return (
@@ -128,6 +131,39 @@ export function PublicHeader() {
                 />
               </svg>
             </button>
+
+            {/* Saved Quotes Quick Access */}
+            <Link
+              href="/saved"
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                pathname === "/saved"
+                  ? "border-[var(--accent-rust)] bg-[#c76b3e]/10 text-[var(--accent-rust)] font-semibold"
+                  : "border-stone-300/80 bg-white/80 text-stone-700 hover:border-stone-400 hover:bg-white shadow-2xs"
+              }`}
+              aria-label="View saved quotes notebook"
+            >
+              <svg
+                className={`h-3.5 w-3.5 ${
+                  savedCount > 0 ? "text-[var(--accent-rust)] fill-current" : "text-stone-400"
+                }`}
+                fill={savedCount > 0 ? "currentColor" : "none"}
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Saved</span>
+              {savedCount > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-rust)] px-1 text-[10px] font-bold text-white">
+                  {savedCount}
+                </span>
+              )}
+            </Link>
 
             {/* Admin Entry Link */}
             <Link

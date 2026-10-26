@@ -6,10 +6,32 @@ import { usePathname, useRouter } from "next/navigation"
 import { Modal } from "../ui/modal"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 
+function subscribeOnline(callback: () => void) {
+  window.addEventListener("online", callback)
+  window.addEventListener("offline", callback)
+  return () => {
+    window.removeEventListener("online", callback)
+    window.removeEventListener("offline", callback)
+  }
+}
+
+function getOnlineSnapshot() {
+  return navigator.onLine
+}
+
+function getServerOnlineSnapshot() {
+  return true
+}
+
 export function PublicHeader() {
   const router = useRouter()
   const pathname = usePathname()
   const { count: savedCount } = useSavedQuotes()
+  const isOnline = React.useSyncExternalStore(
+    subscribeOnline,
+    getOnlineSnapshot,
+    getServerOnlineSnapshot
+  )
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [searchModalOpen, setSearchModalOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -81,8 +103,19 @@ export function PublicHeader() {
             </nav>
           </div>
 
-          {/* Right Actions: Quick Search Trigger & Admin */}
+          {/* Right Actions: Quick Search Trigger, Saved, & Admin */}
           <div className="flex items-center gap-3">
+            {/* Offline Mode Indicator */}
+            {!isOnline && (
+              <div
+                title="You are currently browsing offline. Cached quotes and your saved notebook remain accessible."
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-800 animate-pulse"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                <span>Offline Mode</span>
+              </div>
+            )}
+
             {/* Search Trigger Button */}
             <button
               type="button"
@@ -224,6 +257,12 @@ export function PublicHeader() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-stone-200/90 bg-[var(--page-cream)] px-5 py-4 shadow-lg animate-rise">
             <nav className="flex flex-col gap-2">
+              {!isOnline && (
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs font-semibold mb-1">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span>Offline Mode • Viewing Cached Quotes</span>
+                </div>
+              )}
               {navLinks.map((item) => {
                 const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
                 return (

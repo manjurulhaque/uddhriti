@@ -3,6 +3,7 @@ import { StatTile } from "./stat-tile"
 import { QuoteCard } from "./quote-card"
 import { Empty } from "../ui/empty-state"
 import { HeroSearch, HeroSavedBadge } from "./hero-search"
+import { HeroCompanionQuote } from "./hero-companion-quote"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 
 export interface HomeHeroQuote {
@@ -21,7 +22,7 @@ export interface HomeHeroQuote {
     yearLabel?: string | null
     yearApproximate?: boolean | null
   } | null
-  tags: Array<{ tag: { id: string; name: string } }>
+  tags?: Array<{ tag: { id: string; name: string } }>
   views?: number
 }
 
@@ -30,6 +31,7 @@ export interface HomeHeroProps {
   totalAuthors: number
   quotesLast7Days: number
   heroQuote?: HomeHeroQuote | null
+  companionQuotes?: HomeHeroQuote[]
 }
 
 export function HomeHero({
@@ -37,6 +39,7 @@ export function HomeHero({
   totalAuthors,
   quotesLast7Days,
   heroQuote,
+  companionQuotes = [],
 }: HomeHeroProps) {
   return (
     <section className="overflow-hidden rounded-[2rem] border border-[var(--ink-900)]/10 bg-[var(--ink-900)] text-[var(--page-cream)] shadow-[0_24px_80px_rgba(33,37,41,0.18)]">
@@ -143,7 +146,7 @@ export function HomeHero({
             </div>
           </div>
 
-          <div className="animate-rise-delayed flex items-stretch">
+          <div className="animate-rise-delayed flex flex-col justify-between gap-5 h-full">
             {heroQuote ? (
               <QuoteCard
                 id={heroQuote.id}
@@ -155,15 +158,19 @@ export function HomeHero({
                 categorySlug={heroQuote.category?.slug}
                 sourceTitle={heroQuote.source?.title}
                 year={formatSourceYearLabel(heroQuote.source)}
-                tags={heroQuote.tags.map((entry) => entry.tag.name)}
+                tags={heroQuote.tags?.map((entry) => entry.tag.name) || []}
                 views={heroQuote.views}
                 variant="featured"
-                className="w-full"
+                className="w-full shadow-lg"
               />
             ) : (
               <div className="w-full rounded-[1.6rem] border border-white/12 bg-white/9 p-5 backdrop-blur-md">
                 <Empty message="Publish a featured quote to make this space sing." variant="dark" />
               </div>
+            )}
+
+            {companionQuotes && companionQuotes.length > 0 && (
+              <HeroCompanionQuote quotes={companionQuotes} />
             )}
           </div>
         </div>

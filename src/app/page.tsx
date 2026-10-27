@@ -116,6 +116,7 @@ export default async function HomePage() {
           totalAuthors={totalAuthors}
           quotesLast7Days={quotesLast7Days}
           heroQuote={heroQuote}
+          companionQuotes={serendipityPool.length > 0 ? serendipityPool : latestQuotes.slice(1, 6)}
         />
 
         <HomeMoodFilter />

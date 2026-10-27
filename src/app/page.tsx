@@ -157,6 +157,7 @@ async function loadHomePageData(sevenDaysAgo: Date) {
         select: {
           id: true,
           name: true,
+          slug: true,
           quoteCount: true,
         },
       }),
@@ -178,6 +179,7 @@ async function loadHomePageData(sevenDaysAgo: Date) {
         select: {
           id: true,
           name: true,
+          slug: true,
           quoteCount: true,
         },
       }),

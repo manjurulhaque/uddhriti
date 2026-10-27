@@ -163,10 +163,10 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-900/10 pb-5">
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/20 bg-amber-800/8 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent-rust)] shadow-2xs">
+            <h2 className="inline-flex items-center gap-2 rounded-full border border-amber-800/20 bg-amber-800/8 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent-rust)] shadow-2xs">
               <span className="text-sm">🌅</span>
               <span>{isDaily ? "Daily Contemplation" : "Serendipity Discovery"}</span>
-            </div>
+            </h2>
 
             <span className="text-xs text-stone-400 hidden sm:inline">•</span>
 

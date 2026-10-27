@@ -221,7 +221,7 @@ export function HomeMoodFilter() {
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)]" />
             Reflect by Feeling
           </div>
-          <h2 className="mt-2 text-2xl font-serif font-bold text-[var(--ink-900)] sm:text-3xl lg:text-4xl">
+          <h2 className="mt-2 text-2xl font-serif font-bold text-[var(--ink-900)] sm:text-3xl">
             What are you seeking today?
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-700)] max-w-xl">
@@ -234,7 +234,7 @@ export function HomeMoodFilter() {
           href="/categories"
           className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)] hover:underline self-start sm:self-auto pt-2 sm:pt-0"
         >
-          <span>All 30+ Categories</span>
+          <span>Explore All Categories</span>
           <span>&rarr;</span>
         </Link>
       </div>

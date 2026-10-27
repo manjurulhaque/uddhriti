@@ -66,7 +66,7 @@ export function HomeHighlights({
   const maxCategoryCount = Math.max(...topCategories.map((c) => c.quoteCount), 1)
 
   return (
-    <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" aria-label="Curator Highlights">
+    <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" aria-label="Curator Highlights">
       {errorMessage ? (
         <div className="lg:col-span-2 rounded-[1.4rem] border border-amber-300/60 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-[0_10px_30px_rgba(120,53,15,0.08)]">
           {errorMessage}
@@ -435,7 +435,7 @@ export function HomeHighlights({
                   href="/categories"
                   className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
                 >
-                  <span>Browse all 30+ themes</span>
+                  <span>Browse all themes</span>
                   <span>&rarr;</span>
                 </Link>
               </div>

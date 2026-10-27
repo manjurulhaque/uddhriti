@@ -27,15 +27,15 @@ export interface HomeLatestQuotesProps {
 
 export function HomeLatestQuotes({ quotes }: HomeLatestQuotesProps) {
   return (
-    <section className="mt-8">
+    <section>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
             Fresh additions
           </p>
-          <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Latest Quotes</h2>
+          <h2 className="mt-2 text-2xl font-serif font-bold text-[var(--ink-900)] sm:text-3xl">Latest Quotes</h2>
         </div>
-        <p className="rounded-full border border-[var(--ink-900)]/10 bg-white px-4 py-2 text-sm text-[var(--ink-700)]/75">
+        <p className="rounded-full border border-stone-200/80 bg-white/90 px-4 py-2 text-xs font-medium text-stone-600 shadow-2xs">
           {quotes.length} cards shown
         </p>
       </div>

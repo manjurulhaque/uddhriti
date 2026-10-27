@@ -100,6 +100,12 @@ export function HomeHero({
                 <span>🌿 Reflect by Mood</span>
               </a>
               <a
+                href="#highlights"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
+              >
+                <span>🏛️ Curator’s Parchment</span>
+              </a>
+              <a
                 href="#daily-quote"
                 className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
               >
@@ -124,16 +130,10 @@ export function HomeHero({
                 <span>🔥 Trending Now</span>
               </a>
               <a
-                href="#highlights"
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:border-white/25 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                <span>🏛️ Curated Voices</span>
-              </a>
-              <a
                 href="#latest"
                 className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:border-white/25 hover:bg-white/10 hover:text-white transition-colors"
               >
-                <span>✨ Fresh Additions</span>
+                <span>✨ Latest Quotes</span>
               </a>
             </div>
           </div>

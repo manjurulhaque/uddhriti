@@ -1,24 +1,56 @@
+"use client"
+
 import * as React from "react"
 import Link from "next/link"
-import { InsightCard } from "./insight-card"
-import { RankingItem } from "./ranking-item"
 import { Panel } from "../ui/card"
 import { Empty } from "../ui/empty-state"
 import { formatNumber } from "@/lib/formatters"
 
-export interface RankedItem {
+export interface RankedCategoryItem {
   id: string
   name: string
   slug?: string | null
+  description?: string | null
+  quoteCount: number
+}
+
+export interface RankedAuthorItem {
+  id: string
+  name: string
+  slug?: string | null
+  birthYear?: number | null
+  deathYear?: number | null
+  profession?: string | null
+  nationality?: string | null
   quoteCount: number
 }
 
 export interface HomeHighlightsProps {
-  topCategories: RankedItem[]
-  recentAuthors: RankedItem[]
+  topCategories: RankedCategoryItem[]
+  recentAuthors: RankedAuthorItem[]
   quotesLast7Days: number
-  standoutCategory?: RankedItem | null
+  standoutCategory?: RankedCategoryItem | null
   errorMessage?: string | null
+}
+
+type FolioTab = "pillars" | "standards" | "sanctuary"
+
+function formatAuthorLifespan(author: RankedAuthorItem): string | null {
+  if (author.birthYear && author.deathYear) {
+    const b = author.birthYear < 0 ? `${Math.abs(author.birthYear)} BC` : `${author.birthYear}`
+    const d = author.deathYear < 0 ? `${Math.abs(author.deathYear)} BC` : `${author.deathYear}`
+    return `${b}–${d}`
+  }
+  if (author.birthYear) {
+    return author.birthYear < 0 ? `b. ${Math.abs(author.birthYear)} BC` : `b. ${author.birthYear}`
+  }
+  return null
+}
+
+function getAuthorInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
 export function HomeHighlights({
@@ -28,8 +60,13 @@ export function HomeHighlights({
   standoutCategory = topCategories[0] ?? null,
   errorMessage,
 }: HomeHighlightsProps) {
+  const [activeTab, setActiveTab] = React.useState<FolioTab>("pillars")
+
+  // Find max category count for relative progress bars
+  const maxCategoryCount = Math.max(...topCategories.map((c) => c.quoteCount), 1)
+
   return (
-    <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+    <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" aria-label="Curator Highlights">
       {errorMessage ? (
         <div className="lg:col-span-2 rounded-[1.4rem] border border-amber-300/60 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-[0_10px_30px_rgba(120,53,15,0.08)]">
           {errorMessage}
@@ -37,31 +74,39 @@ export function HomeHighlights({
       ) : null}
 
       {/* Left: The Literary Sanctuary Parchment */}
-      <section className="animate-rise flex flex-col justify-between rounded-[2rem] border border-[var(--ink-900)]/10 bg-white p-6 sm:p-8 lg:p-10 shadow-[0_16px_50px_rgba(33,37,41,0.06)]">
+      <section className="animate-rise relative isolate flex flex-col justify-between overflow-hidden rounded-[2rem] border border-amber-900/10 bg-gradient-to-br from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_rgba(33,37,41,0.08)]">
+        {/* Subtle Watermark Seal */}
+        <div
+          className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full border-[12px] border-amber-800/5 bg-radial from-amber-600/5 to-transparent blur-xs select-none"
+          aria-hidden="true"
+        />
+
         <div>
+          {/* Header & Pillar Badge */}
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)]" />
+            <div className="max-w-xl space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/6 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)] animate-pulse" />
                 The Curator’s Parchment
               </div>
-              <h2 className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-[var(--ink-900)] leading-tight">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-[var(--ink-900)] leading-tight">
                 Where ancient reflections meet living contemplations.
               </h2>
-              <p className="mt-3 text-sm leading-relaxed text-[var(--ink-700)]">
-                Uddhriti is a quiet sanctuary dedicated to the enduring power of language. Every passage
-                is collected as a living cultural artifact—treated with historical reverence rather than
-                disposable internet trivia.
+              <p className="text-sm leading-relaxed text-[var(--ink-700)]">
+                Uddhriti is a quiet sanctuary dedicated to the enduring resonance of language.
+                Here, passages are gathered with scholarly care—treated not as disposable internet
+                snippets, but as living cultural monuments.
               </p>
             </div>
 
+            {/* Standout Category Feature Pill */}
             {standoutCategory ? (
               <Link
                 href={`/categories/${standoutCategory.slug || standoutCategory.id}`}
-                className="group rounded-2xl border border-[var(--accent-gold)]/40 bg-[var(--accent-gold)]/14 p-4 text-sm text-[var(--ink-800)] transition-all duration-200 hover:bg-[var(--accent-gold)]/22 hover:border-[var(--accent-gold)]/70 hover:scale-[1.02] active:scale-[0.98] shadow-xs shrink-0 self-start sm:self-auto"
+                className="group relative overflow-hidden rounded-2xl border border-[var(--accent-gold)]/45 bg-white/90 p-4 text-sm text-[var(--ink-800)] shadow-xs transition-all duration-200 hover:border-[var(--accent-gold)]/80 hover:bg-white hover:scale-[1.02] hover:shadow-md active:scale-[0.98] shrink-0 self-start sm:self-auto"
                 title={`Explore ${standoutCategory.name}`}
               >
-                <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent-rust)]">
+                <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
                   <span>Foundational Theme</span>
                   <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
                 </div>
@@ -75,34 +120,220 @@ export function HomeHighlights({
             ) : null}
           </div>
 
-          {/* Literary Substance Pillars */}
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <InsightCard
-              eyebrow="Authenticity"
-              title="Anchored to original sources"
-              description="Every excerpt is cross-verified against historical manuscripts, published treatises, or recorded speeches—free from apocryphal misattributions."
-            />
-            <InsightCard
-              eyebrow="Continuity"
-              title="A conversation across eras"
-              description={`${formatNumber(quotesLast7Days)} new passages joined the archive this week, keeping the centuries in quiet, perpetual dialogue with our modern moment.`}
-            />
-            <InsightCard
-              eyebrow="Universality"
-              title="Voices across millennia"
-              description="From Stoic emperors and Upanishadic sages to poets, scientists, and reformers—human insight distilled across three thousand years of history."
-            />
+          {/* Interactive Folio Switcher */}
+          <div className="mt-6 flex flex-wrap items-center gap-2 border-b border-amber-900/10 pb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 mr-1">
+              Folios:
+            </span>
+            <button
+              type="button"
+              onClick={() => setActiveTab("pillars")}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
+                activeTab === "pillars"
+                  ? "bg-[var(--ink-900)] text-white shadow-xs"
+                  : "bg-white/70 text-stone-700 hover:bg-white hover:text-stone-900 border border-stone-200/80"
+              }`}
+            >
+              📜 Curatorial Pillars
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("standards")}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
+                activeTab === "standards"
+                  ? "bg-[var(--ink-900)] text-white shadow-xs"
+                  : "bg-white/70 text-stone-700 hover:bg-white hover:text-stone-900 border border-stone-200/80"
+              }`}
+            >
+              ✒️ Editorial Standards
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("sanctuary")}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
+                activeTab === "sanctuary"
+                  ? "bg-[var(--ink-900)] text-white shadow-xs"
+                  : "bg-white/70 text-stone-700 hover:bg-white hover:text-stone-900 border border-stone-200/80"
+              }`}
+            >
+              🕊️ The Sanctuary Vision
+            </button>
+          </div>
+
+          {/* Active Folio Cards Display */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {activeTab === "pillars" && (
+              <>
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">🏛️</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Authenticity
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Anchored to original texts
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    Every excerpt is verified against historical manuscripts, published treatises, or
+                    recorded speeches—free from apocryphal modern misattributions.
+                  </p>
+                </article>
+
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">📜</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Continuity
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    A dialogue across eras
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    {formatNumber(quotesLast7Days)} new passages joined the archive this week, keeping
+                    ancient voices in quiet, ongoing conversation with our present moment.
+                  </p>
+                </article>
+
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">🌐</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Universality
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Voices across millennia
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    From Stoic emperors and Upanishadic sages to poets, scientists, and
+                    reformers—human insight distilled across three thousand years of history.
+                  </p>
+                </article>
+              </>
+            )}
+
+            {activeTab === "standards" && (
+              <>
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">🔍</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Provenance
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Verifiable Citations
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    Citations detail title, publication or composition year, and translation context so
+                    readers can explore the parent work with confidence.
+                  </p>
+                </article>
+
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">⏳</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Endurance
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Resonance Over Novelty
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    We select thoughts that transcend ephemeral news cycles—lines that illuminate human
+                    courage, grief, beauty, and philosophical wonder across generations.
+                  </p>
+                </article>
+
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">🖋️</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Lyrical Cadence
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Craft &amp; Poetics
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    Thought matters, but so does cadence. We honor language crafted with precision,
+                    musicality, and the arresting power of metaphor.
+                  </p>
+                </article>
+              </>
+            )}
+
+            {activeTab === "sanctuary" && (
+              <>
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">📖</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Sanctuary
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Distraction-Free
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    No advertisements, invasive trackers, or algorithmic noise. A calm, warm paper space
+                    crafted for contemplative reading and slow reflection.
+                  </p>
+                </article>
+
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">💾</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Portability
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Personal Notebook
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    Save passages directly to your browser’s private notebook with full offline support.
+                    Your curated reflections stay accessible anywhere.
+                  </p>
+                </article>
+
+                <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">🎨</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+                      Sharing
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+                    Editorial Card Art
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+                    Generate elegant typographical quote cards ready for print or sharing, spreading
+                    memorable wisdom with visual honor.
+                  </p>
+                </article>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Footer Note */}
-        <div className="mt-8 pt-5 border-t border-stone-200/70 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
-          <span className="italic">
-            “To read is to fly; to take off into memories, centuries, and visions.”
-          </span>
+        {/* Footer Marginalia Callout */}
+        <div className="mt-8 rounded-2xl border border-amber-900/10 bg-amber-800/4 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-800/10 text-amber-900 text-lg">
+              ✒️
+            </span>
+            <p className="font-serif italic text-xs sm:text-sm text-stone-800">
+              “Words outlive the hands that wrote them and the stone temples that housed them.”
+            </p>
+          </div>
+
           <Link
             href="/quotes"
-            className="font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)] hover:underline"
           >
             <span>Explore Complete Archive</span>
             <span>&rarr;</span>
@@ -112,34 +343,55 @@ export function HomeHighlights({
 
       {/* Right: Thematic Pillars & Revered Thinkers */}
       <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-        {/* Top Categories Panel */}
+        {/* Leading Themes Panel */}
         <Panel
           title="Leading Themes"
-          subtitle="Explore the library’s most comprehensive collections."
+          subtitle="Explore the collection’s deepest intellectual clusters."
           tone="sand"
         >
           {topCategories.length === 0 ? (
             <Empty message="Categories with published quotes will appear here." />
           ) : (
-            <div className="space-y-2.5">
-              {topCategories.map((category, index) => (
-                <RankingItem
-                  key={category.id}
-                  rank={index + 1}
-                  title={category.name}
-                  count={category.quoteCount}
-                  countLabel="reflections"
-                  href={`/categories/${category.slug || category.id}`}
-                  badgeTone="rust"
-                />
-              ))}
+            <div className="space-y-3">
+              {topCategories.map((category, index) => {
+                const percentage = Math.max(15, Math.round((category.quoteCount / maxCategoryCount) * 100))
+                return (
+                  <Link
+                    key={category.id}
+                    href={`/categories/${category.slug || category.id}`}
+                    className="group block rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-2xs transition-all duration-200 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-rust)]/12 text-[11px] font-bold text-[var(--accent-rust)]">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
+                          {category.name}
+                        </span>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-700">
+                        {formatNumber(category.quoteCount)}
+                      </span>
+                    </div>
 
-              <div className="pt-2 text-right">
+                    {/* Collection Depth Indicator Bar */}
+                    <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-rust)] transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </Link>
+                )
+              })}
+
+              <div className="pt-1 text-right">
                 <Link
                   href="/categories"
                   className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
                 >
-                  <span>Browse all categories</span>
+                  <span>Browse all 30+ themes</span>
                   <span>&rarr;</span>
                 </Link>
               </div>
@@ -147,7 +399,7 @@ export function HomeHighlights({
           )}
         </Panel>
 
-        {/* Top Authors Panel */}
+        {/* Revered Thinkers Panel */}
         <Panel
           title="Revered Thinkers"
           subtitle="Voices whose words have outlived their centuries."
@@ -156,24 +408,65 @@ export function HomeHighlights({
           {recentAuthors.length === 0 ? (
             <Empty message="Authors with published quotes will appear here." />
           ) : (
-            <div className="space-y-2.5">
-              {recentAuthors.map((author) => (
-                <RankingItem
-                  key={author.id}
-                  title={author.name}
-                  count={author.quoteCount}
-                  countLabel="passages"
-                  href={`/authors/${author.slug || author.id}`}
-                  badgeTone="default"
-                />
-              ))}
+            <div className="space-y-3">
+              {recentAuthors.map((author) => {
+                const lifespan = formatAuthorLifespan(author)
+                const initials = getAuthorInitials(author.name)
+                const subtitle = [author.profession, author.nationality, lifespan]
+                  .filter(Boolean)
+                  .join(" • ")
 
-              <div className="pt-2 text-right">
+                return (
+                  <Link
+                    key={author.id}
+                    href={`/authors/${author.slug || author.id}`}
+                    className="group block rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-2xs transition-all duration-200 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Elegant Author Monogram Seal */}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--ink-900)] to-[#3a4454] font-serif text-xs font-bold text-[var(--accent-gold)] shadow-2xs group-hover:from-[var(--accent-rust)] group-hover:to-[#8a3e1b] transition-all">
+                          {initials}
+                        </div>
+
+                        <div className="min-w-0">
+                          <h4 className="font-serif font-bold text-sm text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
+                            {author.name}
+                          </h4>
+                          {subtitle && (
+                            <p className="text-[11px] text-stone-500 truncate mt-0.5">
+                              {subtitle}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-700">
+                          {formatNumber(author.quoteCount)}
+                        </span>
+                        <svg
+                          className="h-3.5 w-3.5 text-stone-400 transition-transform group-hover:translate-x-1 group-hover:text-[var(--accent-rust)]"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+
+              <div className="pt-1 text-right">
                 <Link
                   href="/authors"
                   className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
                 >
-                  <span>Explore all authors</span>
+                  <span>Explore all thinkers</span>
                   <span>&rarr;</span>
                 </Link>
               </div>

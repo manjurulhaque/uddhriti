@@ -44,8 +44,6 @@ export function HeroSearch({ totalQuotes }: HeroSearchProps) {
     router.push(`/quotes?q=${encodeURIComponent(term)}`)
   }
 
-  const placeholderCount = totalQuotes ? `${totalQuotes.toLocaleString()}+` : "1,200+"
-
   return (
     <div className="space-y-4">
       {/* Search Input Bar */}
@@ -77,7 +75,7 @@ export function HeroSearch({ totalQuotes }: HeroSearchProps) {
           name="q"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Search ${placeholderCount} reflections by thinker, passage, or theme...`}
+          placeholder="Search reflections by thinker, passage, or theme..."
           aria-label="Search quotations"
           className="w-full bg-transparent py-2.5 text-sm sm:text-base text-white placeholder:text-white/45 focus:outline-none"
         />

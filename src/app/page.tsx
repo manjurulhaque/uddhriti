@@ -5,6 +5,7 @@ import {
   HomeHero,
   HomeMoodFilter,
   HomeHighlights,
+  HomeDailyQuote,
   HomeTrendingSection,
   HomeLatestQuotes,
 } from "@/components"
@@ -37,16 +38,49 @@ const quoteCardSelect = {
       yearApproximate: true,
     },
   },
-  tags: {
-    select: {
-      tag: {
-        select: {
-          id: true,
-          name: true,
+    tags: {
+      select: {
+        tag: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
       },
+      take: 4,
     },
-    take: 4,
+  } as const
+
+  const dailyQuoteSelect = {
+  id: true,
+  slug: true,
+  content: true,
+  meaning: true,
+  historicalContext: true,
+  authorName: true,
+  author: {
+    select: {
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
+    },
+  },
+  category: {
+    select: {
+      name: true,
+      slug: true,
+    },
+  },
+  source: {
+    select: {
+      title: true,
+      year: true,
+      yearLabel: true,
+      yearApproximate: true,
+    },
   },
 } as const
 
@@ -54,6 +88,8 @@ export default async function HomePage() {
   const sevenDaysAgo = subtractDays(new Date(), 7)
 
   const {
+    dailyQuote,
+    serendipityPool,
     featuredQuote,
     latestQuotes,
     trendingQuotes,
@@ -89,6 +125,15 @@ export default async function HomePage() {
           />
         </div>
 
+        {dailyQuote && (
+          <div id="daily-quote" className="scroll-mt-20">
+            <HomeDailyQuote
+              initialQuote={dailyQuote}
+              serendipityPool={serendipityPool}
+            />
+          </div>
+        )}
+
         <div id="trending" className="scroll-mt-20">
           <HomeTrendingSection
             trendingQuotes={trendingQuotes}
@@ -109,17 +154,43 @@ export default async function HomePage() {
 
 async function loadHomePageData(sevenDaysAgo: Date) {
   try {
+    // Deterministic daily seed based on UTC date string
+    const todayStr = new Date().toISOString().slice(0, 10)
+    let hash = 0
+    for (let i = 0; i < todayStr.length; i++) {
+      hash = (hash << 5) - hash + todayStr.charCodeAt(i)
+      hash |= 0
+    }
+    const dailySeed = Math.abs(hash)
+
+    const totalPublishedQuotes = await prisma.quote.count({
+      where: { status: "PUBLISHED", deletedAt: null },
+    })
+    const dailySkip = totalPublishedQuotes > 0 ? dailySeed % totalPublishedQuotes : 0
+
     const [
+      dailyQuote,
+      serendipityPool,
       featuredQuote,
       latestQuotes,
       trendingQuotes,
       topCategories,
       topTags,
       recentAuthors,
-      totalPublishedQuotes,
       totalAuthors,
       quotesLast7Days,
     ] = await Promise.all([
+      prisma.quote.findFirst({
+        where: { status: "PUBLISHED", deletedAt: null },
+        skip: dailySkip,
+        select: dailyQuoteSelect,
+      }),
+      prisma.quote.findMany({
+        where: { status: "PUBLISHED", deletedAt: null },
+        orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
+        take: 12,
+        select: dailyQuoteSelect,
+      }),
       prisma.quote.findFirst({
         where: {
           status: "PUBLISHED",
@@ -188,9 +259,6 @@ async function loadHomePageData(sevenDaysAgo: Date) {
           quoteCount: true,
         },
       }),
-      prisma.quote.count({
-        where: { status: "PUBLISHED", deletedAt: null },
-      }),
       prisma.author.count(),
       prisma.quote.count({
         where: {
@@ -203,6 +271,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
 
     return {
       ok: true,
+      dailyQuote,
+      serendipityPool,
       featuredQuote,
       latestQuotes,
       trendingQuotes,
@@ -219,6 +289,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
 
     return {
       ok: false,
+      dailyQuote: null,
+      serendipityPool: [],
       featuredQuote: null,
       latestQuotes: [],
       trendingQuotes: [],

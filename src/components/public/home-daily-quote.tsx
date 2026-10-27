@@ -195,15 +195,15 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
             isTransitioning ? "opacity-0 scale-[0.99] translate-y-2" : "opacity-100 scale-100 translate-y-0"
           }`}
         >
-          {/* Large Editorial Quotation */}
-          <div className="relative pt-2">
+          {/* Editorial Quotation */}
+          <div className="relative pt-1">
             <span
-              className="pointer-events-none absolute -left-2 sm:-left-4 -top-6 font-serif text-7xl sm:text-8xl text-amber-800/15 select-none leading-none"
+              className="pointer-events-none absolute -left-2 sm:-left-3 -top-5 font-serif text-5xl sm:text-6xl text-amber-800/15 select-none leading-none"
               aria-hidden="true"
             >
               “
             </span>
-            <blockquote className="relative font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium leading-relaxed sm:leading-relaxed text-[var(--ink-900)]">
+            <blockquote className="relative font-serif text-lg sm:text-xl md:text-2xl font-normal leading-relaxed sm:leading-relaxed text-[var(--ink-900)]">
               “{currentQuote.content}”
             </blockquote>
           </div>
@@ -211,7 +211,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
           {/* Attribution & Provenance Row */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-amber-900/10">
             <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2 text-base sm:text-xl font-serif">
+              <div className="flex flex-wrap items-center gap-2 text-base sm:text-lg font-serif">
                 {authorSlug ? (
                   <Link
                     href={`/authors/${authorSlug}`}

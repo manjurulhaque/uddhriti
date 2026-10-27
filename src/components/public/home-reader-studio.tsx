@@ -105,10 +105,10 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)] animate-pulse" />
             <span>Reader Studio &amp; Sanctuary</span>
           </div>
-          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-900)]">
             Instruments for the Thoughtful Reader
           </h2>
-          <p className="text-sm sm:text-base text-stone-600 font-serif leading-relaxed">
+          <p className="text-xs sm:text-sm text-stone-600 font-serif leading-relaxed">
             Uddhriti is designed as an unhurried, private library. Discover our built-in instruments
             crafted for private study, distraction-free offline reading, and editorial sharing.
           </p>

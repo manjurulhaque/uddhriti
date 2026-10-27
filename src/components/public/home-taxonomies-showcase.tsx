@@ -123,10 +123,10 @@ export function HomeTaxonomiesShowcase({
             <span>🏛️</span>
             <span>Living Taxonomies</span>
           </div>
-          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-900)]">
             Thinkers &amp; Thematic Horizons
           </h2>
-          <p className="text-sm sm:text-base text-stone-600 font-serif leading-relaxed">
+          <p className="text-xs sm:text-sm text-stone-600 font-serif leading-relaxed">
             Encounter the visionary minds whose thoughts outlived empires, and explore the enduring
             questions that unite human contemplation across eras.
           </p>

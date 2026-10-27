@@ -7,6 +7,7 @@ import {
   HomeHighlights,
   HomeDailyQuote,
   HomeTaxonomiesShowcase,
+  HomeReaderStudio,
   HomeTrendingSection,
   HomeLatestQuotes,
 } from "@/components"
@@ -145,6 +146,21 @@ export default async function HomePage() {
             />
           </div>
         )}
+
+        <div id="reader-studio" className="scroll-mt-20">
+          <HomeReaderStudio
+            featuredSampleQuote={
+              dailyQuote
+                ? {
+                    content: dailyQuote.content,
+                    authorName: dailyQuote.author?.name || dailyQuote.authorName,
+                    sourceTitle: dailyQuote.source?.title,
+                    slug: dailyQuote.slug,
+                  }
+                : null
+            }
+          />
+        </div>
 
         <div id="trending" className="scroll-mt-20">
           <HomeTrendingSection

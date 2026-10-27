@@ -77,10 +77,10 @@ export function QuoteCard({
         saved
           ? isDark || isFeatured
             ? "text-[var(--accent-gold)] bg-white/15"
-            : "text-[var(--accent-rust)] bg-[#c76b3e]/12"
+            : "text-[var(--accent-rust)] bg-[#c76b3e]/15 shadow-2xs"
           : isDark || isFeatured
           ? "text-white/40 hover:text-white hover:bg-white/10"
-          : "text-stone-400 hover:text-stone-800 hover:bg-stone-200/50"
+          : "text-amber-800/35 hover:text-amber-900 hover:bg-amber-800/10"
       }`}
     >
       <svg
@@ -195,19 +195,28 @@ export function QuoteCard({
 
   return (
     <article
-      className={`group relative rounded-[1.6rem] border border-[var(--ink-900)]/8 bg-white p-5 shadow-[0_14px_36px_rgba(33,37,41,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_48px_rgba(33,37,41,0.12)] ${className}`}
+      className={`group relative overflow-hidden rounded-[1.6rem] border border-amber-900/14 bg-gradient-to-br from-[#fffdfa] via-[#fbf6ec] to-[#f4ecd8] p-1.5 shadow-[0_12px_32px_rgba(120,53,15,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/28 hover:shadow-[0_22px_45px_rgba(120,53,15,0.12)] ${className}`}
       style={style}
     >
-      <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(244,162,97,0.08),rgba(255,255,255,0))] p-1">
-        <div className="flex items-start justify-between gap-3">
+      {/* Inner Parchment Folio Frame */}
+      <div className="relative rounded-[1.25rem] border border-amber-900/8 bg-white/45 p-4 sm:p-5 backdrop-blur-[1px] transition-colors group-hover:bg-white/60">
+        {/* Subtle Antique Watermark Quote Mark */}
+        <span
+          className="pointer-events-none absolute -left-1 -top-3 select-none font-serif text-6xl text-amber-900/8 leading-none transition-colors group-hover:text-amber-900/14"
+          aria-hidden="true"
+        >
+          “
+        </span>
+
+        <div className="relative z-1 flex items-start justify-between gap-3">
           {quoteHref ? (
             <Link href={quoteHref} className="block group/link flex-1">
-              <blockquote className="line-clamp-5 text-sm leading-7 font-serif text-[var(--ink-800)] group-hover/link:text-[var(--accent-rust)] transition-colors">
+              <blockquote className="line-clamp-5 text-sm sm:text-base leading-relaxed font-serif text-[#2a241d] group-hover/link:text-[var(--accent-rust)] transition-colors">
                 &ldquo;{content}&rdquo;
               </blockquote>
             </Link>
           ) : (
-            <blockquote className="line-clamp-5 text-sm leading-7 font-serif text-[var(--ink-800)] flex-1">
+            <blockquote className="line-clamp-5 text-sm sm:text-base leading-relaxed font-serif text-[#2a241d] flex-1">
               &ldquo;{content}&rdquo;
             </blockquote>
           )}
@@ -222,9 +231,16 @@ export function QuoteCard({
           sourceTitle={sourceTitle}
           year={year}
           tags={tags}
-          className="mt-4"
+          className="relative z-1 mt-4"
           variant="light"
         />
+
+        {views !== undefined ? (
+          <div className="relative z-1 mt-4 flex items-center justify-between border-t border-amber-900/10 pt-3 text-[11px] uppercase tracking-[0.16em] text-stone-500">
+            <span>{formatCountWithNoun(views, "view")}</span>
+            {tags.length > 0 && <span>{formatCountWithNoun(tags.length, "tag")}</span>}
+          </div>
+        ) : null}
       </div>
     </article>
   )

@@ -24,12 +24,12 @@ export function QuoteMeta({
   className = "",
   variant = "light",
 }: QuoteMetaProps) {
-  const nameClass = variant === "dark" ? "text-white/90" : "text-[var(--ink-800)]"
-  const metaClass = variant === "dark" ? "text-white/60" : "text-[var(--ink-700)]/70"
+  const nameClass = variant === "dark" ? "text-white/90" : "font-serif text-[#2a241d]"
+  const metaClass = variant === "dark" ? "text-white/60" : "text-stone-600/85"
   const tagClass =
     variant === "dark"
       ? "bg-white/10 text-white/80 border-white/10 hover:bg-white/20"
-      : "bg-[var(--page-cream)] text-[var(--ink-700)] border-[var(--ink-900)]/8 hover:bg-[var(--accent-sand)]/25"
+      : "bg-amber-800/6 text-stone-700 border-amber-900/10 hover:bg-amber-800/14 hover:border-amber-900/20 hover:text-stone-900"
 
   return (
     <div className={`space-y-1 ${className}`}>

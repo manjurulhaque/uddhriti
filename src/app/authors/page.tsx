@@ -6,11 +6,12 @@ import { prisma } from "@/lib/prisma"
 import { PublicLayout } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
+import { formatEpoch, formatLifespan, cleanProfession } from "@/components/public/home-taxonomies-showcase"
 
 export const metadata: Metadata = {
   title: "Authors & Thinkers | Uddhriti",
   description:
-    "Explore timeless wisdom from history's greatest philosophers, writers, poets, and leaders.",
+    "Explore timeless wisdom from history's greatest philosophers, writers, poets, and leaders across antiquity, enlightenment, and modernity.",
 }
 
 const PAGE_SIZE = 24
@@ -67,6 +68,12 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
         deathYear: true,
         imageUrl: true,
         quoteCount: true,
+        quotes: {
+          where: { status: "PUBLISHED", deletedAt: null },
+          take: 1,
+          orderBy: { popularityScore: "desc" },
+          select: { content: true },
+        },
       },
     }),
   ])
@@ -95,11 +102,11 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
               Authors &amp; Thinkers
             </h1>
             <p className="text-sm sm:text-base text-stone-600 leading-relaxed font-serif">
-              Discover profound words from philosophers, statesmen, poets, and visionaries whose ideas shaped civilization.
+              Discover enduring words from philosophers, statesmen, poets, and visionaries whose ideas shaped civilization.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-stone-500 bg-white/70 rounded-full px-4 py-2 border border-stone-200 shadow-2xs self-start md:self-end">
+          <div className="flex items-center gap-2 text-xs font-mono text-stone-600 bg-white/90 rounded-full px-4 py-2 border border-stone-200 shadow-2xs self-start md:self-end">
             <span>Catalog:</span>
             <span className="font-bold text-stone-900">{formatCountWithNoun(totalAuthors, "voice")}</span>
           </div>
@@ -135,12 +142,12 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
           </div>
 
           {/* Alphabet Bar */}
-          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto scrollbar-none">
             <Link
               href="/authors"
               className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
                 !selectedLetter || selectedLetter === "ALL"
-                  ? "bg-stone-900 text-white"
+                  ? "bg-stone-900 text-white shadow-2xs"
                   : "bg-white/80 text-stone-700 hover:bg-stone-900/5 border border-stone-200"
               }`}
             >
@@ -169,59 +176,98 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
         {authors.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {authors.map((author) => {
-              const lifespan =
-                author.birthYear || author.deathYear
-                  ? `${author.birthYear ?? "?"} – ${author.deathYear ?? (author.birthYear ? "Present" : "")}`
-                  : null
+              const epoch = formatEpoch(author.birthYear)
+              const lifespan = formatLifespan(author.birthYear, author.deathYear)
+              const cleanProf = cleanProfession(author.profession)
+              const initials = author.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((w) => w[0])
+                .join("")
+                .toUpperCase()
 
               return (
                 <Link
                   key={author.id}
                   href={`/authors/${author.slug}`}
-                  className="group flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs hover:border-stone-400 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99]"
                 >
-                  <div className="flex items-start gap-4">
-                    {/* Author Portrait or Monogram */}
-                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border border-stone-200/80">
-                      {author.imageUrl ? (
-                        <Image
-                          src={author.imageUrl}
-                          alt={author.name}
-                          fill
-                          sizes="56px"
-                          unoptimized
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center font-serif text-xl font-bold italic text-stone-400 bg-[var(--page-cream)]">
-                          {author.name.charAt(0)}
-                        </div>
-                      )}
+                  {/* Subtle Top Gradient Accent on Hover */}
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--accent-rust)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-hidden="true"
+                  />
+
+                  <div className="space-y-4">
+                    {/* Header: Portrait / Monogram Seal + Meta */}
+                    <div className="flex items-start gap-3.5">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 shadow-2xs group-hover:border-[var(--accent-rust)]/40 transition-colors">
+                        {author.imageUrl ? (
+                          <Image
+                            src={author.imageUrl}
+                            alt={author.name}
+                            fill
+                            sizes="56px"
+                            unoptimized
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center font-serif text-lg font-bold text-[var(--accent-rust)] bg-gradient-to-br from-amber-50 to-[#faf3e8]">
+                            {initials}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h2 className="font-serif text-lg font-bold tracking-tight text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
+                          {author.name}
+                        </h2>
+
+                        {lifespan && (
+                          <p className="text-xs font-mono font-medium text-stone-500 mt-0.5">
+                            {lifespan}
+                          </p>
+                        )}
+
+                        {epoch && (
+                          <span className="inline-block rounded-md bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-600 mt-1">
+                            {epoch}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <h2 className="font-serif text-base font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors line-clamp-1">
-                        {author.name}
-                      </h2>
-                      {author.profession && (
-                        <p className="text-xs text-stone-500 line-clamp-1">
-                          {author.profession}
-                        </p>
-                      )}
-                      {author.nationality && (
-                        <p className="text-[11px] text-stone-400 line-clamp-1">
-                          {author.nationality}
-                        </p>
-                      )}
-                    </div>
+                    {/* Nationality & Profession */}
+                    {(author.nationality || cleanProf) && (
+                      <div className="text-xs text-stone-600 font-sans line-clamp-1 border-t border-stone-100 pt-2.5">
+                        <span className="font-semibold text-stone-800">{author.nationality}</span>
+                        {author.nationality && cleanProf && <span> · </span>}
+                        <span>{cleanProf}</span>
+                      </div>
+                    )}
+
+                    {/* Signature Excerpt Quote Preview */}
+                    {author.quotes[0]?.content && (
+                      <div className="rounded-xl border border-amber-900/10 bg-[#faf6f0]/70 p-3 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
+                          Notable Excerpt
+                        </span>
+                        <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
+                          &ldquo;{author.quotes[0].content}&rdquo;
+                        </blockquote>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-                    <span className="font-mono text-[11px] text-stone-400">
-                      {lifespan ?? "Historic Voice"}
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-700">
+                  {/* Card Footer */}
+                  <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
+                    <span className="font-semibold text-stone-700">
                       {formatCountWithNoun(author.quoteCount, "quote")}
+                    </span>
+
+                    <span className="inline-flex items-center gap-1 font-bold text-[var(--accent-rust)] group-hover:translate-x-1 transition-transform">
+                      <span>Explore</span>
+                      <span>&rarr;</span>
                     </span>
                   </div>
                 </Link>

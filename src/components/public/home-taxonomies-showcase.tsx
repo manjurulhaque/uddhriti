@@ -1,0 +1,400 @@
+"use client"
+
+import * as React from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { formatCountWithNoun, formatNumber } from "@/lib/formatters"
+
+export interface SpotlightAuthorItem {
+  id: string
+  name: string
+  slug: string
+  profession?: string | null
+  nationality?: string | null
+  birthYear?: number | null
+  deathYear?: number | null
+  imageUrl?: string | null
+  quoteCount: number
+  topQuote?: {
+    content: string
+    slug?: string | null
+  } | null
+}
+
+export interface SpotlightCategoryItem {
+  id: string
+  name: string
+  slug: string
+  description?: string | null
+  quoteCount: number
+  topQuote?: {
+    content: string
+    authorName?: string | null
+  } | null
+}
+
+export interface HomeTaxonomiesShowcaseProps {
+  spotlightAuthors: SpotlightAuthorItem[]
+  spotlightCategories: SpotlightCategoryItem[]
+}
+
+export function formatEpoch(birthYear?: number | null): string | null {
+  if (birthYear === undefined || birthYear === null) return null
+  if (birthYear < 500) return "Classical Antiquity"
+  if (birthYear < 1400) return "Medieval & Mystical Era"
+  if (birthYear < 1650) return "Renaissance & Early Modern"
+  if (birthYear < 1800) return "Age of Enlightenment"
+  if (birthYear < 1900) return "19th Century Romanticism"
+  return "20th Century & Modern Era"
+}
+
+export function formatLifespan(birthYear?: number | null, deathYear?: number | null): string | null {
+  if (birthYear && deathYear) {
+    const b = birthYear < 0 ? `${Math.abs(birthYear)} BC` : `${birthYear}`
+    const d = deathYear < 0 ? `${Math.abs(deathYear)} BC` : `${deathYear}`
+    return `${b}–${d}`
+  }
+  if (birthYear) {
+    return birthYear < 0 ? `b. ${Math.abs(birthYear)} BC` : `b. ${birthYear}`
+  }
+  return null
+}
+
+export function cleanProfession(profession?: string | null): string | null {
+  if (!profession) return null
+  const parts = profession.split(",").map((s) => s.trim()).filter(Boolean)
+  if (parts.length === 0) return null
+  if (parts.length === 1) return parts[0]
+  return `${parts[0]} & ${parts[1]}`
+}
+
+function getCategoryMeta(name: string) {
+  const lower = name.toLowerCase()
+  if (lower.includes("philosoph")) {
+    return { icon: "🌌", gradient: "from-indigo-500/10 via-purple-500/5 to-transparent", border: "border-indigo-500/25", badge: "text-indigo-800 bg-indigo-50" }
+  }
+  if (lower.includes("friend")) {
+    return { icon: "🤝", gradient: "from-amber-500/10 via-orange-500/5 to-transparent", border: "border-amber-500/25", badge: "text-amber-800 bg-amber-50" }
+  }
+  if (lower.includes("love")) {
+    return { icon: "🤍", gradient: "from-pink-500/10 via-rose-500/5 to-transparent", border: "border-pink-500/25", badge: "text-pink-800 bg-pink-50" }
+  }
+  if (lower.includes("polit") || lower.includes("freedom") || lower.includes("libert")) {
+    return { icon: "🏛️", gradient: "from-blue-500/10 via-sky-500/5 to-transparent", border: "border-blue-500/25", badge: "text-blue-800 bg-blue-50" }
+  }
+  if (lower.includes("positiv") || lower.includes("hope") || lower.includes("happ")) {
+    return { icon: "🌅", gradient: "from-yellow-500/10 via-amber-500/5 to-transparent", border: "border-yellow-500/25", badge: "text-yellow-800 bg-yellow-50" }
+  }
+  if (lower.includes("fail") || lower.includes("resilien") || lower.includes("courag")) {
+    return { icon: "⚡", gradient: "from-orange-500/10 via-amber-500/5 to-transparent", border: "border-orange-500/25", badge: "text-orange-800 bg-orange-50" }
+  }
+  if (lower.includes("sad") || lower.includes("grief") || lower.includes("solac")) {
+    return { icon: "🕯️", gradient: "from-slate-500/10 via-stone-500/5 to-transparent", border: "border-slate-500/25", badge: "text-slate-800 bg-slate-50" }
+  }
+  if (lower.includes("attitud") || lower.includes("mind") || lower.includes("grow")) {
+    return { icon: "🎯", gradient: "from-emerald-500/10 via-teal-500/5 to-transparent", border: "border-emerald-500/25", badge: "text-emerald-800 bg-emerald-50" }
+  }
+  if (lower.includes("time") || lower.includes("histor")) {
+    return { icon: "⏳", gradient: "from-amber-600/10 via-stone-500/5 to-transparent", border: "border-amber-700/25", badge: "text-amber-900 bg-amber-50" }
+  }
+  return { icon: "📜", gradient: "from-stone-500/10 via-amber-500/5 to-transparent", border: "border-stone-300", badge: "text-stone-800 bg-stone-100" }
+}
+
+export function HomeTaxonomiesShowcase({
+  spotlightAuthors,
+  spotlightCategories,
+}: HomeTaxonomiesShowcaseProps) {
+  const [activeTab, setActiveTab] = React.useState<"thinkers" | "themes">("thinkers")
+
+  const maxCategoryQuotes = React.useMemo(() => {
+    return Math.max(...spotlightCategories.map((c) => c.quoteCount), 1)
+  }, [spotlightCategories])
+
+  return (
+    <section
+      id="taxonomies"
+      className="scroll-mt-20 space-y-6"
+      aria-label="Master Thinkers and Thematic Horizons"
+    >
+      {/* Section Header */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-amber-900/10 pb-6">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/8 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
+            <span>🏛️</span>
+            <span>Living Taxonomies</span>
+          </div>
+          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
+            Thinkers &amp; Thematic Horizons
+          </h2>
+          <p className="text-sm sm:text-base text-stone-600 font-serif leading-relaxed">
+            Encounter the visionary minds whose thoughts outlived empires, and explore the enduring
+            questions that unite human contemplation across eras.
+          </p>
+        </div>
+
+        {/* View Switcher Pills */}
+        <div className="flex items-center gap-2 rounded-2xl border border-stone-200 bg-white/90 p-1.5 shadow-2xs self-start md:self-end">
+          <button
+            type="button"
+            onClick={() => setActiveTab("thinkers")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "thinkers"
+                ? "bg-[var(--ink-900)] text-white shadow-xs"
+                : "text-stone-700 hover:text-stone-900 hover:bg-stone-50"
+            }`}
+          >
+            <span>✒️ Master Thinkers</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === "thinkers" ? "bg-white/20 text-white" : "bg-stone-100 text-stone-600"
+              }`}
+            >
+              {spotlightAuthors.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("themes")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "themes"
+                ? "bg-[var(--ink-900)] text-white shadow-xs"
+                : "text-stone-700 hover:text-stone-900 hover:bg-stone-50"
+            }`}
+          >
+            <span>🌿 Foundational Themes</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === "themes" ? "bg-white/20 text-white" : "bg-stone-100 text-stone-600"
+              }`}
+            >
+              {spotlightCategories.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Thinkers View */}
+      {activeTab === "thinkers" && (
+        <div className="space-y-6 animate-rise">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {spotlightAuthors.map((author) => {
+              const epoch = formatEpoch(author.birthYear)
+              const lifespan = formatLifespan(author.birthYear, author.deathYear)
+              const cleanProf = cleanProfession(author.profession)
+              const initials = author.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((w) => w[0])
+                .join("")
+                .toUpperCase()
+
+              return (
+                <Link
+                  key={author.id}
+                  href={`/authors/${author.slug}`}
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99]"
+                >
+                  {/* Subtle Top Gradient Accent */}
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--accent-rust)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-hidden="true"
+                  />
+
+                  <div className="space-y-4">
+                    {/* Header: Portrait / Monogram Seal + Meta */}
+                    <div className="flex items-start gap-3.5">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 shadow-2xs group-hover:border-[var(--accent-rust)]/40 transition-colors">
+                        {author.imageUrl ? (
+                          <Image
+                            src={author.imageUrl}
+                            alt={author.name}
+                            fill
+                            sizes="56px"
+                            unoptimized
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center font-serif text-lg font-bold text-[var(--accent-rust)] bg-gradient-to-br from-amber-50 to-[#faf3e8]">
+                            {initials}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-serif text-lg font-bold tracking-tight text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
+                          {author.name}
+                        </h3>
+
+                        {lifespan && (
+                          <p className="text-xs font-mono font-medium text-stone-500 mt-0.5">
+                            {lifespan}
+                          </p>
+                        )}
+
+                        {epoch && (
+                          <span className="inline-block rounded-md bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-600 mt-1">
+                            {epoch}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Nationality & Profession Pill */}
+                    {(author.nationality || cleanProf) && (
+                      <div className="text-xs text-stone-600 font-sans line-clamp-1 border-t border-stone-100 pt-2.5">
+                        <span className="font-semibold text-stone-800">{author.nationality}</span>
+                        {author.nationality && cleanProf && <span> · </span>}
+                        <span>{cleanProf}</span>
+                      </div>
+                    )}
+
+                    {/* Signature Excerpt Quote Preview */}
+                    {author.topQuote?.content && (
+                      <div className="rounded-xl border border-amber-900/10 bg-[#faf6f0]/70 p-3 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
+                          Notable Excerpt
+                        </span>
+                        <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
+                          &ldquo;{author.topQuote.content}&rdquo;
+                        </blockquote>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
+                    <span className="font-semibold text-stone-700">
+                      {formatCountWithNoun(author.quoteCount, "quote")}
+                    </span>
+
+                    <span className="inline-flex items-center gap-1 font-bold text-[var(--accent-rust)] group-hover:translate-x-1 transition-transform">
+                      <span>Explore</span>
+                      <span>&rarr;</span>
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Directory Link Footer */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 sm:px-6 shadow-2xs">
+            <p className="text-xs sm:text-sm text-stone-700 font-serif">
+              Discover over <strong>2,800+</strong> philosophers, poets, novelists, and historical statesmen in our comprehensive catalog.
+            </p>
+            <Link
+              href="/authors"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] shrink-0"
+            >
+              <span>Explore All Thinkers</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Thematic Collections View */}
+      {activeTab === "themes" && (
+        <div className="space-y-6 animate-rise">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {spotlightCategories.map((category) => {
+              const meta = getCategoryMeta(category.name)
+              const percentage = Math.max(20, Math.round((category.quoteCount / maxCategoryQuotes) * 100))
+
+              return (
+                <Link
+                  key={category.id}
+                  href={`/categories/${category.slug}`}
+                  className={`group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border bg-gradient-to-b ${meta.gradient} bg-white p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99] ${meta.border}`}
+                >
+                  <div className="space-y-3.5">
+                    {/* Header: Icon + Badge + Count */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
+                        {meta.icon}
+                      </span>
+
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${meta.badge}`}>
+                        {formatNumber(category.quoteCount)} reflections
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="font-serif text-xl font-bold tracking-tight text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors">
+                        {category.name}
+                      </h3>
+
+                      {category.description ? (
+                        <p className="text-xs text-stone-600 leading-relaxed mt-1 line-clamp-2">
+                          {category.description}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-stone-500 italic mt-1">
+                          Curated philosophical reflections and memorable passages on {category.name.toLowerCase()}.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Relative Collection Depth Bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                        <span>Archive Depth</span>
+                        <span>{percentage}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-rust)] transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Featured Excerpt */}
+                    {category.topQuote?.content && (
+                      <div className="rounded-xl border border-stone-200/80 bg-white/90 p-3 space-y-1 mt-2 shadow-2xs">
+                        <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-2 leading-relaxed">
+                          &ldquo;{category.topQuote.content}&rdquo;
+                        </blockquote>
+                        {category.topQuote.authorName && (
+                          <p className="text-[10px] font-sans text-stone-500 text-right">
+                            — {category.topQuote.authorName}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent-rust)]">
+                      View Collection
+                    </span>
+
+                    <span className="font-bold text-[var(--accent-rust)] group-hover:translate-x-1 transition-transform">
+                      &rarr;
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Directory Link Footer */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 sm:px-6 shadow-2xs">
+            <p className="text-xs sm:text-sm text-stone-700 font-serif">
+              Explore all thematic realms—from courage and wisdom to science, friendship, and grief.
+            </p>
+            <Link
+              href="/categories"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-rust)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#b55d32] hover:scale-[1.02] active:scale-[0.98] shrink-0"
+            >
+              <span>Explore All 30+ Themes</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}

@@ -6,6 +6,7 @@ import {
   HomeMoodFilter,
   HomeHighlights,
   HomeDailyQuote,
+  HomeTaxonomiesShowcase,
   HomeTrendingSection,
   HomeLatestQuotes,
 } from "@/components"
@@ -96,6 +97,8 @@ export default async function HomePage() {
     topCategories,
     topTags,
     recentAuthors,
+    spotlightAuthors,
+    spotlightCategories,
     totalPublishedQuotes,
     totalAuthors,
     quotesLast7Days,
@@ -130,6 +133,15 @@ export default async function HomePage() {
             <HomeDailyQuote
               initialQuote={dailyQuote}
               serendipityPool={serendipityPool}
+            />
+          </div>
+        )}
+
+        {spotlightAuthors.length > 0 && spotlightCategories.length > 0 && (
+          <div id="taxonomies" className="scroll-mt-20">
+            <HomeTaxonomiesShowcase
+              spotlightAuthors={spotlightAuthors}
+              spotlightCategories={spotlightCategories}
             />
           </div>
         )}
@@ -177,6 +189,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       topCategories,
       topTags,
       recentAuthors,
+      spotlightAuthorsRaw,
+      spotlightCategoriesRaw,
       totalAuthors,
       quotesLast7Days,
     ] = await Promise.all([
@@ -259,6 +273,52 @@ async function loadHomePageData(sevenDaysAgo: Date) {
           quoteCount: true,
         },
       }),
+      prisma.author.findMany({
+        where: { quoteCount: { gt: 0 } },
+        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+        take: 8,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          birthYear: true,
+          deathYear: true,
+          profession: true,
+          nationality: true,
+          imageUrl: true,
+          quoteCount: true,
+          quotes: {
+            where: { status: "PUBLISHED", deletedAt: null },
+            take: 1,
+            orderBy: { popularityScore: "desc" },
+            select: {
+              content: true,
+              slug: true,
+            },
+          },
+        },
+      }),
+      prisma.category.findMany({
+        where: { quoteCount: { gt: 0 } },
+        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+        take: 8,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          quoteCount: true,
+          quotes: {
+            where: { status: "PUBLISHED", deletedAt: null },
+            take: 1,
+            orderBy: { popularityScore: "desc" },
+            select: {
+              content: true,
+              authorName: true,
+            },
+          },
+        },
+      }),
       prisma.author.count(),
       prisma.quote.count({
         where: {
@@ -268,6 +328,15 @@ async function loadHomePageData(sevenDaysAgo: Date) {
         },
       }),
     ])
+
+    const spotlightAuthors = spotlightAuthorsRaw.map((a) => ({
+      ...a,
+      topQuote: a.quotes[0] ?? null,
+    }))
+    const spotlightCategories = spotlightCategoriesRaw.map((c) => ({
+      ...c,
+      topQuote: c.quotes[0] ?? null,
+    }))
 
     return {
       ok: true,
@@ -279,6 +348,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       topCategories,
       topTags,
       recentAuthors,
+      spotlightAuthors,
+      spotlightCategories,
       totalPublishedQuotes,
       totalAuthors,
       quotesLast7Days,
@@ -297,6 +368,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       topCategories: [],
       topTags: [],
       recentAuthors: [],
+      spotlightAuthors: [],
+      spotlightCategories: [],
       totalPublishedQuotes: 0,
       totalAuthors: 0,
       quotesLast7Days: 0,

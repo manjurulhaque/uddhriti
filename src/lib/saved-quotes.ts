@@ -18,18 +18,19 @@ export interface SavedQuote {
 
 const STORAGE_KEY = "uddhriti_saved_quotes_v1";
 const CHANGE_EVENT = "uddhriti_saved_quotes_changed";
+const EMPTY_QUOTES: SavedQuote[] = [];
 
 let cachedQuotes: SavedQuote[] | null = null;
 
 function readStorage(): SavedQuote[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_QUOTES;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return EMPTY_QUOTES;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed : EMPTY_QUOTES;
   } catch {
-    return [];
+    return EMPTY_QUOTES;
   }
 }
 
@@ -145,7 +146,7 @@ function getSnapshot(): SavedQuote[] {
 }
 
 function getServerSnapshot(): SavedQuote[] {
-  return [];
+  return EMPTY_QUOTES;
 }
 
 /**

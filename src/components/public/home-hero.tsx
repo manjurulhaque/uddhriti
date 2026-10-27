@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { StatTile } from "./stat-tile"
 import { QuoteCard } from "./quote-card"
 import { Empty } from "../ui/empty-state"
 import { HeroSearch, HeroSavedBadge } from "./hero-search"
@@ -27,9 +26,9 @@ export interface HomeHeroQuote {
 }
 
 export interface HomeHeroProps {
-  totalPublishedQuotes: number
-  totalAuthors: number
-  quotesLast7Days: number
+  totalPublishedQuotes?: number
+  totalAuthors?: number
+  quotesLast7Days?: number
   heroQuote?: HomeHeroQuote | null
   companionQuotes?: HomeHeroQuote[]
 }
@@ -136,13 +135,6 @@ export function HomeHero({
               >
                 <span>✨ Fresh Additions</span>
               </a>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid gap-3 pt-2 sm:grid-cols-3">
-              <StatTile label="Published Quotes" value={totalPublishedQuotes} tone="light" />
-              <StatTile label="Authors" value={totalAuthors} tone="light" />
-              <StatTile label="Added This Week" value={quotesLast7Days} tone="light" />
             </div>
           </div>
 

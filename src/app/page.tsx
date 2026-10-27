@@ -3,6 +3,7 @@ import { subtractDays } from "@/lib/datetime"
 import {
   PublicLayout,
   HomeHero,
+  HomeMoodFilter,
   HomeHighlights,
   HomeTrendingSection,
   HomeLatestQuotes,
@@ -76,6 +77,8 @@ export default async function HomePage() {
           quotesLast7Days={quotesLast7Days}
           heroQuote={heroQuote}
         />
+
+        <HomeMoodFilter />
 
         <div id="highlights" className="scroll-mt-20">
           <HomeHighlights

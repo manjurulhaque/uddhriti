@@ -89,8 +89,14 @@ export function HomeHero({
             </div>
 
             {/* Quick Section Anchors */}
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-white/60">
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-white/60">
               <span className="text-white/40">Jump to:</span>
+              <a
+                href="#mood-filter"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
+              >
+                <span>🌿 Reflect by Mood</span>
+              </a>
               <a
                 href="#trending"
                 className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:border-white/25 hover:bg-white/10 hover:text-white transition-colors"

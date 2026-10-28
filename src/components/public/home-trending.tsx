@@ -35,17 +35,14 @@ export interface PopularTag {
 export interface HomeTrendingSectionProps {
   trendingQuotes: TrendingQuote[]
   topTags: PopularTag[]
-  latestCount: number
-  tagCount: number
-  categoryCount: number
+  latestCount?: number
+  tagCount?: number
+  categoryCount?: number
 }
 
 export function HomeTrendingSection({
   trendingQuotes,
   topTags,
-  latestCount,
-  tagCount,
-  categoryCount,
 }: HomeTrendingSectionProps) {
   return (
     <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">

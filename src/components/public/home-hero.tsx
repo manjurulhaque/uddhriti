@@ -27,16 +27,12 @@ export interface HomeHeroQuote {
 
 export interface HomeHeroProps {
   totalPublishedQuotes?: number
-  totalAuthors?: number
-  quotesLast7Days?: number
   heroQuote?: HomeHeroQuote | null
   companionQuotes?: HomeHeroQuote[]
 }
 
 export function HomeHero({
   totalPublishedQuotes,
-  totalAuthors,
-  quotesLast7Days,
   heroQuote,
   companionQuotes = [],
 }: HomeHeroProps) {

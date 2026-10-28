@@ -40,63 +40,63 @@ const quoteCardSelect = {
       yearApproximate: true,
     },
   },
-    tags: {
-      select: {
-        tag: {
-          select: {
-            id: true,
-            name: true,
-          },
+  tags: {
+    select: {
+      tag: {
+        select: {
+          id: true,
+          name: true,
         },
       },
-      take: 4,
     },
-  } as const
+    take: 4,
+  },
+} as const
 
-  const dailyQuoteSelect = {
-    id: true,
-    slug: true,
-    content: true,
-    meaning: true,
-    historicalContext: true,
-    authorName: true,
-    author: {
-      select: {
-        name: true,
-        slug: true,
-        profession: true,
-        nationality: true,
-        birthYear: true,
-        deathYear: true,
-      },
+const dailyQuoteSelect = {
+  id: true,
+  slug: true,
+  content: true,
+  meaning: true,
+  historicalContext: true,
+  authorName: true,
+  author: {
+    select: {
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
     },
-    views: true,
-    tags: {
-      select: {
-        tag: {
-          select: {
-            id: true,
-            name: true,
-          },
+  },
+  views: true,
+  tags: {
+    select: {
+      tag: {
+        select: {
+          id: true,
+          name: true,
         },
       },
-      take: 4,
     },
-    category: {
-      select: {
-        name: true,
-        slug: true,
-      },
+    take: 4,
+  },
+  category: {
+    select: {
+      name: true,
+      slug: true,
     },
-    source: {
-      select: {
-        title: true,
-        year: true,
-        yearLabel: true,
-        yearApproximate: true,
-      },
+  },
+  source: {
+    select: {
+      title: true,
+      year: true,
+      yearLabel: true,
+      yearApproximate: true,
     },
-  } as const
+  },
+} as const
 
 export default async function HomePage() {
   const sevenDaysAgo = subtractDays(new Date(), 7)
@@ -104,7 +104,6 @@ export default async function HomePage() {
   const {
     dailyQuote,
     serendipityPool,
-    featuredQuote,
     latestQuotes,
     trendingQuotes,
     topCategories,
@@ -113,12 +112,11 @@ export default async function HomePage() {
     spotlightAuthors,
     spotlightCategories,
     totalPublishedQuotes,
-    totalAuthors,
     quotesLast7Days,
     errorMessage,
   } = await loadHomePageData(sevenDaysAgo)
 
-  const heroQuote = dailyQuote ?? featuredQuote ?? latestQuotes[0] ?? null
+  const heroQuote = dailyQuote ?? latestQuotes[0] ?? null
   const companionPool = serendipityPool.filter((q) => q.id !== heroQuote?.id)
   const remainingLatestQuotes = latestQuotes.filter((q) => q.id !== heroQuote?.id)
 
@@ -127,8 +125,6 @@ export default async function HomePage() {
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
         <HomeHero
           totalPublishedQuotes={totalPublishedQuotes}
-          totalAuthors={totalAuthors}
-          quotesLast7Days={quotesLast7Days}
           heroQuote={heroQuote}
           companionQuotes={companionPool.length > 0 ? companionPool : remainingLatestQuotes.slice(0, 5)}
         />
@@ -181,9 +177,6 @@ export default async function HomePage() {
           <HomeTrendingSection
             trendingQuotes={trendingQuotes}
             topTags={topTags}
-            latestCount={latestQuotes.length}
-            tagCount={topTags.length}
-            categoryCount={topCategories.length}
           />
         </div>
 
@@ -214,14 +207,11 @@ async function loadHomePageData(sevenDaysAgo: Date) {
     const [
       dailyQuote,
       serendipityPool,
-      featuredQuote,
       latestQuotes,
       trendingQuotes,
-      topCategories,
-      topTags,
-      recentAuthors,
-      spotlightAuthorsRaw,
       spotlightCategoriesRaw,
+      topTags,
+      spotlightAuthorsRaw,
       totalAuthors,
       quotesLast7Days,
     ] = await Promise.all([
@@ -236,29 +226,14 @@ async function loadHomePageData(sevenDaysAgo: Date) {
         take: 12,
         select: dailyQuoteSelect,
       }),
-      prisma.quote.findFirst({
-        where: {
-          status: "PUBLISHED",
-          deletedAt: null,
-          isFeatured: true,
-        },
-        orderBy: [{ publishedAt: "desc" }],
-        select: quoteCardSelect,
-      }),
       prisma.quote.findMany({
-        where: {
-          status: "PUBLISHED",
-          deletedAt: null,
-        },
+        where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }],
         take: 8,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
-        where: {
-          status: "PUBLISHED",
-          deletedAt: null,
-        },
+        where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }],
         take: 4,
         select: {
@@ -269,13 +244,22 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       prisma.category.findMany({
         where: { quoteCount: { gt: 0 } },
         orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
-        take: 6,
+        take: 8,
         select: {
           id: true,
           name: true,
           slug: true,
           description: true,
           quoteCount: true,
+          quotes: {
+            where: { status: "PUBLISHED", deletedAt: null },
+            take: 1,
+            orderBy: { popularityScore: "desc" },
+            select: {
+              content: true,
+              authorName: true,
+            },
+          },
         },
       }),
       prisma.tag.findMany({
@@ -286,21 +270,6 @@ async function loadHomePageData(sevenDaysAgo: Date) {
           id: true,
           name: true,
           type: true,
-          quoteCount: true,
-        },
-      }),
-      prisma.author.findMany({
-        where: { quoteCount: { gt: 0 } },
-        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
-        take: 5,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          birthYear: true,
-          deathYear: true,
-          profession: true,
-          nationality: true,
           quoteCount: true,
         },
       }),
@@ -329,27 +298,6 @@ async function loadHomePageData(sevenDaysAgo: Date) {
           },
         },
       }),
-      prisma.category.findMany({
-        where: { quoteCount: { gt: 0 } },
-        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
-        take: 8,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          quoteCount: true,
-          quotes: {
-            where: { status: "PUBLISHED", deletedAt: null },
-            take: 1,
-            orderBy: { popularityScore: "desc" },
-            select: {
-              content: true,
-              authorName: true,
-            },
-          },
-        },
-      }),
       prisma.author.count(),
       prisma.quote.count({
         where: {
@@ -364,16 +312,32 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       ...a,
       topQuote: a.quotes[0] ?? null,
     }))
+    const recentAuthors = spotlightAuthorsRaw.slice(0, 5).map((a) => ({
+      id: a.id,
+      name: a.name,
+      slug: a.slug,
+      birthYear: a.birthYear,
+      deathYear: a.deathYear,
+      profession: a.profession,
+      nationality: a.nationality,
+      quoteCount: a.quoteCount,
+    }))
+
     const spotlightCategories = spotlightCategoriesRaw.map((c) => ({
       ...c,
       topQuote: c.quotes[0] ?? null,
     }))
+    const topCategories = spotlightCategoriesRaw.slice(0, 6).map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+      quoteCount: c.quoteCount,
+    }))
 
     return {
-      ok: true,
       dailyQuote,
       serendipityPool,
-      featuredQuote,
       latestQuotes,
       trendingQuotes,
       topCategories,
@@ -390,10 +354,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
     console.error("Failed to load homepage metrics", error)
 
     return {
-      ok: false,
       dailyQuote: null,
       serendipityPool: [],
-      featuredQuote: null,
       latestQuotes: [],
       trendingQuotes: [],
       topCategories: [],

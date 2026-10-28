@@ -1,9 +1,14 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useSavedQuotes } from "@/lib/saved-quotes"
-import { QuoteShareModal } from "./quote-share-modal"
+
+const QuoteShareModal = dynamic(
+  () => import("./quote-share-modal").then((mod) => mod.QuoteShareModal),
+  { ssr: false }
+)
 
 export interface HomeReaderStudioProps {
   featuredSampleQuote?: {

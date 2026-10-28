@@ -1,14 +1,9 @@
-"use client"
-
 import * as React from "react"
 import Link from "next/link"
+import { ScrollToTopButton } from "./scroll-to-top-button"
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear()
-
-  function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
 
   return (
     <footer className="mt-16 border-t border-[var(--ink-900)]/12 bg-[var(--ink-900)] text-[var(--page-cream)]">
@@ -24,24 +19,7 @@ export function PublicFooter() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={scrollToTop}
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-medium text-white/90 hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer"
-              aria-label="Scroll back to top"
-            >
-              <span>Back to Top</span>
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-            </button>
+            <ScrollToTopButton />
           </div>
         </div>
       </div>
@@ -84,17 +62,17 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="#trending" className="hover:text-white transition-colors">
+                <Link href="/#trending" className="hover:text-white transition-colors">
                   Trending Quotes
                 </Link>
               </li>
               <li>
-                <Link href="#highlights" className="hover:text-white transition-colors">
+                <Link href="/#highlights" className="hover:text-white transition-colors">
                   Featured Voices
                 </Link>
               </li>
               <li>
-                <Link href="#latest" className="hover:text-white transition-colors">
+                <Link href="/#latest" className="hover:text-white transition-colors">
                   Latest Additions
                 </Link>
               </li>

@@ -1,10 +1,15 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useSavedQuotes } from "@/lib/saved-quotes"
-import { QuoteShareModal } from "./quote-share-modal"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+
+const QuoteShareModal = dynamic(
+  () => import("./quote-share-modal").then((mod) => mod.QuoteShareModal),
+  { ssr: false }
+)
 
 export interface DailyQuoteItem {
   id: string

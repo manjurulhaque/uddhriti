@@ -98,6 +98,39 @@ const dailyQuoteSelect = {
   },
 } as const
 
+const serendipityQuoteSelect = {
+  id: true,
+  slug: true,
+  content: true,
+  meaning: true,
+  historicalContext: true,
+  authorName: true,
+  author: {
+    select: {
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
+    },
+  },
+  category: {
+    select: {
+      name: true,
+      slug: true,
+    },
+  },
+  source: {
+    select: {
+      title: true,
+      year: true,
+      yearLabel: true,
+      yearApproximate: true,
+    },
+  },
+} as const
+
 export default async function HomePage() {
   const sevenDaysAgo = subtractDays(new Date(), 7)
 
@@ -120,13 +153,25 @@ export default async function HomePage() {
   const companionPool = serendipityPool.filter((q) => q.id !== heroQuote?.id)
   const remainingLatestQuotes = latestQuotes.filter((q) => q.id !== heroQuote?.id)
 
+  const companionQuotes = companionPool.length > 0
+    ? companionPool.slice(0, 5).map((q) => ({
+        id: q.id,
+        slug: q.slug,
+        content: q.content,
+        authorName: q.author?.name || q.authorName,
+        author: q.author ? { name: q.author.name, slug: q.author.slug } : null,
+        category: q.category ? { name: q.category.name, slug: q.category.slug } : null,
+        source: q.source,
+      }))
+    : remainingLatestQuotes.slice(0, 5)
+
   return (
     <PublicLayout>
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
         <HomeHero
           totalPublishedQuotes={totalPublishedQuotes}
           heroQuote={heroQuote}
-          companionQuotes={companionPool.length > 0 ? companionPool : remainingLatestQuotes.slice(0, 5)}
+          companionQuotes={companionQuotes}
         />
 
         <HomeMoodFilter />
@@ -223,8 +268,8 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
-        take: 12,
-        select: dailyQuoteSelect,
+        take: 6,
+        select: serendipityQuoteSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },

@@ -149,10 +149,76 @@ function getServerSnapshot(): SavedQuote[] {
   return EMPTY_QUOTES;
 }
 
+export interface SavedQuotesContextValue {
+  savedQuotes: SavedQuote[];
+  count: number;
+  isSaved: (idOrSlug: string) => boolean;
+  save: (quote: Omit<SavedQuote, "savedAt">) => void;
+  remove: (idOrSlug: string) => void;
+  toggleSave: (quote: Omit<SavedQuote, "savedAt">) => boolean;
+}
+
+const SavedQuotesContext = React.createContext<SavedQuotesContextValue | null>(null);
+
+export function SavedQuotesProvider({ children }: { children: React.ReactNode }) {
+  const quotes = React.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
+
+  const savedSet = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const q of quotes) {
+      if (q.id) set.add(q.id);
+      if (q.slug) set.add(q.slug);
+    }
+    return set;
+  }, [quotes]);
+
+  const checkIsSaved = React.useCallback(
+    (idOrSlug: string) => {
+      if (!idOrSlug) return false;
+      return savedSet.has(idOrSlug);
+    },
+    [savedSet]
+  );
+
+  const value = React.useMemo<SavedQuotesContextValue>(
+    () => ({
+      savedQuotes: quotes,
+      count: quotes.length,
+      isSaved: checkIsSaved,
+      save: saveQuote,
+      remove: removeQuote,
+      toggleSave: toggleSaveQuote,
+    }),
+    [quotes, checkIsSaved]
+  );
+
+  return React.createElement(
+    SavedQuotesContext.Provider,
+    { value },
+    children
+  );
+}
+
 /**
- * Reactive React hook for accessing saved quotes across components and tabs
+ * Reactive React hook for accessing saved quotes across components and tabs.
+ * Uses SavedQuotesContext when available (single listener, O(1) Set lookups),
+ * and gracefully falls back to useSyncExternalStore when outside provider.
  */
-export function useSavedQuotes() {
+export function useSavedQuotes(): SavedQuotesContextValue {
+  const context = React.useContext(SavedQuotesContext);
+  if (context !== null) {
+    return context;
+  }
+
+  // Fallback for standalone usage without provider
+  return useStandaloneSavedQuotes();
+}
+
+function useStandaloneSavedQuotes(): SavedQuotesContextValue {
   const quotes = React.useSyncExternalStore(
     subscribe,
     getSnapshot,
@@ -161,6 +227,7 @@ export function useSavedQuotes() {
 
   const checkIsSaved = React.useCallback(
     (idOrSlug: string) => {
+      if (!idOrSlug) return false;
       return quotes.some(
         (q) => q.id === idOrSlug || (q.slug && q.slug === idOrSlug)
       );

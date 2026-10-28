@@ -16,6 +16,23 @@ export function ServiceWorkerRegister() {
         )
     );
 
+    // In development or on localhost, unregister any active service worker and clear caches to prevent stale chunk caching
+    if (process.env.NODE_ENV !== "production" || isLocalhost) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister();
+        }
+      });
+      if ("caches" in window) {
+        caches.keys().then((names) => {
+          for (const name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      return;
+    }
+
     function registerSW() {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })

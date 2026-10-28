@@ -1,5 +1,5 @@
 // Uddhriti Service Worker
-const CACHE_VERSION = "uddhriti-v2";
+const CACHE_VERSION = "uddhriti-v3";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
@@ -86,7 +86,10 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/admin") ||
     url.pathname.startsWith("/api") ||
-    url.pathname.startsWith("/_vercel")
+    url.pathname.startsWith("/_vercel") ||
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1" ||
+    url.hostname === "[::1]"
   ) {
     return;
   }

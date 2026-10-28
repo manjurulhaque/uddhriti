@@ -153,11 +153,12 @@ export function HomeHero({
                 tags={heroQuote.tags?.map((entry) => entry.tag.name) || []}
                 views={heroQuote.views}
                 variant="featured"
+                badgeLabel="Quote of the Day"
                 className="w-full shadow-lg"
               />
             ) : (
               <div className="w-full rounded-[1.6rem] border border-white/12 bg-white/9 p-5 backdrop-blur-md">
-                <Empty message="Publish a featured quote to make this space sing." variant="dark" />
+                <Empty message="Discover timeless quotations from thinkers across eras." variant="dark" />
               </div>
             )}
 

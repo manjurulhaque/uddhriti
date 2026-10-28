@@ -54,37 +54,49 @@ const quoteCardSelect = {
   } as const
 
   const dailyQuoteSelect = {
-  id: true,
-  slug: true,
-  content: true,
-  meaning: true,
-  historicalContext: true,
-  authorName: true,
-  author: {
-    select: {
-      name: true,
-      slug: true,
-      profession: true,
-      nationality: true,
-      birthYear: true,
-      deathYear: true,
+    id: true,
+    slug: true,
+    content: true,
+    meaning: true,
+    historicalContext: true,
+    authorName: true,
+    author: {
+      select: {
+        name: true,
+        slug: true,
+        profession: true,
+        nationality: true,
+        birthYear: true,
+        deathYear: true,
+      },
     },
-  },
-  category: {
-    select: {
-      name: true,
-      slug: true,
+    views: true,
+    tags: {
+      select: {
+        tag: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      take: 4,
     },
-  },
-  source: {
-    select: {
-      title: true,
-      year: true,
-      yearLabel: true,
-      yearApproximate: true,
+    category: {
+      select: {
+        name: true,
+        slug: true,
+      },
     },
-  },
-} as const
+    source: {
+      select: {
+        title: true,
+        year: true,
+        yearLabel: true,
+        yearApproximate: true,
+      },
+    },
+  } as const
 
 export default async function HomePage() {
   const sevenDaysAgo = subtractDays(new Date(), 7)
@@ -106,7 +118,9 @@ export default async function HomePage() {
     errorMessage,
   } = await loadHomePageData(sevenDaysAgo)
 
-  const heroQuote = featuredQuote ?? latestQuotes[0] ?? null
+  const heroQuote = dailyQuote ?? featuredQuote ?? latestQuotes[0] ?? null
+  const companionPool = serendipityPool.filter((q) => q.id !== heroQuote?.id)
+  const remainingLatestQuotes = latestQuotes.filter((q) => q.id !== heroQuote?.id)
 
   return (
     <PublicLayout>
@@ -116,7 +130,7 @@ export default async function HomePage() {
           totalAuthors={totalAuthors}
           quotesLast7Days={quotesLast7Days}
           heroQuote={heroQuote}
-          companionQuotes={serendipityPool.length > 0 ? serendipityPool : latestQuotes.slice(1, 6)}
+          companionQuotes={companionPool.length > 0 ? companionPool : remainingLatestQuotes.slice(0, 5)}
         />
 
         <HomeMoodFilter />
@@ -174,7 +188,7 @@ export default async function HomePage() {
         </div>
 
         <div id="latest" className="scroll-mt-20">
-          <HomeLatestQuotes quotes={latestQuotes} />
+          <HomeLatestQuotes quotes={remainingLatestQuotes} />
         </div>
       </main>
     </PublicLayout>

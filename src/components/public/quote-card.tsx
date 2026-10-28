@@ -21,6 +21,7 @@ export interface QuoteCardProps {
   trendingRank?: number
   trendingScore?: number
   variant?: "paper" | "dark" | "featured"
+  badgeLabel?: string
   className?: string
   style?: React.CSSProperties
 }
@@ -40,6 +41,7 @@ export function QuoteCard({
   trendingRank,
   trendingScore,
   variant = "paper",
+  badgeLabel,
   className = "",
   style,
 }: QuoteCardProps) {
@@ -107,7 +109,7 @@ export function QuoteCard({
       >
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-sand)]">
           <div className="flex items-center gap-2">
-            <span>Featured Voice</span>
+            <span>{badgeLabel || "Quote of the Day"}</span>
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)]" />
           </div>
           {bookmarkButton}

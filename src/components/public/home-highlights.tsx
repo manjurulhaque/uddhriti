@@ -57,7 +57,6 @@ export function HomeHighlights({
   topCategories,
   recentAuthors,
   quotesLast7Days,
-  standoutCategory = topCategories[0] ?? null,
   errorMessage,
 }: HomeHighlightsProps) {
   const [activeTab, setActiveTab] = React.useState<FolioTab>("pillars")
@@ -82,41 +81,19 @@ export function HomeHighlights({
         />
 
         {/* Header & Pillar Badge */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-xl space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/6 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)] animate-pulse" />
-              The Curator’s Parchment
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--ink-900)] leading-tight">
-              Where ancient reflections meet living contemplations.
-            </h2>
-            <p className="text-sm leading-relaxed text-[var(--ink-700)]">
-              Uddhriti is a quiet sanctuary dedicated to the enduring resonance of language.
-              Here, passages are gathered with scholarly care—treated not as disposable internet
-              snippets, but as living cultural monuments.
-            </p>
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/6 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)] animate-pulse" />
+            The Curator’s Parchment
           </div>
-
-          {/* Standout Category Feature Pill */}
-          {standoutCategory ? (
-            <Link
-              href={`/categories/${standoutCategory.slug || standoutCategory.id}`}
-              className="group relative overflow-hidden rounded-2xl border border-[var(--accent-gold)]/45 bg-white/90 p-4 text-sm text-[var(--ink-800)] shadow-xs transition-all duration-200 hover:border-[var(--accent-gold)]/80 hover:bg-white hover:scale-[1.02] hover:shadow-md active:scale-[0.98] shrink-0 self-start sm:self-auto"
-              title={`Explore ${standoutCategory.name}`}
-            >
-              <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
-                <span>Foundational Theme</span>
-                <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
-              </div>
-              <div className="mt-1 font-serif text-lg font-bold text-[var(--ink-900)] group-hover:text-[var(--accent-rust)] transition-colors">
-                {standoutCategory.name}
-              </div>
-              <div className="text-xs text-[var(--ink-700)]/75 mt-0.5">
-                {formatNumber(standoutCategory.quoteCount)} curated reflections
-              </div>
-            </Link>
-          ) : null}
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[var(--ink-900)] leading-tight">
+            Where ancient reflections meet living contemplations.
+          </h2>
+          <p className="text-sm leading-relaxed text-[var(--ink-700)]">
+            Uddhriti is a quiet sanctuary dedicated to the enduring resonance of language.
+            Here, passages are gathered with scholarly care—treated not as disposable internet
+            snippets, but as living cultural monuments.
+          </p>
         </div>
 
         {/* Interactive Folio Switcher & Cards */}

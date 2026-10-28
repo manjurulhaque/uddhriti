@@ -1,8 +1,8 @@
+import Link from "next/link"
 import { Panel } from "../ui/card"
 import { Empty } from "../ui/empty-state"
 import { QuoteCard } from "./quote-card"
 import { TagBadge } from "./tag-badge"
-import { StatTile } from "./stat-tile"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 
 export interface TrendingQuote {
@@ -102,16 +102,96 @@ export function HomeTrendingSection({
           )}
         </Panel>
 
-        <section className="rounded-[1.6rem] border border-[var(--ink-900)]/10 bg-[linear-gradient(135deg,rgba(233,196,106,0.18),rgba(244,162,97,0.08),rgba(255,255,255,0.9))] p-6 shadow-[0_18px_50px_rgba(33,37,41,0.06)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
-            Collection Snapshot
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <StatTile label="Visible Now" value={latestCount} tone="warm" />
-            <StatTile label="Tag Clusters" value={tagCount} tone="warm" />
-            <StatTile label="Lead Categories" value={categoryCount} tone="warm" />
+        {/* The Curator's Reading Compass */}
+        <div className="rounded-[1.6rem] border border-amber-900/14 bg-gradient-to-br from-[#fffdfa] via-[#fbf6ec] to-[#f4ecd8] p-5 sm:p-6 shadow-[0_12px_36px_rgba(120,53,15,0.06)] space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+              <span>🧭</span>
+              <span>Reading Compass</span>
+            </div>
+            <span className="text-[11px] font-serif italic text-stone-500">
+              Curated pathways
+            </span>
           </div>
-        </section>
+
+          <div>
+            <h3 className="font-serif text-lg font-bold text-[#2a241d]">
+              How would you like to explore?
+            </h3>
+            <p className="mt-1 text-xs text-stone-600 leading-relaxed font-serif">
+              Three mindful instruments to wander the living anthology beyond trending charts.
+            </p>
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-3">
+            <Link
+              href="#daily-quote"
+              className="group flex flex-col justify-between rounded-xl border border-amber-900/10 bg-white/75 p-3.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
+            >
+              <div>
+                <span className="text-xl">🎲</span>
+                <h4 className="mt-2 text-xs font-serif font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors">
+                  Serendipity
+                </h4>
+                <p className="mt-1 text-[10px] text-stone-500 leading-snug">
+                  Surprise reflection from the pool
+                </p>
+              </div>
+              <span className="mt-2 text-[10px] font-semibold text-[var(--accent-rust)] group-hover:underline">
+                Contemplate &rarr;
+              </span>
+            </Link>
+
+            <Link
+              href="/categories"
+              className="group flex flex-col justify-between rounded-xl border border-amber-900/10 bg-white/75 p-3.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
+            >
+              <div>
+                <span className="text-xl">🏛️</span>
+                <h4 className="mt-2 text-xs font-serif font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors">
+                  Theme Horizons
+                </h4>
+                <p className="mt-1 text-[10px] text-stone-500 leading-snug">
+                  Browse by philosophical theme
+                </p>
+              </div>
+              <span className="mt-2 text-[10px] font-semibold text-[var(--accent-rust)] group-hover:underline">
+                Explore themes &rarr;
+              </span>
+            </Link>
+
+            <Link
+              href="/saved"
+              className="group flex flex-col justify-between rounded-xl border border-amber-900/10 bg-white/75 p-3.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
+            >
+              <div>
+                <span className="text-xl">📓</span>
+                <h4 className="mt-2 text-xs font-serif font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors">
+                  Saved Notebook
+                </h4>
+                <p className="mt-1 text-[10px] text-stone-500 leading-snug">
+                  Private offline reading space
+                </p>
+              </div>
+              <span className="mt-2 text-[10px] font-semibold text-[var(--accent-rust)] group-hover:underline">
+                Open folio &rarr;
+              </span>
+            </Link>
+          </div>
+
+          <div className="border-t border-amber-900/10 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-serif italic text-stone-600 text-[11px]">
+              “A word once spoken is sacred.”
+            </span>
+            <Link
+              href="/quotes"
+              className="font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
+            >
+              <span>Explore Complete Archive</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
+        </div>
       </section>
     </section>
   )

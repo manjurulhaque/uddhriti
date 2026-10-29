@@ -133,7 +133,17 @@ export function HomeMoodFilter() {
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ink-700)]">
               <span className="font-serif font-bold text-stone-900">
-                — {activeMood.quote.author}
+                —{" "}
+                {activeMood.quote.authorSlug ? (
+                  <Link
+                    href={`/authors/${activeMood.quote.authorSlug}`}
+                    className="hover:text-[var(--accent-rust)] hover:underline transition-colors"
+                  >
+                    {activeMood.quote.author}
+                  </Link>
+                ) : (
+                  activeMood.quote.author
+                )}
               </span>
               {activeMood.quote.source && (
                 <span className="text-stone-500">

@@ -208,12 +208,12 @@ export default async function HomePage() {
         <div id="reader-studio" className="scroll-mt-20">
           <HomeReaderStudio
             featuredSampleQuote={
-              dailyQuote
+              heroQuote
                 ? {
-                    content: dailyQuote.content,
-                    authorName: dailyQuote.author?.name || dailyQuote.authorName,
-                    sourceTitle: dailyQuote.source?.title,
-                    slug: dailyQuote.slug,
+                    content: heroQuote.content,
+                    authorName: heroQuote.author?.name || heroQuote.authorName,
+                    sourceTitle: heroQuote.source?.title,
+                    slug: heroQuote.slug,
                   }
                 : null
             }

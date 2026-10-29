@@ -12,6 +12,7 @@ export interface MoodItem {
   quote: {
     content: string
     author: string
+    authorSlug?: string
     source?: string
     year?: string
   }
@@ -33,6 +34,7 @@ export const MOODS: MoodItem[] = [
       content:
         "Silence is an ocean. Speech is a river. When the ocean is searching for you, don't walk into the river.",
       author: "Rumi",
+      authorSlug: "rumi",
       source: "The Masnavi",
     },
   },
@@ -51,6 +53,7 @@ export const MOODS: MoodItem[] = [
       content:
         "Failure after long perseverance is much grander than never to have a striving good enough to be called a failure.",
       author: "George Eliot",
+      authorSlug: "george-eliot",
       source: "Middlemarch",
       year: "1871",
     },
@@ -69,6 +72,7 @@ export const MOODS: MoodItem[] = [
     quote: {
       content: "We suffer more often in imagination than in reality.",
       author: "Seneca",
+      authorSlug: "seneca",
       source: "Letters from a Stoic",
       year: "c. 65 AD",
     },
@@ -87,6 +91,7 @@ export const MOODS: MoodItem[] = [
       content:
         "You have power over your mind - not outside events. Realize this, and you will find strength.",
       author: "Marcus Aurelius",
+      authorSlug: "marcus-aurelius",
       source: "Meditations",
       year: "c. 180 AD",
     },
@@ -105,6 +110,7 @@ export const MOODS: MoodItem[] = [
     quote: {
       content: "Nature does not hurry, yet everything is accomplished.",
       author: "Lao Tzu",
+      authorSlug: "lao-tzu",
       source: "Tao Te Ching",
       year: "c. 4th Century BC",
     },
@@ -123,6 +129,7 @@ export const MOODS: MoodItem[] = [
       content:
         "In the sweetness of friendship let there be laughter, and sharing of pleasures. For in the dew of little things the heart finds its morning and is refreshed.",
       author: "Kahlil Gibran",
+      authorSlug: "kahlil-gibran",
       source: "The Prophet",
       year: "1923",
     },
@@ -142,6 +149,7 @@ export const MOODS: MoodItem[] = [
       content:
         "Hope is the thing with feathers that perches in the soul - and sings the tune without the words - and never stops at all.",
       author: "Emily Dickinson",
+      authorSlug: "emily-dickinson",
       year: "1861",
     },
   },
@@ -159,6 +167,7 @@ export const MOODS: MoodItem[] = [
       content:
         "Clouds come floating into my life, no longer to carry rain or usher storm, but to add color to my sunset sky.",
       author: "Rabindranath Tagore",
+      authorSlug: "rabindranath-tagore",
       source: "Stray Birds",
       year: "1916",
     },

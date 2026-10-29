@@ -311,7 +311,7 @@ export function HomeTaxonomiesShowcase({
           href="/categories"
           className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-rust)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#b55d32] hover:scale-[1.02] active:scale-[0.98] shrink-0"
         >
-          <span>Explore All 30+ Themes</span>
+          <span>Explore All Themes</span>
           <span>&rarr;</span>
         </Link>
       </div>

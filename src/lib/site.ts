@@ -1,18 +1,17 @@
-export function getSiteUrl() {
+export const DEFAULT_PRODUCTION_URL = "https://www.quotzen.com"
+
+export function getSiteUrl(): string {
   const configured =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : null) ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production"
+      ? DEFAULT_PRODUCTION_URL
+      : null)
 
   if (!configured) {
-    if (process.env.VERCEL_ENV === "production") {
-      throw new Error(
-        "NEXT_PUBLIC_SITE_URL must be set to the public HTTPS site origin in production."
-      )
-    }
-
     return "http://localhost:3000"
   }
 
@@ -20,7 +19,7 @@ export function getSiteUrl() {
   try {
     url = new URL(configured)
   } catch {
-    throw new Error("NEXT_PUBLIC_SITE_URL must be a valid absolute URL.")
+    return DEFAULT_PRODUCTION_URL
   }
 
   if (
@@ -31,15 +30,12 @@ export function getSiteUrl() {
     url.search ||
     url.hash
   ) {
-    throw new Error(
-      "NEXT_PUBLIC_SITE_URL must contain only an HTTP(S) origin, without credentials, a path, query, or fragment."
-    )
+    return DEFAULT_PRODUCTION_URL
   }
 
   if (process.env.VERCEL_ENV === "production" && url.protocol !== "https:") {
-    throw new Error("NEXT_PUBLIC_SITE_URL must use HTTPS in production.")
+    return DEFAULT_PRODUCTION_URL
   }
 
   return url.origin
 }
-

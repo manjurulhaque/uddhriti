@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Uddhriti — Timeless Quotes and Ideas",
-    short_name: "Uddhriti",
+    name: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
+    short_name: "Quotzen",
     description:
       "Explore a curated collection of meaningful quotes from books, speeches, and thinkers across history.",
     start_url: "/",
@@ -48,41 +48,25 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
       },
       {
-        name: "Discover Authors",
+        name: "Authors & Thinkers",
         short_name: "Authors",
         description: "Find thinkers, philosophers, and writers",
         url: "/authors",
         icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
       },
       {
-        name: "Browse Categories",
-        short_name: "Categories",
-        description: "Explore quotes by theme and category",
-        url: "/categories",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
-      },
-      {
         name: "Saved Notebook",
-        short_name: "Saved",
-        description: "Read your offline saved quotes and reflections",
+        short_name: "Notebook",
+        description: "Access your private saved quotations offline",
         url: "/saved",
         icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
       },
-    ],
-    screenshots: [
       {
-        src: "/screenshots/desktop.png",
-        sizes: "1280x720",
-        type: "image/png",
-        form_factor: "wide",
-        label: "Uddhriti Desktop Reading Sanctuary",
-      },
-      {
-        src: "/screenshots/mobile.png",
-        sizes: "750x1334",
-        type: "image/png",
-        form_factor: "narrow",
-        label: "Uddhriti Mobile Timeless Quotes Experience",
+        name: "Reflect by Feeling",
+        short_name: "Moods",
+        description: "Find quotations calibrated to your current moment",
+        url: "/#mood-filter",
+        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192" }],
       },
     ],
   };

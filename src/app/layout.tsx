@@ -10,17 +10,20 @@ const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   title: {
-    default: "Uddhriti — Timeless Quotes and Ideas",
-    template: "%s | Uddhriti",
+    default: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
+    template: "%s | Quotzen",
   },
   description:
-    "Explore a curated collection of meaningful quotes from books, speeches, and thinkers across history.",
+    "Explore a curated, searchable collection of meaningful quotes from history's greatest philosophers, poets, and thinkers. Verified against primary texts, distraction-free, and available offline.",
   metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: siteUrl,
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Uddhriti",
+    title: "Quotzen",
   },
   icons: {
     icon: [
@@ -33,17 +36,17 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "Uddhriti — Timeless Quotes and Ideas",
+    title: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
     description:
       "A warm, searchable home for memorable quotations from books, speeches, interviews, scripture, and everything that keeps language alive.",
     url: siteUrl,
-    siteName: "Uddhriti",
+    siteName: "Quotzen",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Uddhriti — Timeless Quotes and Ideas",
+    title: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
     description:
       "A curated collection of meaningful quotes from books, speeches, and thinkers.",
   },
@@ -77,4 +80,3 @@ export default function RootLayout({
     </html>
   );
 }
-

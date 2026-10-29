@@ -1,5 +1,7 @@
+import type { Metadata } from "next"
 import { prisma } from "@/lib/prisma"
 import { subtractDays } from "@/lib/datetime"
+import { getSiteUrl } from "@/lib/site"
 import {
   PublicLayout,
   HomeHero,
@@ -13,6 +15,41 @@ import {
 } from "@/components"
 
 export const revalidate = 60
+
+const siteUrl = getSiteUrl()
+
+export const metadata: Metadata = {
+  title: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
+  description:
+    "Explore a curated, searchable collection of meaningful quotes from history's greatest philosophers, poets, and thinkers. Verified against primary texts, distraction-free, and available offline.",
+  alternates: {
+    canonical: siteUrl,
+  },
+  openGraph: {
+    title: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
+    description:
+      "A quiet, searchable sanctuary for memorable quotations from books, speeches, interviews, and thinkers across history.",
+    url: siteUrl,
+    siteName: "Quotzen",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/icons/icon-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "Quotzen",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Quotzen — Timeless Quotes, Philosophy & Literary Sanctuary",
+    description:
+      "A quiet, searchable sanctuary for memorable quotations from books, speeches, and thinkers across history.",
+    images: ["/icons/icon-512x512.png"],
+  },
+}
 
 const quoteCardSelect = {
   id: true,
@@ -166,8 +203,60 @@ export default async function HomePage() {
       }))
     : remainingLatestQuotes.slice(0, 5)
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: "Quotzen",
+        alternateName: ["Uddhriti", "Quotzen Sanctuary"],
+        description:
+          "A quiet, searchable sanctuary for memorable quotations from books, speeches, interviews, and thinkers across history.",
+        inLanguage: "en-US",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${siteUrl}/quotes?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: "Quotzen",
+        url: siteUrl,
+        logo: `${siteUrl}/icons/icon-512x512.png`,
+      },
+      ...(heroQuote
+        ? [
+            {
+              "@type": "Quotation",
+              "@id": `${siteUrl}/quotes/${heroQuote.slug || heroQuote.id}#quotation`,
+              text: heroQuote.content,
+              creator: {
+                "@type": "Person",
+                name: heroQuote.author?.name || heroQuote.authorName || "Unknown",
+                ...(heroQuote.author?.slug
+                  ? { url: `${siteUrl}/authors/${heroQuote.author.slug}` }
+                  : {}),
+              },
+              ...(heroQuote.source?.title ? { citation: heroQuote.source.title } : {}),
+            },
+          ]
+        : []),
+    ],
+  }
+
   return (
     <PublicLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
         <HomeHero
           totalPublishedQuotes={totalPublishedQuotes}

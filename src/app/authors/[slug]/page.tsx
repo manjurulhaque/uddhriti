@@ -37,6 +37,9 @@ export async function generateMetadata({
   return {
     title: `${author.name} Quotes | Uddhriti`,
     description: desc,
+    alternates: {
+      canonical: `/authors/${slug}`,
+    },
     openGraph: {
       title: `${author.name} Quotes - Uddhriti`,
       description: desc,

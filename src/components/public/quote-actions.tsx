@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { BookmarkIcon } from "@/components/ui"
 import { useCopyToClipboard } from "@/hooks"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { QuoteShareModal } from "./quote-share-modal"
@@ -152,21 +153,12 @@ export function QuoteActions({
             }`}
             aria-label={saved ? "Remove quote from saved notebook" : "Save quote for offline reading"}
           >
-            <svg
+            <BookmarkIcon
+              filled={saved}
               className={`h-4 w-4 transition-transform active:scale-125 ${
                 saved ? "text-[var(--accent-rust)] fill-current" : "text-stone-500"
               }`}
-              fill={saved ? "currentColor" : "none"}
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-              />
-            </svg>
+            />
             <span>{saved ? "Saved" : "Save Quote"}</span>
           </button>
         </div>

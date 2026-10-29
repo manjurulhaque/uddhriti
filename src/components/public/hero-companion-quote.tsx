@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { BookmarkIcon } from "@/components/ui"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { useCopyToClipboard } from "@/hooks"
@@ -186,18 +187,10 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
             title={saved ? "Saved in notebook" : "Save reflection"}
             aria-label="Bookmark quote"
           >
-            <svg
-              className={`h-3.5 w-3.5 ${saved ? "fill-current" : "fill-none"}`}
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-              />
-            </svg>
+            <BookmarkIcon
+              filled={saved}
+              className={`h-3.5 w-3.5 ${saved ? "fill-current" : ""}`}
+            />
           </button>
 
           {/* Copy Button */}

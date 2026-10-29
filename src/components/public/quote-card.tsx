@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { BookmarkIcon } from "@/components/ui"
 import { QuoteMeta } from "./quote-meta"
 import { formatScore, formatCountWithNoun } from "@/lib/formatters"
 import { useSavedQuotes } from "@/lib/saved-quotes"
@@ -85,19 +86,10 @@ export function QuoteCard({
           : "text-amber-800/35 hover:text-amber-900 hover:bg-amber-800/10"
       }`}
     >
-      <svg
-        className={`h-4 w-4 transition-transform active:scale-125 ${saved ? "fill-current" : ""}`}
-        fill={saved ? "currentColor" : "none"}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-        />
-      </svg>
+      <BookmarkIcon
+        filled={saved}
+        className="h-4 w-4 transition-transform active:scale-125"
+      />
     </button>
   )
 

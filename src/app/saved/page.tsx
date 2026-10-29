@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { BookmarkIcon } from "@/components/ui"
 import { PublicLayout, QuoteCard } from "@/components/public"
 import { useSavedQuotes, exportSavedQuotesAsMarkdown } from "@/lib/saved-quotes"
 
@@ -170,19 +171,10 @@ export default function SavedQuotesPage() {
           /* Empty Sanctuary State */
           <div className="py-20 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-stone-200/80 text-[var(--accent-gold)] shadow-xs mb-6">
-              <svg
+              <BookmarkIcon
                 className="h-8 w-8 text-[var(--accent-rust)]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
                 strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                />
-              </svg>
+              />
             </div>
 
             <h2 className="font-serif text-2xl font-bold text-[var(--ink-900)] tracking-tight">

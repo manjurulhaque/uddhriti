@@ -31,6 +31,16 @@ export interface HomeHeroProps {
   companionQuotes?: HomeHeroQuote[]
 }
 
+const HERO_JUMP_LINKS = [
+  { href: "#mood-filter", label: "Reflect by Mood", icon: "🌿", featured: true },
+  { href: "#highlights", label: "Curator’s Parchment", icon: "🏛️", featured: true },
+  { href: "#daily-quote", label: "Daily Contemplation", icon: "🌅", featured: true },
+  { href: "#taxonomies", label: "Thinkers & Themes", icon: "✒️", featured: true },
+  { href: "#reader-studio", label: "Reader Studio", icon: "🛠️", featured: true },
+  { href: "#trending", label: "Trending Now", icon: "🔥", featured: false },
+  { href: "#latest", label: "Latest Quotes", icon: "✨", featured: false },
+] as const
+
 export function HomeHero({
   totalPublishedQuotes,
   heroQuote,
@@ -87,51 +97,23 @@ export function HomeHero({
             </div>
 
             {/* Quick Section Anchors */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-white/60">
+            <nav aria-label="Quick section jumps" className="flex flex-wrap items-center gap-2 pt-1 text-xs text-white/60">
               <span className="text-white/40">Jump to:</span>
-              <a
-                href="#mood-filter"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
-              >
-                <span>🌿 Reflect by Mood</span>
-              </a>
-              <a
-                href="#highlights"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
-              >
-                <span>🏛️ Curator’s Parchment</span>
-              </a>
-              <a
-                href="#daily-quote"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
-              >
-                <span>🌅 Daily Contemplation</span>
-              </a>
-              <a
-                href="#taxonomies"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
-              >
-                <span>✒️ Thinkers &amp; Themes</span>
-              </a>
-              <a
-                href="#reader-studio"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 px-3 py-1 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white transition-all"
-              >
-                <span>🛠️ Reader Studio</span>
-              </a>
-              <a
-                href="#trending"
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:border-white/25 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                <span>🔥 Trending Now</span>
-              </a>
-              <a
-                href="#latest"
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:border-white/25 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                <span>✨ Latest Quotes</span>
-              </a>
-            </div>
+              {HERO_JUMP_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 transition-all ${
+                    link.featured
+                      ? "border border-[var(--accent-gold)]/25 bg-[var(--accent-gold)]/10 text-[var(--accent-sand)] hover:border-[var(--accent-gold)]/40 hover:bg-[var(--accent-gold)]/20 hover:text-white"
+                      : "border border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <span aria-hidden="true">{link.icon}</span>
+                  <span>{link.label}</span>
+                </a>
+              ))}
+            </nav>
           </div>
 
           <div className="animate-rise-delayed flex flex-col justify-between gap-5 h-full">

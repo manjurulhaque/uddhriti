@@ -53,16 +53,16 @@ export function PublicHeader() {
             <Link
               href="/"
               className="group flex items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rust)] rounded-lg"
-              aria-label="Uddhriti Home"
+              aria-label="Quotzen Home"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--ink-900)] text-white shadow-xs transition-transform duration-200 group-hover:scale-105 group-hover:bg-black">
                 <span className="font-serif text-lg font-bold italic text-[var(--accent-gold)]">
-                  U
+                  Q
                 </span>
               </div>
               <div className="flex flex-col">
                 <span className="font-serif text-lg font-bold tracking-tight text-[var(--ink-900)] group-hover:text-[var(--accent-rust)] transition-colors">
-                  Uddhriti
+                  Quotzen
                 </span>
                 <span className="text-[10px] uppercase tracking-[0.22em] text-stone-500 -mt-1 font-sans">
                   Quotes &amp; Ideas
@@ -342,7 +342,7 @@ export function PublicHeader() {
 
           <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
             <span>Press Enter to search, ESC to dismiss</span>
-            <span className="font-mono text-[11px]">Uddhriti Archive</span>
+            <span className="font-mono text-[11px]">Quotzen Archive</span>
           </div>
         </div>
       </Modal>

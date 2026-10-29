@@ -4,9 +4,9 @@ import Link from "next/link"
 import { PublicLayout, LegalNav } from "@/components/public"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Uddhriti",
+  title: "Privacy Policy",
   description:
-    "Learn how Uddhriti respects and protects your privacy. We are committed to minimal data collection, privacy-first analytics, and absolute transparency.",
+    "Learn how Quotzen respects and protects your privacy. We are committed to minimal data collection, privacy-first analytics, and absolute transparency.",
 }
 
 export default function PrivacyPage() {
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-base sm:text-lg text-stone-600 leading-relaxed font-serif max-w-3xl">
-            Uddhriti is an open literary sanctuary dedicated to human wisdom. We believe reading,
+            Quotzen is an open literary sanctuary dedicated to human wisdom. We believe reading,
             researching, and reflecting on timeless ideas should never require surrendering your personal privacy.
           </p>
 
@@ -112,15 +112,15 @@ export default function PrivacyPage() {
                 1. Overview &amp; Scholarly Mission
               </h2>
               <p>
-                Welcome to <strong>Uddhriti</strong> (&ldquo;উদ্ধৃতি&rdquo;), accessible at{" "}
-                <span className="font-mono text-xs bg-stone-100 px-1.5 py-0.5 rounded">https://uddhriti.org</span>.
-                Uddhriti operates as an archival, literary, and educational database dedicated to the curation of
+                Welcome to <strong>Quotzen</strong>, accessible at{" "}
+                <span className="font-mono text-xs bg-stone-100 px-1.5 py-0.5 rounded">https://www.quotzen.com</span>.
+                Quotzen operates as an archival, literary, and educational database dedicated to the curation of
                 philosophical quotations, historic speeches, and literary passages.
               </p>
               <p>
                 This Privacy Policy explains how we collect, process, and safeguard information when you interact
                 with our website, browse quotes, navigate taxonomy categories, or communicate with our editorial team.
-                By using Uddhriti, you acknowledge the practices described herein.
+                By using Quotzen, you acknowledge the practices described herein.
               </p>
             </section>
 
@@ -183,7 +183,7 @@ export default function PrivacyPage() {
                 4. Cookies &amp; Web Storage
               </h2>
               <p>
-                Uddhriti utilizes minimal browser storage technologies. We do not use third-party marketing or
+                Quotzen utilizes minimal browser storage technologies. We do not use third-party marketing or
                 behavioral advertising cookies. For public readers, analytics are cookieless.
               </p>
               <p>
@@ -262,7 +262,7 @@ export default function PrivacyPage() {
               </ul>
               <p className="text-stone-600 text-sm">
                 To exercise any of these rights, please contact our privacy desk at{" "}
-                <span className="font-mono text-stone-800 font-medium">privacy@uddhriti.org</span>.
+                <span className="font-mono text-stone-800 font-medium">privacy@quotzen.com</span>.
                 We respond to all verified requests within 30 days without charge.
               </p>
             </section>
@@ -273,7 +273,7 @@ export default function PrivacyPage() {
                 8. Children&rsquo;s Privacy
               </h2>
               <p>
-                Uddhriti is an educational archive designed for general audiences and scholars of all ages.
+                Quotzen is an educational archive designed for general audiences and scholars of all ages.
                 We do not knowingly collect personal identifiable information from children under the age of 13
                 (or 16 in applicable jurisdictions). If you believe a minor has submitted personal contact details,
                 please notify us immediately and we will promptly delete such information.
@@ -295,9 +295,9 @@ export default function PrivacyPage() {
                   Questions, concerns, or requests regarding this Privacy Policy should be directed to:
                 </p>
                 <div className="text-xs sm:text-sm text-stone-700 space-y-1 font-mono">
-                  <p>Uddhriti Literary Archive</p>
-                  <p>Email: <a href="mailto:privacy@uddhriti.org" className="text-[var(--accent-rust)] underline">privacy@uddhriti.org</a></p>
-                  <p>Editorial Inquiries: <a href="mailto:editorial@uddhriti.org" className="text-[var(--accent-rust)] underline">editorial@uddhriti.org</a></p>
+                  <p>Quotzen Literary Archive</p>
+                  <p>Email: <a href="mailto:privacy@quotzen.com" className="text-[var(--accent-rust)] underline">privacy@quotzen.com</a></p>
+                  <p>Editorial Inquiries: <a href="mailto:editorial@quotzen.com" className="text-[var(--accent-rust)] underline">editorial@quotzen.com</a></p>
                 </div>
               </div>
             </section>

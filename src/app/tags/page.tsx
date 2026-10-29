@@ -6,7 +6,7 @@ import { PublicLayout } from "@/components/public"
 import { formatCountWithNoun } from "@/lib/formatters"
 
 export const metadata: Metadata = {
-  title: "Literary Tags & Catalog | Uddhriti",
+  title: "Literary Tags & Catalog",
   description:
     "Browse quotes across nuanced dimensions: philosophical schools, emotional states, timeless virtues, literary eras, and human values.",
 }

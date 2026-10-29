@@ -4,9 +4,9 @@ import Link from "next/link"
 import { PublicLayout, LegalNav } from "@/components/public"
 
 export const metadata: Metadata = {
-  title: "Cookie Policy | Uddhriti",
+  title: "Cookie Policy",
   description:
-    "Learn about how Uddhriti uses essential cookies, browser local storage, and cookieless, privacy-preserving analytics to power the literary archive.",
+    "Learn about how Quotzen uses essential cookies, browser local storage, and cookieless, privacy-preserving analytics to power the literary archive.",
 }
 
 export default function CookiesPage() {
@@ -46,7 +46,7 @@ export default function CookiesPage() {
     {
       name: "reader_theme / prefs",
       category: "Functional (Local Storage)",
-      provider: "Uddhriti Archive",
+      provider: "Quotzen Archive",
       purpose: "Stores non-identifying client preferences (e.g. search filter state, display density) entirely within your local browser storage.",
       duration: "Persistent on client device",
     },
@@ -80,7 +80,7 @@ export default function CookiesPage() {
             Cookie &amp; Storage Policy
           </h1>
           <p className="text-base sm:text-lg text-stone-600 leading-relaxed font-serif max-w-3xl">
-            We believe the web should be respectful of readers. Learn how Uddhriti uses minimal, privacy-centric
+            We believe the web should be respectful of readers. Learn how Quotzen uses minimal, privacy-centric
             storage technologies to maintain platform reliability without commercial surveillance.
           </p>
 
@@ -99,7 +99,7 @@ export default function CookiesPage() {
             </div>
             <div className="space-y-1.5 text-xs sm:text-sm text-stone-800">
               <h2 className="font-serif text-base font-bold text-[var(--ink-900)]">
-                Key Takeaways on Cookies at Uddhriti
+                Key Takeaways on Cookies at Quotzen
               </h2>
               <ul className="list-disc pl-4 space-y-1 text-stone-700">
                 <li><strong>Zero tracking pixels or ad networks:</strong> We do not deploy Meta Pixel, Google AdSense, or third-party marketing cookies.</li>
@@ -157,7 +157,7 @@ export default function CookiesPage() {
                 2. Zero Third-Party Advertising Cookies
               </h2>
               <p>
-                Uddhriti is committed to being an ad-free cultural resource. <strong>We do not use any third-party
+                Quotzen is committed to being an ad-free cultural resource. <strong>We do not use any third-party
                 advertising cookies, behavioral tracking scripts, or data broker integrations.</strong>
               </p>
               <p>
@@ -264,8 +264,8 @@ export default function CookiesPage() {
                   For inquiries about our cookie and storage practices, please contact:
                 </p>
                 <div className="text-xs sm:text-sm text-stone-700 space-y-1 font-mono">
-                  <p>Uddhriti Privacy Operations</p>
-                  <p>Email: <a href="mailto:privacy@uddhriti.org" className="text-[var(--accent-rust)] underline">privacy@uddhriti.org</a></p>
+                  <p>Quotzen Privacy Operations</p>
+                  <p>Email: <a href="mailto:privacy@quotzen.com" className="text-[var(--accent-rust)] underline">privacy@quotzen.com</a></p>
                 </div>
               </div>
             </section>

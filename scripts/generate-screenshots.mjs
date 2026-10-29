@@ -33,8 +33,8 @@ function getDesktopSvg() {
 
   <!-- Brand Logo -->
   <rect x="64" y="18" width="36" height="36" rx="10" fill="#212529"/>
-  <text x="82" y="42" font-family="'Times New Roman', serif" font-size="20" font-weight="bold" font-style="italic" fill="#e9c46a" text-anchor="middle">U</text>
-  <text x="110" y="38" font-family="'Times New Roman', serif" font-size="20" font-weight="bold" fill="#212529">Uddhriti</text>
+  <text x="82" y="42" font-family="'Times New Roman', serif" font-size="20" font-weight="bold" font-style="italic" fill="#e9c46a" text-anchor="middle">Q</text>
+  <text x="110" y="38" font-family="'Times New Roman', serif" font-size="20" font-weight="bold" fill="#212529">Quotzen</text>
   <text x="110" y="50" font-family="sans-serif" font-size="9" letter-spacing="2" fill="#71717a">QUOTES &amp; IDEAS</text>
 
   <!-- Nav Links -->
@@ -130,8 +130,8 @@ function getMobileSvg() {
 
   <!-- Brand -->
   <rect x="44" y="38" width="48" height="48" rx="14" fill="#212529"/>
-  <text x="68" y="71" font-family="'Times New Roman', serif" font-size="28" font-weight="bold" font-style="italic" fill="#e9c46a" text-anchor="middle">U</text>
-  <text x="108" y="66" font-family="'Times New Roman', serif" font-size="26" font-weight="bold" fill="#212529">Uddhriti</text>
+  <text x="68" y="71" font-family="'Times New Roman', serif" font-size="28" font-weight="bold" font-style="italic" fill="#e9c46a" text-anchor="middle">Q</text>
+  <text x="108" y="66" font-family="'Times New Roman', serif" font-size="26" font-weight="bold" fill="#212529">Quotzen</text>
   <text x="108" y="82" font-family="sans-serif" font-size="11" letter-spacing="2" fill="#71717a">QUOTES &amp; IDEAS</text>
 
   <!-- PWA Pill -->

@@ -93,7 +93,7 @@ export async function generateQuoteCardBlob(
   ctx.fillStyle = isDark ? "#e9c46a" : "#c76b3e";
   ctx.font = "600 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.letterSpacing = "4px";
-  ctx.fillText("✦  UDDHRITI  ✦", width / 2, pad + 60);
+  ctx.fillText("✦  QUOTZEN  ✦", width / 2, pad + 60);
 
   // 4. Large Quotation Mark
   ctx.font = "italic 900 120px Georgia, 'Times New Roman', serif";

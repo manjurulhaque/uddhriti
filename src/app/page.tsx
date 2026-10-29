@@ -211,7 +211,7 @@ export default async function HomePage() {
         "@id": `${siteUrl}/#website`,
         url: siteUrl,
         name: "Quotzen",
-        alternateName: ["Uddhriti", "Quotzen Sanctuary"],
+        alternateName: ["Quotzen", "Quotzen Sanctuary"],
         description:
           "A quiet, searchable sanctuary for memorable quotations from books, speeches, interviews, and thinkers across history.",
         inLanguage: "en-US",

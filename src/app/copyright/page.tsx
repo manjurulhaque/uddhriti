@@ -4,9 +4,9 @@ import Link from "next/link"
 import { PublicLayout, LegalNav } from "@/components/public"
 
 export const metadata: Metadata = {
-  title: "Copyright & Fair Use Policy | Uddhriti",
+  title: "Copyright & Fair Use Policy",
   description:
-    "Scholarly fair use principles, attribution standards, public domain works, and formal DMCA notice and takedown procedures for the Uddhriti literary archive.",
+    "Scholarly fair use principles, attribution standards, public domain works, and formal DMCA notice and takedown procedures for the Quotzen literary archive.",
 }
 
 export default function CopyrightPage() {
@@ -50,7 +50,7 @@ export default function CopyrightPage() {
             Copyright &amp; Fair Use Policy
           </h1>
           <p className="text-base sm:text-lg text-stone-600 leading-relaxed font-serif max-w-3xl">
-            Uddhriti is committed to the protection of intellectual property while honoring the centuries-old
+            Quotzen is committed to the protection of intellectual property while honoring the centuries-old
             tradition of quotation, criticism, scholarly commentary, and educational fair use.
           </p>
 
@@ -110,7 +110,7 @@ export default function CopyrightPage() {
                 1. Scholarly Mission &amp; Fair Use
               </h2>
               <p>
-                Uddhriti (&ldquo;উদ্ধৃতি&rdquo; means &ldquo;quotation&rdquo; or &ldquo;citation&rdquo; in Bengali) is designed
+                Quotzen is designed
                 as a digital common for reflection, literary exploration, and historical reference.
               </p>
               <p>
@@ -120,7 +120,7 @@ export default function CopyrightPage() {
                 comment, news reporting, teaching, scholarship, and research.
               </p>
               <div className="rounded-xl border border-stone-200/90 bg-white p-5 space-y-2 text-xs sm:text-sm">
-                <h3 className="font-serif font-bold text-stone-900">The Four Fair Use Factors Applied to Uddhriti:</h3>
+                <h3 className="font-serif font-bold text-stone-900">The Four Fair Use Factors Applied to Quotzen:</h3>
                 <ul className="list-disc pl-4 space-y-1.5 text-stone-600">
                   <li><strong>Purpose and Character:</strong> Transformative, non-commercial scholarly indexing, categorizing, and biographical annotation.</li>
                   <li><strong>Nature of the Work:</strong> Informational citation of published philosophical, historical, and literary statements.</li>
@@ -136,14 +136,14 @@ export default function CopyrightPage() {
                 2. Public Domain &amp; Historical Texts
               </h2>
               <p>
-                A substantial portion of the Uddhriti archive consists of quotations from historical figures—such as
+                A substantial portion of the Quotzen archive consists of quotations from historical figures—such as
                 Socrates, Confucius, Rabindranath Tagore, Jane Austen, Marcus Aurelius, and William Shakespeare—whose
                 works are firmly in the public domain.
               </p>
               <p>
                 Public domain texts are free from copyright restrictions under applicable laws (e.g., works published
                 prior to January 1, 1929 in the United States, or where the author passed away over 70 years ago in jurisdictions
-                applying the life-plus-70 rule). Uddhriti freely disseminates these cultural treasures for the enrichment of all humanity.
+                applying the life-plus-70 rule). Quotzen freely disseminates these cultural treasures for the enrichment of all humanity.
               </p>
             </section>
 
@@ -173,12 +173,12 @@ export default function CopyrightPage() {
                 4. DMCA Notice &amp; Takedown Process
               </h2>
               <p>
-                In accordance with Title II of the Digital Millennium Copyright Act (17 U.S.C. &sect; 512), Uddhriti
+                In accordance with Title II of the Digital Millennium Copyright Act (17 U.S.C. &sect; 512), Quotzen
                 maintains a notice-and-takedown procedure for copyright owners.
               </p>
               <p>
                 If you are a copyright owner (or an authorized agent) and believe in good faith that any content hosted
-                on Uddhriti infringes upon your copyright, please provide a written notification to our Designated Copyright
+                on Quotzen infringes upon your copyright, please provide a written notification to our Designated Copyright
                 Agent containing the following statutory information:
               </p>
 
@@ -191,7 +191,7 @@ export default function CopyrightPage() {
                     <strong>Identification of the Work:</strong> A description of the copyrighted work claimed to have been infringed (or a representative list if multiple works).
                   </li>
                   <li>
-                    <strong>Identification of Infringing Material:</strong> The specific URL(s) on Uddhriti where the claimed material is located so we can locate it quickly.
+                    <strong>Identification of Infringing Material:</strong> The specific URL(s) on Quotzen where the claimed material is located so we can locate it quickly.
                   </li>
                   <li>
                     <strong>Contact Information:</strong> Your full legal name, mailing address, telephone number, and email address.
@@ -230,12 +230,12 @@ export default function CopyrightPage() {
               </h2>
               <p>
                 The Internet is saturated with misattributed quotes (e.g. quotes erroneously assigned to Albert Einstein,
-                Mark Twain, or Buddha). Uddhriti strives to be an antidote to false citations.
+                Mark Twain, or Buddha). Quotzen strives to be an antidote to false citations.
               </p>
               <p>
-                If you have documentary proof that a quotation on Uddhriti has been misattributed, misquoted, or taken
+                If you have documentary proof that a quotation on Quotzen has been misattributed, misquoted, or taken
                 severely out of historical context, please send bibliographic citations, page numbers, or primary scans to{" "}
-                <span className="font-mono text-stone-800 font-semibold text-xs">editorial@uddhriti.org</span>.
+                <span className="font-mono text-stone-800 font-semibold text-xs">editorial@quotzen.com</span>.
                 We actively celebrate scholar and reader contributions to our errata ledger.
               </p>
             </section>
@@ -246,15 +246,15 @@ export default function CopyrightPage() {
                 7. Designated Copyright Agent
               </h2>
               <div className="rounded-xl border border-stone-200/90 bg-white p-6 shadow-xs space-y-3">
-                <h3 className="font-serif font-bold text-stone-900">Uddhriti DMCA &amp; Rights Compliance Officer</h3>
+                <h3 className="font-serif font-bold text-stone-900">Quotzen DMCA &amp; Rights Compliance Officer</h3>
                 <p className="text-sm text-stone-600">
                   All copyright notices, takedown requests, and scholarly licensing inquiries should be addressed to:
                 </p>
                 <div className="text-xs sm:text-sm text-stone-700 space-y-1 font-mono">
                   <p>Attn: Copyright Agent</p>
-                  <p>Uddhriti Literary Archive &amp; Digital Humanities Project</p>
-                  <p>Email: <a href="mailto:dmca@uddhriti.org" className="text-[var(--accent-rust)] underline">dmca@uddhriti.org</a></p>
-                  <p>Secondary: <a href="mailto:legal@uddhriti.org" className="text-[var(--accent-rust)] underline">legal@uddhriti.org</a></p>
+                  <p>Quotzen Literary Archive &amp; Digital Humanities Project</p>
+                  <p>Email: <a href="mailto:dmca@quotzen.com" className="text-[var(--accent-rust)] underline">dmca@quotzen.com</a></p>
+                  <p>Secondary: <a href="mailto:legal@quotzen.com" className="text-[var(--accent-rust)] underline">legal@quotzen.com</a></p>
                 </div>
               </div>
             </section>

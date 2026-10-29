@@ -80,7 +80,7 @@ export function QuoteShareModal({
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .slice(0, 30)
-    const fileName = `uddhriti-${authorSlug}.png`
+    const fileName = `quotzen-${authorSlug}.png`
 
     const a = document.createElement("a")
     a.href = URL.createObjectURL(currentBlob)

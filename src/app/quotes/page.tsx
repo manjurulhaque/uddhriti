@@ -7,7 +7,7 @@ import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 
 export const metadata: Metadata = {
-  title: "Browse All Quotations | Uddhriti",
+  title: "Browse All Quotations",
   description:
     "Explore our complete searchable archive of timeless quotations, curated philosophical fragments, and memorable passages.",
 }

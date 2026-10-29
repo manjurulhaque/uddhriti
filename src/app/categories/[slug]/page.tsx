@@ -24,10 +24,10 @@ export async function generateMetadata({
   })
 
   if (!category) {
-    return { title: "Category Not Found | Uddhriti" }
+    return { title: "Category Not Found" }
   }
 
-  const title = category.metaTitle || `${category.name} Quotes | Uddhriti`
+  const title = category.metaTitle || `${category.name} Quotes`
   const description =
     category.metaDescription ||
     category.description ||

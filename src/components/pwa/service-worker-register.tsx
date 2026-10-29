@@ -48,7 +48,7 @@ export function ServiceWorkerRegister() {
                 navigator.serviceWorker.controller
               ) {
                 console.info(
-                  "[Uddhriti PWA] New content is available; background refresh enabled."
+                  "[Quotzen PWA] New content is available; background refresh enabled."
                 );
               }
             });
@@ -56,7 +56,7 @@ export function ServiceWorkerRegister() {
         })
         .catch((error) => {
           if (!isLocalhost) {
-            console.warn("[Uddhriti PWA] Service worker registration error:", error);
+            console.warn("[Quotzen PWA] Service worker registration error:", error);
           }
         });
     }

@@ -6,7 +6,7 @@ import { PublicLayout } from "@/components/public"
 import { formatCountWithNoun, formatNumber } from "@/lib/formatters"
 
 export const metadata: Metadata = {
-  title: "Thematic Categories | Uddhriti",
+  title: "Thematic Categories",
   description:
     "Explore timeless quotations organized by enduring philosophical and human themes: Wisdom, Love, Courage, Science, Truth, and Art.",
 }

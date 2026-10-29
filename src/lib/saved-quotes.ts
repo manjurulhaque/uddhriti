@@ -16,8 +16,9 @@ export interface SavedQuote {
   savedAt: number;
 }
 
-const STORAGE_KEY = "uddhriti_saved_quotes_v1";
-const CHANGE_EVENT = "uddhriti_saved_quotes_changed";
+const STORAGE_KEY = "quotzen_saved_quotes_v1";
+const LEGACY_STORAGE_KEY = "uddhriti_saved_quotes_v1";
+const CHANGE_EVENT = "quotzen_saved_quotes_changed";
 const EMPTY_QUOTES: SavedQuote[] = [];
 
 let cachedQuotes: SavedQuote[] | null = null;
@@ -25,7 +26,15 @@ let cachedQuotes: SavedQuote[] | null = null;
 function readStorage(): SavedQuote[] {
   if (typeof window === "undefined") return EMPTY_QUOTES;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    let raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      // Graceful migration from legacy key if present
+      const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacyRaw) {
+        localStorage.setItem(STORAGE_KEY, legacyRaw);
+        raw = legacyRaw;
+      }
+    }
     if (!raw) return EMPTY_QUOTES;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : EMPTY_QUOTES;
@@ -98,7 +107,7 @@ export function toggleSaveQuote(
 
 export function exportSavedQuotesAsMarkdown(quotes: SavedQuote[]): string {
   const lines = [
-    "# Uddhriti — My Saved Reflections",
+    "# Quotzen — My Saved Reflections",
     `*Exported on ${new Date().toLocaleDateString()}*\n`,
   ];
 

@@ -4,9 +4,9 @@ import Link from "next/link"
 import { PublicLayout, LegalNav } from "@/components/public"
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Uddhriti",
+  title: "Terms of Service",
   description:
-    "Terms and conditions governing the access, educational research, and scholarly use of the Uddhriti quotations database and literary archive.",
+    "Terms and conditions governing the access, educational research, and scholarly use of the Quotzen quotations database and literary archive.",
 }
 
 export default function TermsPage() {
@@ -52,7 +52,7 @@ export default function TermsPage() {
             Terms of Service
           </h1>
           <p className="text-base sm:text-lg text-stone-600 leading-relaxed font-serif max-w-3xl">
-            These terms define the guidelines for reading, citing, and exploring quotes within the Uddhriti
+            These terms define the guidelines for reading, citing, and exploring quotes within the Quotzen
             archive. We are committed to fostering open scholarship, responsible citation, and respectful research.
           </p>
 
@@ -112,7 +112,7 @@ export default function TermsPage() {
                 1. Acceptance of Terms
               </h2>
               <p>
-                By accessing, browsing, or utilizing the Uddhriti platform (&ldquo;Service&rdquo; or &ldquo;Archive&rdquo;),
+                By accessing, browsing, or utilizing the Quotzen platform (&ldquo;Service&rdquo; or &ldquo;Archive&rdquo;),
                 you enter into a legally binding agreement to comply with these Terms of Service, along with our{" "}
                 <Link href="/privacy" className="text-[var(--accent-rust)] font-medium hover:underline">Privacy Policy</Link>{" "}
                 and <Link href="/copyright" className="text-[var(--accent-rust)] font-medium hover:underline">Copyright &amp; Fair Use Policy</Link>.
@@ -128,7 +128,7 @@ export default function TermsPage() {
                 2. Nature of the Service
               </h2>
               <p>
-                Uddhriti is an educational, non-commercial literary reference database. The archive compiles quotations,
+                Quotzen is an educational, non-commercial literary reference database. The archive compiles quotations,
                 aphorisms, excerpts from literary works, philosophical dissertations, historical speeches, and interviews.
                 Each entry is cataloged with available biographical details, source texts, historical year of publication,
                 thematic categories, and keywords to aid human inquiry and scholarly discernment.
@@ -140,7 +140,7 @@ export default function TermsPage() {
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-[var(--ink-900)]">
                 3. Permitted &amp; Acceptable Use
               </h2>
-              <p>You may use Uddhriti for legitimate scholarly, educational, personal, and research endeavors. Specifically:</p>
+              <p>You may use Quotzen for legitimate scholarly, educational, personal, and research endeavors. Specifically:</p>
               <ul className="list-disc pl-5 space-y-1.5 text-stone-600 text-sm sm:text-base">
                 <li>You may read, search, bookmark, and share links to individual quotation pages.</li>
                 <li>You may cite excerpts under recognized fair use / fair dealing doctrines, providing clear attribution to the original author and source.</li>
@@ -163,15 +163,15 @@ export default function TermsPage() {
               </h2>
               <div className="space-y-3">
                 <p>
-                  <strong>A. Quotation Excerpts:</strong> Uddhriti does not claim proprietary ownership over the individual
+                  <strong>A. Quotation Excerpts:</strong> Quotzen does not claim proprietary ownership over the individual
                   quotations, speeches, or literary excerpts displayed on the platform. Such excerpts are the intellectual
-                  property of their original creators, estates, or public domain archives. Their presentation on Uddhriti
+                  property of their original creators, estates, or public domain archives. Their presentation on Quotzen
                   is conducted strictly under international fair use and educational doctrines.
                 </p>
                 <p>
                   <strong>B. Compilation &amp; Platform Architecture:</strong> The unique compilation, editorial taxonomies,
                   tagging schemas, database structure, curatorial annotations, graphic design, and software code constituting
-                  Uddhriti are the property of Uddhriti and are protected under copyright, trademark, and database compilation laws.
+                  Quotzen are the property of Quotzen and are protected under copyright, trademark, and database compilation laws.
                 </p>
               </div>
             </section>
@@ -189,7 +189,7 @@ export default function TermsPage() {
               <p>
                 However, historical transmission of sayings frequently involves variants, translation nuances, and debate.
                 We provide all material on an &ldquo;as is&rdquo; basis. If you identify a citation inaccuracy or translation dispute,
-                we encourage you to notify us at <span className="font-mono text-xs font-semibold text-stone-800">editorial@uddhriti.org</span>.
+                we encourage you to notify us at <span className="font-mono text-xs font-semibold text-stone-800">editorial@quotzen.com</span>.
               </p>
             </section>
 
@@ -200,7 +200,7 @@ export default function TermsPage() {
               </h2>
               <p>
                 For deeper research, our records link to third-party resources such as Wikimedia Commons, WorldCat,
-                Open Library, Internet Archive, and scholarly publishers. Uddhriti exercises no editorial or operational
+                Open Library, Internet Archive, and scholarly publishers. Quotzen exercises no editorial or operational
                 control over third-party destinations and assumes no responsibility for their content, policies, or availability.
               </p>
             </section>
@@ -214,7 +214,7 @@ export default function TermsPage() {
                 PLEASE READ CAREFULLY
               </p>
               <p>
-                THE UDDHRITI SERVICE IS PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE,&rdquo; WITHOUT EXPRESS OR IMPLIED
+                THE QUOTZEN SERVICE IS PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE,&rdquo; WITHOUT EXPRESS OR IMPLIED
                 WARRANTIES OF ANY KIND, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
                 PARTICULAR SCHOLARLY PURPOSE, CONTINUOUS AVAILABILITY, OR FREEDOM FROM TRANSMISSION ERRORS.
               </p>
@@ -226,7 +226,7 @@ export default function TermsPage() {
                 8. Limitation of Liability
               </h2>
               <p>
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, UDDHRITI, ITS CONTRIBUTORS, CURATORS, AND OPERATORS SHALL NOT
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, QUOTZEN, ITS CONTRIBUTORS, CURATORS, AND OPERATORS SHALL NOT
                 BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES RESULTING FROM YOUR
                 ACCESS TO, USE OF, OR INABILITY TO ACCESS THE ARCHIVE OR ANY RELIANCE PLACED ON HISTORICAL EXCERPTS.
               </p>
@@ -248,8 +248,8 @@ export default function TermsPage() {
                   For formal legal correspondence or questions about archive policies:
                 </p>
                 <div className="text-xs sm:text-sm text-stone-700 space-y-1 font-mono">
-                  <p>Uddhriti Legal Desk</p>
-                  <p>Email: <a href="mailto:legal@uddhriti.org" className="text-[var(--accent-rust)] underline">legal@uddhriti.org</a></p>
+                  <p>Quotzen Legal Desk</p>
+                  <p>Email: <a href="mailto:legal@quotzen.com" className="text-[var(--accent-rust)] underline">legal@quotzen.com</a></p>
                 </div>
               </div>
             </section>

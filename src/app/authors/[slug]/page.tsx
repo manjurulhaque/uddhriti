@@ -25,7 +25,7 @@ export async function generateMetadata({
   })
 
   if (!author) {
-    return { title: "Author Not Found | Uddhriti" }
+    return { title: "Author Not Found" }
   }
 
   const desc =
@@ -35,13 +35,13 @@ export async function generateMetadata({
     }.`
 
   return {
-    title: `${author.name} Quotes | Uddhriti`,
+    title: `${author.name} Quotes`,
     description: desc,
     alternates: {
       canonical: `/authors/${slug}`,
     },
     openGraph: {
-      title: `${author.name} Quotes - Uddhriti`,
+      title: `${author.name} Quotes - Quotzen`,
       description: desc,
     },
   }

@@ -31,15 +31,15 @@ export function PublicFooter() {
           <div className="space-y-4 sm:col-span-2 lg:col-span-2">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[var(--ink-900)] font-serif font-bold italic shadow-xs">
-                U
+                Q
               </div>
               <span className="font-serif text-xl font-bold tracking-tight text-white">
-                Uddhriti
+                Quotzen
               </span>
             </div>
 
             <p className="max-w-md text-xs leading-relaxed text-white/70">
-              <span className="font-medium text-white/90">উদ্ধৃতি (Uddhriti)</span> is a
+              <span className="font-medium text-white/90">Quotzen</span> is a
               curated, searchable sanctuary for timeless quotations, philosophical fragments,
               historic speeches, and literary ideas across human history.
             </p>
@@ -170,7 +170,7 @@ export function PublicFooter() {
         {/* Bottom Bar: Copyright & Attribution */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-xs text-white/50 md:flex-row">
           <p className="text-center md:text-left">
-            &copy; {currentYear} Uddhriti Archive. All citations and excerpts belong to their
+            &copy; {currentYear} Quotzen Archive. All citations and excerpts belong to their
             respective authors and public domain archives.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-white/60">

@@ -34,12 +34,12 @@ export async function generateMetadata({
   })
 
   if (!quote) {
-    return { title: "Quote Not Found | Uddhriti" }
+    return { title: "Quote Not Found" }
   }
 
   const author = quote.authorName || "Unknown"
   const cleanSnippet = quote.content.length > 70 ? `${quote.content.slice(0, 70)}...` : quote.content
-  const title = `“${cleanSnippet}” — ${author} | Uddhriti`
+  const title = `“${cleanSnippet}” — ${author}`
   const description =
     quote.meaning ||
     `Read the quotation “${cleanSnippet}” by ${author}. Explore its historical context, meaning, and thematic analysis.`

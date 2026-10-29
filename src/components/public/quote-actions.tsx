@@ -53,7 +53,7 @@ export function QuoteActions({
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: `Quote by ${authorName || "Uddhriti"}`,
+          title: `Quote by ${authorName || "Quotzen"}`,
           text: shareText,
           url,
         })

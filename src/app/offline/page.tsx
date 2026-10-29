@@ -95,16 +95,16 @@ function OfflinePageContent() {
         <Link
           href="/"
           className="group flex items-center gap-2.5 outline-none"
-          aria-label="Uddhriti Home"
+          aria-label="Quotzen Home"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--ink-900)] text-white shadow-xs">
             <span className="font-serif text-lg font-bold italic text-[var(--accent-gold)]">
-              U
+              Q
             </span>
           </div>
           <div className="flex flex-col">
             <span className="font-serif text-lg font-bold tracking-tight text-[var(--ink-900)]">
-              Uddhriti
+              Quotzen
             </span>
             <span className="text-[10px] uppercase tracking-[0.22em] text-stone-500 -mt-1 font-sans">
               Offline Sanctuary
@@ -244,7 +244,7 @@ function OfflinePageContent() {
 
       {/* Footer */}
       <footer className="text-center text-[11px] text-stone-500 py-4 border-t border-stone-300/40">
-        Uddhriti PWA • Wisdom Doesn&apos;t Need Wi-Fi
+        Quotzen PWA • Wisdom Doesn&apos;t Need Wi-Fi
       </footer>
     </div>
   );

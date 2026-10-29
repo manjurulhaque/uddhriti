@@ -305,7 +305,7 @@ export function AdminSidebar({
             </span>
             <div>
               <h2 className="font-bold text-base text-gray-900 leading-tight">Admin Panel</h2>
-              <p className="text-[11px] text-gray-400">Uddhriti Engine</p>
+              <p className="text-[11px] text-gray-400">Quotzen Engine</p>
             </div>
           </Link>
 

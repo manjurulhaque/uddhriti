@@ -11,7 +11,8 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
-const STORAGE_KEY = "uddhriti_pwa_install_dismissed_until";
+const STORAGE_KEY = "quotzen_pwa_install_dismissed_until";
+const LEGACY_STORAGE_KEY = "uddhriti_pwa_install_dismissed_until";
 const DISMISS_DAYS = 7;
 
 function subscribeIos(callback: () => void) {
@@ -29,7 +30,7 @@ function getIosSnapshot(): boolean {
   if (isStandalone) return false;
 
   try {
-    const dismissedUntil = localStorage.getItem(STORAGE_KEY);
+    const dismissedUntil = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
       return false;
     }
@@ -114,7 +115,7 @@ export function InstallPrompt() {
         setDeferredPrompt(null);
       }
     } catch (err) {
-      console.warn("[Uddhriti PWA] Prompt error:", err);
+      console.warn("[Quotzen PWA] Prompt error:", err);
     } finally {
       setIsInstalling(false);
     }
@@ -142,7 +143,7 @@ export function InstallPrompt() {
           {/* App Icon */}
           <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--ink-900)] text-white shadow-xs">
             <span className="font-serif text-xl font-bold italic text-[var(--accent-gold)]">
-              U
+              Q
             </span>
           </div>
 
@@ -151,8 +152,8 @@ export function InstallPrompt() {
             <div className="flex items-center gap-1.5">
               <h4 className="text-xs font-serif font-bold text-[var(--ink-900)] tracking-tight">
                 {platform === "ios"
-                  ? "Install Uddhriti on iPhone / iPad"
-                  : "Install Uddhriti App"}
+                  ? "Install Quotzen on iPhone / iPad"
+                  : "Install Quotzen App"}
               </h4>
               <span className="text-[10px] uppercase font-sans font-semibold tracking-wider text-[var(--accent-rust)] bg-[#c76b3e]/10 px-1.5 py-0.5 rounded">
                 PWA

@@ -24,10 +24,10 @@ export async function generateMetadata({
   })
 
   if (!tag) {
-    return { title: "Tag Not Found | Uddhriti" }
+    return { title: "Tag Not Found" }
   }
 
-  const title = `${tag.name} Quotes | Uddhriti`
+  const title = `${tag.name} Quotes`
   const description =
     tag.description ||
     `Browse memorable quotes, maxims, and passages tagged under ${tag.name} (${tag.type.toLowerCase()}).`

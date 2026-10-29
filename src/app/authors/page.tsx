@@ -9,7 +9,7 @@ import { formatCountWithNoun } from "@/lib/formatters"
 import { formatEpoch, formatLifespan, cleanProfession } from "@/components/public/home-taxonomies-showcase"
 
 export const metadata: Metadata = {
-  title: "Authors & Thinkers | Uddhriti",
+  title: "Authors & Thinkers",
   description:
     "Explore timeless wisdom from history's greatest philosophers, writers, poets, and leaders across antiquity, enlightenment, and modernity.",
 }

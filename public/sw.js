@@ -1,5 +1,5 @@
-// Uddhriti Service Worker
-const CACHE_VERSION = "uddhriti-v3";
+// Quotzen Service Worker
+const CACHE_VERSION = "quotzen-v1";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;

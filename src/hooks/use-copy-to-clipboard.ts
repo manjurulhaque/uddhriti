@@ -15,7 +15,7 @@ export function formatQuoteCopyText(quote: {
 }): string {
   const author = quote.author || quote.authorName || "Unknown"
   const source = quote.source || quote.sourceTitle
-  return `“${quote.content}”\n— ${author}${source ? ` (${source})` : ""}\n\nVia Uddhriti Quotations`
+  return `“${quote.content}”\n— ${author}${source ? ` (${source})` : ""}\n\nVia Quotzen Quotations`
 }
 
 export function useCopyToClipboard({ timeout = 2000 }: CopyOptions = {}) {

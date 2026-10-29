@@ -66,7 +66,7 @@ export function HomeHighlights({
             Where ancient reflections meet living contemplations.
           </h2>
           <p className="text-sm leading-relaxed text-[var(--ink-700)]">
-            Uddhriti is a quiet sanctuary dedicated to the enduring resonance of language.
+            Quotzen is a quiet sanctuary dedicated to the enduring resonance of language.
             Here, passages are gathered with scholarly care—treated not as disposable internet
             snippets, but as living cultural monuments.
           </p>

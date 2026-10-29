@@ -37,9 +37,9 @@ function getStandardSvg(size) {
   <!-- Subtle Quote Mark Motif in Background -->
   <text x="350" y="220" font-family="Georgia, serif" font-size="190" font-weight="900" fill="rgba(233, 196, 106, 0.07)" text-anchor="middle">”</text>
 
-  <!-- Main "U" Serif Emblem -->
+  <!-- Main "Q" Serif Emblem -->
   <g filter="url(#shadow)">
-    <text x="256" y="348" font-family="'Times New Roman', Times, Georgia, serif" font-size="280" font-style="italic" font-weight="bold" fill="url(#goldGrad)" text-anchor="middle">U</text>
+    <text x="256" y="348" font-family="'Times New Roman', Times, Georgia, serif" font-size="280" font-style="italic" font-weight="bold" fill="url(#goldGrad)" text-anchor="middle">Q</text>
   </g>
 
   <!-- Decorative Quotation Marks -->
@@ -81,9 +81,9 @@ function getMaskableSvg() {
     <!-- Background Quote Watermark -->
     <text x="350" y="210" font-family="Georgia, serif" font-size="180" font-weight="900" fill="rgba(233, 196, 106, 0.08)" text-anchor="middle">”</text>
 
-    <!-- Main "U" Emblem -->
+    <!-- Main "Q" Emblem -->
     <g filter="url(#shadowMask)">
-      <text x="256" y="340" font-family="'Times New Roman', Times, Georgia, serif" font-size="270" font-style="italic" font-weight="bold" fill="url(#goldGradMaskable)" text-anchor="middle">U</text>
+      <text x="256" y="340" font-family="'Times New Roman', Times, Georgia, serif" font-size="270" font-style="italic" font-weight="bold" fill="url(#goldGradMaskable)" text-anchor="middle">Q</text>
     </g>
 
     <!-- Decorative Quotation Marks -->

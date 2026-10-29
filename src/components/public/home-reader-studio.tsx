@@ -124,7 +124,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
             Instruments for the Thoughtful Reader
           </h2>
           <p className="text-xs sm:text-sm text-stone-600 font-serif leading-relaxed">
-            Uddhriti is designed as an unhurried, private library. Discover our built-in instruments
+            Quotzen is designed as an unhurried, private library. Discover our built-in instruments
             crafted for private study, distraction-free offline reading, and editorial sharing.
           </p>
         </div>
@@ -249,7 +249,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
               }`}
             >
               <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
-                <span>✦ UDDHRITI ✦</span>
+                <span>✦ QUOTZEN ✦</span>
                 <span className={previewTheme === "dark" ? "text-stone-400" : "text-stone-500"}>
                   1080×1080 High-Res
                 </span>
@@ -315,7 +315,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
               <li className="flex items-start gap-2">
                 <span className="text-[var(--accent-rust)] font-bold">✓</span>
                 <span>
-                  <strong>Installable App:</strong> Add Uddhriti to your iPhone, Android, or desktop home screen as a standalone app.
+                  <strong>Installable App:</strong> Add Quotzen to your iPhone, Android, or desktop home screen as a standalone app.
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -340,7 +340,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
                 onClick={handleInstallClick}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] w-full cursor-pointer"
               >
-                <span>Install Uddhriti App</span>
+                <span>Install Quotzen App</span>
                 <span aria-hidden="true">📲</span>
               </button>
             ) : null}

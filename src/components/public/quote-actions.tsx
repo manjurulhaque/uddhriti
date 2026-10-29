@@ -37,10 +37,53 @@ export function QuoteActions({
 }: QuoteActionsProps) {
   const { copied, copyQuote } = useCopyToClipboard()
   const [shareModalOpen, setShareModalOpen] = React.useState(false)
+  const [overrideViews, setOverrideViews] = React.useState<number | null>(null)
   const { isSaved, toggleSave } = useSavedQuotes()
+
+  const displayViews = overrideViews ?? views
+
+  // Automatically record view count on mount with session-level deduplication
+  React.useEffect(() => {
+    const targetKey = id || slug
+    if (!targetKey) return
+
+    const sessionKey = `quotzen_viewed_${targetKey}`
+    try {
+      if (sessionStorage.getItem(sessionKey)) {
+        return
+      }
+      sessionStorage.setItem(sessionKey, "1")
+    } catch {
+      // Ignore sessionStorage availability errors
+    }
+
+    fetch(`/api/quotes/${encodeURIComponent(targetKey)}/view`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.views === "number") {
+          setOverrideViews(data.views)
+        }
+      })
+      .catch(() => {
+        // Non-blocking fail-safe
+      })
+  }, [id, slug])
 
   const quoteKey = id || slug || content
   const saved = isSaved(quoteKey)
+
+  function recordShare() {
+    const targetKey = id || slug
+    if (!targetKey) return
+    fetch(`/api/quotes/${encodeURIComponent(targetKey)}/share`, {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => {})
+  }
 
   function handleCopy() {
     copyQuote({ content, authorName, sourceTitle })
@@ -48,7 +91,7 @@ export function QuoteActions({
 
   async function handleShare() {
     const url = quoteUrl || (typeof window !== "undefined" ? window.location.href : "")
-    const shareText = `“${content}” — ${authorName || "Unknown"}`
+    const shareText = `“${content}” — ${authorName || "Quotzen"}`
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
@@ -57,12 +100,14 @@ export function QuoteActions({
           text: shareText,
           url,
         })
+        recordShare()
         return
       } catch {
         // User cancelled or share failed, fallback to twitter intent
       }
     }
 
+    recordShare()
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       shareText
     )}&url=${encodeURIComponent(url)}`
@@ -119,7 +164,10 @@ export function QuoteActions({
           {/* Share as Image Card Button */}
           <button
             type="button"
-            onClick={() => setShareModalOpen(true)}
+            onClick={() => {
+              recordShare()
+              setShareModalOpen(true)
+            }}
             className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
             aria-label="Export quotation as image card"
           >
@@ -163,13 +211,13 @@ export function QuoteActions({
           </button>
         </div>
 
-        {typeof views === "number" && (
+        {typeof displayViews === "number" && (
           <div className="flex items-center gap-1.5 text-xs text-stone-400 font-mono">
             <svg className="h-3.5 w-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            <span>{views.toLocaleString()} views</span>
+            <span>{displayViews.toLocaleString()} views</span>
           </div>
         )}
       </div>

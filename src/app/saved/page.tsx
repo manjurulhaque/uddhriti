@@ -6,7 +6,7 @@ import { BookmarkIcon } from "@/components/ui"
 import { PublicLayout, QuoteCard } from "@/components/public"
 import { useSavedQuotes, exportSavedQuotesAsMarkdown } from "@/lib/saved-quotes"
 
-export default function SavedQuotesPage() {
+function SavedQuotesContent() {
   const { savedQuotes, count } = useSavedQuotes()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [copiedAll, setCopiedAll] = React.useState(false)
@@ -64,8 +64,7 @@ export default function SavedQuotesPage() {
   }
 
   return (
-    <PublicLayout>
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
+    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className="text-xs text-stone-500 flex items-center gap-2">
           <Link href="/" className="hover:text-stone-900 transition-colors">
@@ -236,6 +235,13 @@ export default function SavedQuotesPage() {
           </div>
         )}
       </div>
+  )
+}
+
+export default function SavedQuotesPage() {
+  return (
+    <PublicLayout>
+      <SavedQuotesContent />
     </PublicLayout>
   )
 }

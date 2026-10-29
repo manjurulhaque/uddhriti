@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
@@ -12,6 +14,9 @@ const nextConfig: NextConfig = {
         hostname: "upload.wikimedia.org",
       },
     ],
+  },
+  experimental: {
+    optimizePackageImports: ["@prisma/client"],
   },
   async headers() {
     return [
@@ -47,4 +52,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

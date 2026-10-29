@@ -45,6 +45,7 @@ export interface SpotlightCategoryItem {
 export interface HomeTaxonomiesShowcaseProps {
   spotlightAuthors: SpotlightAuthorItem[]
   spotlightCategories: SpotlightCategoryItem[]
+  totalAuthors?: number
 }
 
 function getCategoryMeta(name: string) {
@@ -82,6 +83,7 @@ function getCategoryMeta(name: string) {
 export function HomeTaxonomiesShowcase({
   spotlightAuthors,
   spotlightCategories,
+  totalAuthors,
 }: HomeTaxonomiesShowcaseProps) {
   const maxCategoryQuotes = Math.max(...spotlightCategories.map((c) => c.quoteCount), 1)
 
@@ -202,7 +204,7 @@ export function HomeTaxonomiesShowcase({
       {/* Directory Link Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 sm:px-6 shadow-2xs">
         <p className="text-xs sm:text-sm text-stone-700 font-serif">
-          Discover over <strong>2,800+</strong> philosophers, poets, novelists, and historical statesmen in our comprehensive catalog.
+          Discover over <strong>{totalAuthors ? `${totalAuthors.toLocaleString()}+` : "2,800+"}</strong> philosophers, poets, novelists, and historical statesmen in our comprehensive catalog.
         </p>
         <Link
           href="/authors"

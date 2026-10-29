@@ -35,9 +35,6 @@ export interface PopularTag {
 export interface HomeTrendingSectionProps {
   trendingQuotes: TrendingQuote[]
   topTags: PopularTag[]
-  latestCount?: number
-  tagCount?: number
-  categoryCount?: number
 }
 
 export function HomeTrendingSection({

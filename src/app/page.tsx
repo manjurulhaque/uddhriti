@@ -145,6 +145,7 @@ export default async function HomePage() {
     spotlightAuthors,
     spotlightCategories,
     totalPublishedQuotes,
+    totalAuthors,
     quotesLast7Days,
     errorMessage,
   } = await loadHomePageData(sevenDaysAgo)
@@ -199,6 +200,7 @@ export default async function HomePage() {
             <HomeTaxonomiesShowcase
               spotlightAuthors={spotlightAuthors}
               spotlightCategories={spotlightCategories}
+              totalAuthors={totalAuthors}
             />
           </div>
         )}

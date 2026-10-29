@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSavedQuotes } from "@/lib/saved-quotes";
+import { SavedQuotesProvider, useSavedQuotes } from "@/lib/saved-quotes";
+import { useOnlineStatus, useCopyToClipboard } from "@/hooks";
 
 interface OfflineQuote {
   quote: string;
@@ -48,40 +49,18 @@ const OFFLINE_QUOTES: OfflineQuote[] = [
   },
 ];
 
-function subscribeOnline(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-
-function getOnlineSnapshot() {
-  return navigator.onLine;
-}
-
-function getServerOnlineSnapshot() {
-  return true;
-}
-
-export default function OfflinePage() {
+function OfflinePageContent() {
   const router = useRouter();
   const { count: savedCount } = useSavedQuotes();
   const [quoteIndex, setQuoteIndex] = React.useState(0);
   const [isChecking, setIsChecking] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-  const isOnline = React.useSyncExternalStore(
-    subscribeOnline,
-    getOnlineSnapshot,
-    getServerOnlineSnapshot
-  );
+  const { copied, copy } = useCopyToClipboard();
+  const isOnline = useOnlineStatus();
 
   const currentQuote = OFFLINE_QUOTES[quoteIndex];
 
   function handleNextQuote() {
     setQuoteIndex((prev) => (prev + 1) % OFFLINE_QUOTES.length);
-    setCopied(false);
   }
 
   async function handleRetry() {
@@ -103,16 +82,9 @@ export default function OfflinePage() {
     }
   }
 
-  async function handleCopy() {
+  function handleCopy() {
     if (!currentQuote) return;
-    const text = `"${currentQuote.quote}" — ${currentQuote.author}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
-    }
+    copy(`"${currentQuote.quote}" — ${currentQuote.author}`);
   }
 
   return (
@@ -282,5 +254,13 @@ export default function OfflinePage() {
         Uddhriti PWA • Wisdom Doesn&apos;t Need Wi-Fi
       </footer>
     </div>
+  );
+}
+
+export default function OfflinePage() {
+  return (
+    <SavedQuotesProvider>
+      <OfflinePageContent />
+    </SavedQuotesProvider>
   );
 }

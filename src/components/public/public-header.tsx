@@ -5,33 +5,13 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Modal } from "../ui/modal"
 import { useSavedQuotes } from "@/lib/saved-quotes"
-
-function subscribeOnline(callback: () => void) {
-  window.addEventListener("online", callback)
-  window.addEventListener("offline", callback)
-  return () => {
-    window.removeEventListener("online", callback)
-    window.removeEventListener("offline", callback)
-  }
-}
-
-function getOnlineSnapshot() {
-  return navigator.onLine
-}
-
-function getServerOnlineSnapshot() {
-  return true
-}
+import { useOnlineStatus } from "@/hooks"
 
 export function PublicHeader() {
   const router = useRouter()
   const pathname = usePathname()
   const { count: savedCount } = useSavedQuotes()
-  const isOnline = React.useSyncExternalStore(
-    subscribeOnline,
-    getOnlineSnapshot,
-    getServerOnlineSnapshot
-  )
+  const isOnline = useOnlineStatus()
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [searchModalOpen, setSearchModalOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")

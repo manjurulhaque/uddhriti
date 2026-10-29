@@ -1,8 +1,18 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { formatCountWithNoun, formatNumber } from "@/lib/formatters"
+import {
+  formatCountWithNoun,
+  formatNumber,
+  formatEpoch,
+  formatLifespan,
+  cleanProfession,
+  getAuthorInitials,
+} from "@/lib/formatters"
 import { TaxonomiesTabs } from "./taxonomies-tabs"
+
+// Re-export author formatters for backward compatibility
+export { formatEpoch, formatLifespan, cleanProfession }
 
 export interface SpotlightAuthorItem {
   id: string
@@ -35,36 +45,6 @@ export interface SpotlightCategoryItem {
 export interface HomeTaxonomiesShowcaseProps {
   spotlightAuthors: SpotlightAuthorItem[]
   spotlightCategories: SpotlightCategoryItem[]
-}
-
-export function formatEpoch(birthYear?: number | null): string | null {
-  if (birthYear === undefined || birthYear === null) return null
-  if (birthYear < 500) return "Classical Antiquity"
-  if (birthYear < 1400) return "Medieval & Mystical Era"
-  if (birthYear < 1650) return "Renaissance & Early Modern"
-  if (birthYear < 1800) return "Age of Enlightenment"
-  if (birthYear < 1900) return "19th Century Romanticism"
-  return "20th Century & Modern Era"
-}
-
-export function formatLifespan(birthYear?: number | null, deathYear?: number | null): string | null {
-  if (birthYear && deathYear) {
-    const b = birthYear < 0 ? `${Math.abs(birthYear)} BC` : `${birthYear}`
-    const d = deathYear < 0 ? `${Math.abs(deathYear)} BC` : `${deathYear}`
-    return `${b}–${d}`
-  }
-  if (birthYear) {
-    return birthYear < 0 ? `b. ${Math.abs(birthYear)} BC` : `b. ${birthYear}`
-  }
-  return null
-}
-
-export function cleanProfession(profession?: string | null): string | null {
-  if (!profession) return null
-  const parts = profession.split(",").map((s) => s.trim()).filter(Boolean)
-  if (parts.length === 0) return null
-  if (parts.length === 1) return parts[0]
-  return `${parts[0]} & ${parts[1]}`
 }
 
 function getCategoryMeta(name: string) {
@@ -128,12 +108,7 @@ export function HomeTaxonomiesShowcase({
           const epoch = formatEpoch(author.birthYear)
           const lifespan = formatLifespan(author.birthYear, author.deathYear)
           const cleanProf = cleanProfession(author.profession)
-          const initials = author.name
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((w) => w[0])
-            .join("")
-            .toUpperCase()
+          const initials = getAuthorInitials(author.name)
 
           return (
             <Link

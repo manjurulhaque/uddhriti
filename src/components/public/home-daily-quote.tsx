@@ -5,6 +5,8 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+import { formatLifespan } from "@/lib/formatters"
+import { useCopyToClipboard } from "@/hooks"
 
 const QuoteShareModal = dynamic(
   () => import("./quote-share-modal").then((mod) => mod.QuoteShareModal),
@@ -43,19 +45,6 @@ export interface HomeDailyQuoteProps {
   serendipityPool?: DailyQuoteItem[]
 }
 
-function formatLifespan(author?: DailyQuoteItem["author"]): string | null {
-  if (!author) return null
-  if (author.birthYear && author.deathYear) {
-    const b = author.birthYear < 0 ? `${Math.abs(author.birthYear)} BC` : `${author.birthYear}`
-    const d = author.deathYear < 0 ? `${Math.abs(author.deathYear)} BC` : `${author.deathYear}`
-    return `${b}–${d}`
-  }
-  if (author.birthYear) {
-    return author.birthYear < 0 ? `b. ${Math.abs(author.birthYear)} BC` : `b. ${author.birthYear}`
-  }
-  return null
-}
-
 export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDailyQuoteProps) {
   // Combine initial quote with serendipity pool and deduplicate by ID
   const allQuotes = React.useMemo(() => {
@@ -72,7 +61,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
   const [currentIndex, setCurrentIndex] = React.useState(0)
   const [isTransitioning, setIsTransitioning] = React.useState(false)
   const [shareModalOpen, setShareModalOpen] = React.useState(false)
-  const [copied, setCopied] = React.useState(false)
+  const { copied, copyQuote } = useCopyToClipboard()
 
   const { isSaved, toggleSave } = useSavedQuotes()
 
@@ -107,17 +96,12 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
     }, 200)
   }
 
-  async function handleCopy() {
-    const text = `“${currentQuote.content}”\n— ${authorDisplayName}${
-      sourceTitle ? ` (${sourceTitle})` : ""
-    }\n\nVia Uddhriti Quotations`
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Fallback
-    }
+  function handleCopy() {
+    copyQuote({
+      content: currentQuote.content,
+      author: authorDisplayName,
+      source: sourceTitle,
+    })
   }
 
   function handleBookmark() {

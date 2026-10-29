@@ -4,6 +4,7 @@ import * as React from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useSavedQuotes } from "@/lib/saved-quotes"
+import { useOnlineStatus } from "@/hooks"
 
 const QuoteShareModal = dynamic(
   () => import("./quote-share-modal").then((mod) => mod.QuoteShareModal),
@@ -19,41 +20,58 @@ export interface HomeReaderStudioProps {
   } | null
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[]
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed"
+    platform: string
+  }>
+  prompt(): Promise<void>
+}
+
 const DEFAULT_SAMPLE_QUOTE = {
   content: "Silence is an ocean. Speech is a river. When the ocean is searching for you, don't walk into the river.",
   authorName: "Rumi",
   sourceTitle: "The Masnavi",
 }
 
-function subscribeOnline(callback: () => void) {
-  window.addEventListener("online", callback)
-  window.addEventListener("offline", callback)
+function subscribeStandalone(callback: () => void) {
+  if (typeof window === "undefined") return () => {}
+  const mql = window.matchMedia("(display-mode: standalone)")
+  mql.addEventListener("change", callback)
+  window.addEventListener("appinstalled", callback)
   return () => {
-    window.removeEventListener("online", callback)
-    window.removeEventListener("offline", callback)
+    mql.removeEventListener("change", callback)
+    window.removeEventListener("appinstalled", callback)
   }
 }
 
-function getOnlineSnapshot() {
-  return typeof navigator !== "undefined" ? navigator.onLine : true
+function getStandaloneSnapshot(): boolean {
+  if (typeof window === "undefined") return false
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  )
 }
 
-function getServerOnlineSnapshot() {
-  return true
+function getServerStandaloneSnapshot(): boolean {
+  return false
 }
 
 export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps) {
-  const { savedQuotes, count: savedCount } = useSavedQuotes()
+  const { count: savedCount } = useSavedQuotes()
   const [modalOpen, setModalOpen] = React.useState(false)
   const [previewTheme, setPreviewTheme] = React.useState<"cream" | "dark">("cream")
-  const [pwaPrompt, setPwaPrompt] = React.useState<any>(null)
-  const [isInstalled, setIsInstalled] = React.useState(false)
+  const [pwaPrompt, setPwaPrompt] = React.useState<BeforeInstallPromptEvent | null>(null)
+  const [installedInSession, setInstalledInSession] = React.useState(false)
 
-  const isOnline = React.useSyncExternalStore(
-    subscribeOnline,
-    getOnlineSnapshot,
-    getServerOnlineSnapshot
+  const isStandalone = React.useSyncExternalStore(
+    subscribeStandalone,
+    getStandaloneSnapshot,
+    getServerStandaloneSnapshot
   )
+  const isInstalled = isStandalone || installedInSession
+  const isOnline = useOnlineStatus()
 
   const sampleQuote = featuredSampleQuote || DEFAULT_SAMPLE_QUOTE
 
@@ -61,24 +79,16 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
   React.useEffect(() => {
     function handleBeforeInstall(e: Event) {
       e.preventDefault()
-      setPwaPrompt(e)
+      setPwaPrompt(e as BeforeInstallPromptEvent)
     }
 
     function handleAppInstalled() {
-      setIsInstalled(true)
+      setInstalledInSession(true)
       setPwaPrompt(null)
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall)
     window.addEventListener("appinstalled", handleAppInstalled)
-
-    // Check if running as standalone PWA
-    if (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true
-    ) {
-      setIsInstalled(true)
-    }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall)
@@ -92,7 +102,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
       const { outcome } = await pwaPrompt.userChoice
       if (outcome === "accepted") {
         setPwaPrompt(null)
-        setIsInstalled(true)
+        setInstalledInSession(true)
       }
     }
   }

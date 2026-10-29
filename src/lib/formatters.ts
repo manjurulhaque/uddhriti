@@ -54,4 +54,55 @@ export function formatFileSize(bytes: number): string {
   return `${size >= 10 || index === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[index]}`
 }
 
+export function formatLifespan(
+  birthYearOrAuthor?: number | { birthYear?: number | null; deathYear?: number | null } | null,
+  maybeDeathYear?: number | null
+): string | null {
+  let birthYear: number | null | undefined
+  let deathYear: number | null | undefined
+
+  if (typeof birthYearOrAuthor === "object" && birthYearOrAuthor !== null) {
+    birthYear = birthYearOrAuthor.birthYear
+    deathYear = birthYearOrAuthor.deathYear
+  } else {
+    birthYear = birthYearOrAuthor
+    deathYear = maybeDeathYear
+  }
+
+  if (birthYear && deathYear) {
+    const b = birthYear < 0 ? `${Math.abs(birthYear)} BC` : `${birthYear}`
+    const d = deathYear < 0 ? `${Math.abs(deathYear)} BC` : `${deathYear}`
+    return `${b}–${d}`
+  }
+  if (birthYear) {
+    return birthYear < 0 ? `b. ${Math.abs(birthYear)} BC` : `b. ${birthYear}`
+  }
+  return null
+}
+
+export function formatEpoch(birthYear?: number | null): string | null {
+  if (birthYear === undefined || birthYear === null) return null
+  if (birthYear < 500) return "Classical Antiquity"
+  if (birthYear < 1400) return "Medieval & Mystical Era"
+  if (birthYear < 1650) return "Renaissance & Early Modern"
+  if (birthYear < 1800) return "Age of Enlightenment"
+  if (birthYear < 1900) return "19th Century Romanticism"
+  return "20th Century & Modern Era"
+}
+
+export function cleanProfession(profession?: string | null): string | null {
+  if (!profession) return null
+  const parts = profession.split(",").map((s) => s.trim()).filter(Boolean)
+  if (parts.length === 0) return null
+  if (parts.length === 1) return parts[0]
+  return `${parts[0]} & ${parts[1]}`
+}
+
+export function getAuthorInitials(name?: string | null): string {
+  if (!name) return "U"
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
 export { slugify }

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useCopyToClipboard } from "@/hooks"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { QuoteShareModal } from "./quote-share-modal"
 
@@ -33,22 +34,15 @@ export function QuoteActions({
   quoteUrl,
   views,
 }: QuoteActionsProps) {
-  const [copied, setCopied] = React.useState(false)
+  const { copied, copyQuote } = useCopyToClipboard()
   const [shareModalOpen, setShareModalOpen] = React.useState(false)
   const { isSaved, toggleSave } = useSavedQuotes()
 
   const quoteKey = id || slug || content
   const saved = isSaved(quoteKey)
 
-  async function handleCopy() {
-    const textToCopy = `“${content}”\n— ${authorName || "Unknown"}\n\nVia Uddhriti Quotations`
-    try {
-      await navigator.clipboard.writeText(textToCopy)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Fallback
-    }
+  function handleCopy() {
+    copyQuote({ content, authorName, sourceTitle })
   }
 
   async function handleShare() {

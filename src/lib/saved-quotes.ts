@@ -205,42 +205,12 @@ export function SavedQuotesProvider({ children }: { children: React.ReactNode })
 
 /**
  * Reactive React hook for accessing saved quotes across components and tabs.
- * Uses SavedQuotesContext when available (single listener, O(1) Set lookups),
- * and gracefully falls back to useSyncExternalStore when outside provider.
+ * Uses SavedQuotesContext (single listener, O(1) Set lookups).
  */
 export function useSavedQuotes(): SavedQuotesContextValue {
   const context = React.useContext(SavedQuotesContext);
-  if (context !== null) {
-    return context;
+  if (!context) {
+    throw new Error("useSavedQuotes must be used within a SavedQuotesProvider");
   }
-
-  // Fallback for standalone usage without provider
-  return useStandaloneSavedQuotes();
-}
-
-function useStandaloneSavedQuotes(): SavedQuotesContextValue {
-  const quotes = React.useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot
-  );
-
-  const checkIsSaved = React.useCallback(
-    (idOrSlug: string) => {
-      if (!idOrSlug) return false;
-      return quotes.some(
-        (q) => q.id === idOrSlug || (q.slug && q.slug === idOrSlug)
-      );
-    },
-    [quotes]
-  );
-
-  return {
-    savedQuotes: quotes,
-    count: quotes.length,
-    isSaved: checkIsSaved,
-    save: saveQuote,
-    remove: removeQuote,
-    toggleSave: toggleSaveQuote,
-  };
+  return context;
 }

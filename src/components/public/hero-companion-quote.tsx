@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+import { useCopyToClipboard } from "@/hooks"
 
 export interface CompanionQuoteItem {
   id?: string
@@ -32,7 +33,7 @@ export interface HeroCompanionQuoteProps {
 export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
   const [currentIndex, setCurrentIndex] = React.useState(0)
   const [isTransitioning, setIsTransitioning] = React.useState(false)
-  const [copied, setCopied] = React.useState(false)
+  const { copied, copyQuote } = useCopyToClipboard()
 
   const { isSaved, toggleSave } = useSavedQuotes()
 
@@ -56,19 +57,14 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
     }, 180)
   }
 
-  async function handleCopy(e: React.MouseEvent) {
+  function handleCopy(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    const text = `“${currentQuote.content}”\n— ${authorDisplayName}${
-      sourceTitle ? ` (${sourceTitle})` : ""
-    }\n\nVia Uddhriti Quotations`
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Fallback
-    }
+    copyQuote({
+      content: currentQuote.content,
+      author: authorDisplayName,
+      source: sourceTitle,
+    })
   }
 
   function handleBookmark(e: React.MouseEvent) {

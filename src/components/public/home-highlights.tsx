@@ -2,7 +2,7 @@ import * as React from "react"
 import Link from "next/link"
 import { Panel } from "../ui/card"
 import { Empty } from "../ui/empty-state"
-import { formatNumber } from "@/lib/formatters"
+import { formatNumber, formatLifespan, getAuthorInitials } from "@/lib/formatters"
 import { CuratorFolioTabs } from "./curator-folio-tabs"
 
 export interface RankedCategoryItem {
@@ -29,24 +29,6 @@ export interface HomeHighlightsProps {
   recentAuthors: RankedAuthorItem[]
   quotesLast7Days: number
   errorMessage?: string | null
-}
-
-function formatAuthorLifespan(author: RankedAuthorItem): string | null {
-  if (author.birthYear && author.deathYear) {
-    const b = author.birthYear < 0 ? `${Math.abs(author.birthYear)} BC` : `${author.birthYear}`
-    const d = author.deathYear < 0 ? `${Math.abs(author.deathYear)} BC` : `${author.deathYear}`
-    return `${b}–${d}`
-  }
-  if (author.birthYear) {
-    return author.birthYear < 0 ? `b. ${Math.abs(author.birthYear)} BC` : `b. ${author.birthYear}`
-  }
-  return null
-}
-
-function getAuthorInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
 export function HomeHighlights({
@@ -225,7 +207,7 @@ export function HomeHighlights({
           ) : (
             <div className="space-y-3">
               {recentAuthors.slice(0, 4).map((author) => {
-                const lifespan = formatAuthorLifespan(author)
+                const lifespan = formatLifespan(author)
                 const initials = getAuthorInitials(author.name)
                 const subtitle = [author.profession, author.nationality, lifespan]
                   .filter(Boolean)

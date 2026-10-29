@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useCopyToClipboard } from "@/hooks"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { MOODS, type MoodItem } from "@/data/home-moods"
 
@@ -9,24 +10,19 @@ export type { MoodItem }
 
 export function HomeMoodFilter() {
   const [selectedMoodId, setSelectedMoodId] = React.useState<string>("stillness")
-  const [copied, setCopied] = React.useState(false)
+  const { copied, copyQuote } = useCopyToClipboard()
   const { isSaved, toggleSave } = useSavedQuotes()
 
   const activeMood = MOODS.find((m) => m.id === selectedMoodId) || MOODS[0]
   const quoteKey = `mood-${activeMood.id}-${activeMood.quote.author}`
   const saved = isSaved(quoteKey)
 
-  async function handleCopy() {
-    const text = `“${activeMood.quote.content}”\n— ${activeMood.quote.author}${
-      activeMood.quote.source ? ` (${activeMood.quote.source})` : ""
-    }\n\nVia Uddhriti Quotations`
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Fallback
-    }
+  function handleCopy() {
+    copyQuote({
+      content: activeMood.quote.content,
+      author: activeMood.quote.author,
+      source: activeMood.quote.source,
+    })
   }
 
   function handleSave() {

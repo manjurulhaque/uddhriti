@@ -19,16 +19,20 @@ const SUGGESTED_SEARCHES = [
   { label: "Hope", icon: "✨" },
 ]
 
+const emptySubscribe = () => () => {}
+
 export function HeroSearch({ totalQuotes }: HeroSearchProps) {
   const router = useRouter()
   const [query, setQuery] = React.useState("")
-  const [isMac, setIsMac] = React.useState(false)
+  const isMac = React.useSyncExternalStore(
+    emptySubscribe,
+    () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent),
+    () => false
+  )
 
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent))
-    }
-  }, [])
+  const placeholder = totalQuotes
+    ? `Search over ${totalQuotes.toLocaleString()} reflections by thinker, passage...`
+    : "Search reflections by thinker, passage, or theme..."
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -75,7 +79,7 @@ export function HeroSearch({ totalQuotes }: HeroSearchProps) {
           name="q"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search reflections by thinker, passage, or theme..."
+          placeholder={placeholder}
           aria-label="Search quotations"
           className="w-full bg-transparent py-2.5 text-sm sm:text-base text-white placeholder:text-white/45 focus:outline-none"
         />

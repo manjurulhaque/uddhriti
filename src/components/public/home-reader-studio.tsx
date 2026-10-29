@@ -141,7 +141,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
         <div className="flex flex-col justify-between rounded-[2rem] border border-amber-900/12 bg-gradient-to-b from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 shadow-2xs hover:shadow-md transition-all duration-300">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-3xl">📓</span>
+              <span className="text-3xl" aria-hidden="true">📓</span>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${
                   savedCount > 0
@@ -150,7 +150,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
                 }`}
               >
                 <span>{savedCount > 0 ? "Active Notebook" : "Empty Notebook"}</span>
-                <span>•</span>
+                <span aria-hidden="true">•</span>
                 <span>{savedCount} saved</span>
               </span>
             </div>
@@ -202,10 +202,11 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
         <div className="flex flex-col justify-between rounded-[2rem] border border-amber-900/12 bg-gradient-to-b from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 shadow-2xs hover:shadow-md transition-all duration-300">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-3xl">🎨</span>
-              <div className="flex items-center gap-1 rounded-xl bg-stone-100 p-1 border border-stone-200">
+              <span className="text-3xl" aria-hidden="true">🎨</span>
+              <div role="group" aria-label="Card preview theme" className="flex items-center gap-1 rounded-xl bg-stone-100 p-1 border border-stone-200">
                 <button
                   type="button"
+                  aria-pressed={previewTheme === "cream"}
                   onClick={() => setPreviewTheme("cream")}
                   className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
                     previewTheme === "cream"
@@ -217,6 +218,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
                 </button>
                 <button
                   type="button"
+                  aria-pressed={previewTheme === "dark"}
                   onClick={() => setPreviewTheme("dark")}
                   className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
                     previewTheme === "dark"
@@ -273,7 +275,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--accent-rust)] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#b55d32] hover:scale-[1.02] active:scale-[0.98] w-full cursor-pointer"
             >
               <span>Launch Card Studio</span>
-              <span>🎨</span>
+              <span aria-hidden="true">🎨</span>
             </button>
           </div>
         </div>
@@ -282,7 +284,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
         <div className="flex flex-col justify-between rounded-[2rem] border border-amber-900/12 bg-gradient-to-b from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 shadow-2xs hover:shadow-md transition-all duration-300">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-3xl">🕊️</span>
+              <span className="text-3xl" aria-hidden="true">🕊️</span>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${
                   isOnline
@@ -294,6 +296,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
                   className={`h-2 w-2 rounded-full ${
                     isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
                   }`}
+                  aria-hidden="true"
                 />
                 <span>{isOnline ? "Online & Synced" : "Browsing Offline"}</span>
               </span>
@@ -338,7 +341,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] w-full cursor-pointer"
               >
                 <span>Install Uddhriti App</span>
-                <span>📲</span>
+                <span aria-hidden="true">📲</span>
               </button>
             ) : null}
 

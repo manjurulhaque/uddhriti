@@ -79,7 +79,7 @@ export function HomeHighlights({
         <div className="rounded-2xl border border-amber-900/12 bg-white/80 p-5 shadow-2xs backdrop-blur-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/8 pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-base">📜</span>
+              <span className="text-base" aria-hidden="true">📜</span>
               <span className="text-xs font-serif font-bold uppercase tracking-[0.16em] text-[var(--ink-900)]">
                 The Curatorial Charter &amp; Textual Oath
               </span>
@@ -95,22 +95,22 @@ export function HomeHighlights({
 
           <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base">🏛️</div>
+              <div className="text-base" aria-hidden="true">🏛️</div>
               <div className="mt-1 text-xs font-bold text-stone-900">Textual Fidelity</div>
               <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Primary editions &amp; verified manuscripts</div>
             </div>
             <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base">🕯️</div>
+              <div className="text-base" aria-hidden="true">🕯️</div>
               <div className="mt-1 text-xs font-bold text-stone-900">Historical Setting</div>
               <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Era, thinker lifespan, and context noted</div>
             </div>
             <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base">🌿</div>
+              <div className="text-base" aria-hidden="true">🌿</div>
               <div className="mt-1 text-xs font-bold text-stone-900">Pure Sanctuary</div>
               <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Zero ads, no tracking, quiet focus</div>
             </div>
             <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base">💾</div>
+              <div className="text-base" aria-hidden="true">💾</div>
               <div className="mt-1 text-xs font-bold text-stone-900">Private Notebook</div>
               <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Offline-first personal storage</div>
             </div>
@@ -120,7 +120,7 @@ export function HomeHighlights({
         {/* Footer Marginalia Callout */}
         <div className="rounded-2xl border border-amber-900/10 bg-amber-800/4 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-800/10 text-amber-900 text-lg">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-800/10 text-amber-900 text-lg" aria-hidden="true">
               ✒️
             </span>
             <p className="font-serif italic text-xs sm:text-sm text-stone-800">

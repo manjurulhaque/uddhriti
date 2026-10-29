@@ -154,11 +154,11 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-900/10 pb-5">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="inline-flex items-center gap-2 rounded-full border border-amber-800/20 bg-amber-800/8 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent-rust)] shadow-2xs">
-              <span className="text-sm">🌅</span>
+              <span className="text-sm" aria-hidden="true">🌅</span>
               <span>{isDaily ? "Daily Contemplation" : "Serendipity Discovery"}</span>
             </h2>
 
-            <span className="text-xs text-stone-400 hidden sm:inline">•</span>
+            <span className="text-xs text-stone-400 hidden sm:inline" aria-hidden="true">•</span>
 
             <span className="text-xs font-semibold text-stone-600" suppressHydrationWarning>
               {isDaily ? todayFormatted : `Serendipitous Passage ${currentIndex + 1} of ${allQuotes.length}`}
@@ -172,7 +172,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
             className="group inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 shadow-2xs transition hover:border-[var(--accent-rust)] hover:bg-white hover:text-[var(--accent-rust)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             title="Reveal another reflection from the serendipity pool"
           >
-            <span className="text-sm transition-transform duration-300 group-hover:rotate-180">
+            <span className="text-sm transition-transform duration-300 group-hover:rotate-180" aria-hidden="true">
               🔄
             </span>
             <span>Surprise Me</span>

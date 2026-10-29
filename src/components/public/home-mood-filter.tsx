@@ -51,7 +51,7 @@ export function HomeMoodFilter() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-6">
         <div>
           <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)]" aria-hidden="true" />
             Reflect by Feeling
           </div>
           <h2 className="mt-2 text-2xl font-serif font-bold text-[var(--ink-900)] sm:text-3xl">

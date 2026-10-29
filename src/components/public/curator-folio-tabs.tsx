@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { TabSwitcher, type TabItem } from "@/components/ui"
 import { formatNumber } from "@/lib/formatters"
 
 type FolioTab = "pillars" | "standards" | "sanctuary"
@@ -38,66 +39,25 @@ function FolioCard({
   )
 }
 
+const FOLIO_TABS: TabItem<FolioTab>[] = [
+  { id: "pillars", label: "Curatorial Pillars", icon: "📜" },
+  { id: "standards", label: "Editorial Standards", icon: "✒️" },
+  { id: "sanctuary", label: "The Sanctuary Vision", icon: "🕊️" },
+]
+
 export function CuratorFolioTabs({ quotesLast7Days = 0 }: CuratorFolioTabsProps) {
   const [activeTab, setActiveTab] = React.useState<FolioTab>("pillars")
 
   return (
     <div className="space-y-4">
       {/* Tab Switcher */}
-      <div
-        className="flex flex-wrap items-center gap-2 border-b border-amber-900/10 pb-3"
-        role="tablist"
-        aria-label="Curator Folios"
-      >
-        <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 mr-1">
-          Folios:
-        </span>
-        <button
-          type="button"
-          role="tab"
-          id="tab-pillars"
-          aria-selected={activeTab === "pillars"}
-          aria-controls="panel-pillars"
-          onClick={() => setActiveTab("pillars")}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
-            activeTab === "pillars"
-              ? "bg-[var(--ink-900)] text-white shadow-xs"
-              : "bg-white/70 text-stone-700 hover:bg-white hover:text-stone-900 border border-stone-200/80"
-          }`}
-        >
-          📜 Curatorial Pillars
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="tab-standards"
-          aria-selected={activeTab === "standards"}
-          aria-controls="panel-standards"
-          onClick={() => setActiveTab("standards")}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
-            activeTab === "standards"
-              ? "bg-[var(--ink-900)] text-white shadow-xs"
-              : "bg-white/70 text-stone-700 hover:bg-white hover:text-stone-900 border border-stone-200/80"
-          }`}
-        >
-          ✒️ Editorial Standards
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="tab-sanctuary"
-          aria-selected={activeTab === "sanctuary"}
-          aria-controls="panel-sanctuary"
-          onClick={() => setActiveTab("sanctuary")}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
-            activeTab === "sanctuary"
-              ? "bg-[var(--ink-900)] text-white shadow-xs"
-              : "bg-white/70 text-stone-700 hover:bg-white hover:text-stone-900 border border-stone-200/80"
-          }`}
-        >
-          🕊️ The Sanctuary Vision
-        </button>
-      </div>
+      <TabSwitcher
+        tabs={FOLIO_TABS}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        label="Curator Folios"
+        className="border-amber-900/10 bg-amber-900/5 self-start"
+      />
 
       {/* Active Folio Cards Display */}
       <div className="grid gap-4 sm:grid-cols-3">

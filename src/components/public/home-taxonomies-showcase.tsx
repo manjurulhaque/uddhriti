@@ -90,7 +90,7 @@ export function HomeTaxonomiesShowcase({
   const headerLeft = (
     <div className="space-y-2 max-w-2xl">
       <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/8 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
-        <span>🏛️</span>
+        <span aria-hidden="true">🏛️</span>
         <span>Living Taxonomies</span>
       </div>
       <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-900)]">

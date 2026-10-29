@@ -57,9 +57,9 @@ export function QuoteMeta({
             <span>{category}</span>
           )
         )}
-        {category && (sourceTitle || year) && <span>·</span>}
+        {category && (sourceTitle || year) && <span aria-hidden="true">·</span>}
         {sourceTitle && <span>{sourceTitle}</span>}
-        {sourceTitle && year && <span>·</span>}
+        {sourceTitle && year && <span aria-hidden="true">·</span>}
         {year && <span className="font-mono">{year}</span>}
       </div>
 

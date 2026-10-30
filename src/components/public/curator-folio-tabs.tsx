@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { TabSwitcher, type TabItem } from "@/components/ui"
-import { formatNumber } from "@/lib/formatters"
 
 type FolioTab = "pillars" | "standards" | "sanctuary"
 
@@ -45,7 +44,7 @@ const FOLIO_TABS: TabItem<FolioTab>[] = [
   { id: "sanctuary", label: "The Sanctuary Vision", icon: "🕊️" },
 ]
 
-export function CuratorFolioTabs({ quotesLast7Days = 0 }: CuratorFolioTabsProps) {
+export function CuratorFolioTabs() {
   const [activeTab, setActiveTab] = React.useState<FolioTab>("pillars")
 
   return (
@@ -78,14 +77,7 @@ export function CuratorFolioTabs({ quotesLast7Days = 0 }: CuratorFolioTabsProps)
               icon="📜"
               tag="Continuity"
               title="A dialogue across eras"
-              description={
-                <>
-                  {quotesLast7Days > 0
-                    ? `${formatNumber(quotesLast7Days)} new passages joined the archive this week`
-                    : "New passages join the archive every week"}
-                  , keeping ancient voices in quiet, ongoing conversation with our present moment.
-                </>
-              }
+              description="New passages join the archive continuously, keeping ancient voices in quiet, ongoing conversation with our present moment."
             />
             <FolioCard
               icon="🌐"
@@ -155,4 +147,3 @@ export function CuratorFolioTabs({ quotesLast7Days = 0 }: CuratorFolioTabsProps)
     </div>
   )
 }
-

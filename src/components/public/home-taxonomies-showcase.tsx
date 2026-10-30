@@ -2,8 +2,6 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
-  formatCountWithNoun,
-  formatNumber,
   formatEpoch,
   formatLifespan,
   cleanProfession,
@@ -23,7 +21,7 @@ export interface SpotlightAuthorItem {
   birthYear?: number | null
   deathYear?: number | null
   imageUrl?: string | null
-  quoteCount: number
+  quoteCount?: number
   topQuote?: {
     content: string
     slug?: string | null
@@ -35,7 +33,7 @@ export interface SpotlightCategoryItem {
   name: string
   slug: string
   description?: string | null
-  quoteCount: number
+  quoteCount?: number
   topQuote?: {
     content: string
     authorName?: string | null
@@ -83,10 +81,7 @@ function getCategoryMeta(name: string) {
 export function HomeTaxonomiesShowcase({
   spotlightAuthors,
   spotlightCategories,
-  totalAuthors,
 }: HomeTaxonomiesShowcaseProps) {
-  const maxCategoryQuotes = Math.max(...spotlightCategories.map((c) => c.quoteCount), 1)
-
   const headerLeft = (
     <div className="space-y-2 max-w-2xl">
       <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/8 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
@@ -187,8 +182,8 @@ export function HomeTaxonomiesShowcase({
 
               {/* Card Footer */}
               <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
-                <span className="font-semibold text-stone-700">
-                  {formatCountWithNoun(author.quoteCount, "quote")}
+                <span className="font-serif italic text-xs text-stone-500">
+                  Curated Folio
                 </span>
 
                 <span className="inline-flex items-center gap-1 font-bold text-[var(--accent-rust)] group-hover:translate-x-1 transition-transform">
@@ -204,7 +199,7 @@ export function HomeTaxonomiesShowcase({
       {/* Directory Link Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 sm:px-6 shadow-2xs">
         <p className="text-xs sm:text-sm text-stone-700 font-serif">
-          Discover over <strong>{totalAuthors ? `${totalAuthors.toLocaleString()}+` : "2,800+"}</strong> philosophers, poets, novelists, and historical statesmen in our comprehensive catalog.
+          Discover philosophers, poets, novelists, and historical statesmen from antiquity to modern times in our comprehensive catalog.
         </p>
         <Link
           href="/authors"
@@ -222,7 +217,6 @@ export function HomeTaxonomiesShowcase({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {spotlightCategories.map((category) => {
           const meta = getCategoryMeta(category.name)
-          const percentage = Math.max(20, Math.round((category.quoteCount / maxCategoryQuotes) * 100))
 
           return (
             <Link
@@ -231,14 +225,14 @@ export function HomeTaxonomiesShowcase({
               className={`group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border bg-gradient-to-b ${meta.gradient} bg-white p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99] ${meta.border}`}
             >
               <div className="space-y-3.5">
-                {/* Header: Icon + Badge + Count */}
+                {/* Header: Icon + Badge */}
                 <div className="flex items-center justify-between">
                   <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
                     {meta.icon}
                   </span>
 
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${meta.badge}`}>
-                    {formatNumber(category.quoteCount)} reflections
+                    Living Theme
                   </span>
                 </div>
 
@@ -256,20 +250,6 @@ export function HomeTaxonomiesShowcase({
                       Curated philosophical reflections and memorable passages on {category.name.toLowerCase()}.
                     </p>
                   )}
-                </div>
-
-                {/* Relative Collection Depth Bar */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-stone-500">
-                    <span>Archive Depth</span>
-                    <span>{percentage}%</span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-rust)] transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
                 </div>
 
                 {/* Featured Excerpt */}
@@ -334,4 +314,3 @@ export function HomeTaxonomiesShowcase({
     </section>
   )
 }
-

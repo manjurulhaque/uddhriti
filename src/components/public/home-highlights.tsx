@@ -1,71 +1,63 @@
 import * as React from "react"
 import Link from "next/link"
 import { Panel } from "../ui/card"
-import { formatNumber } from "@/lib/formatters"
 import { CuratorFolioTabs } from "./curator-folio-tabs"
 
-export interface RankedCategoryItem {
-  id: string
-  name: string
-  slug?: string | null
-  description?: string | null
-  quoteCount: number
-}
-
-export interface RankedAuthorItem {
-  id: string
-  name: string
-  slug?: string | null
-  birthYear?: number | null
-  deathYear?: number | null
-  profession?: string | null
-  nationality?: string | null
-  quoteCount: number
-}
-
 export interface HomeHighlightsProps {
-  topCategories?: RankedCategoryItem[]
-  recentAuthors?: RankedAuthorItem[]
-  totalPublishedQuotes?: number
-  totalAuthors?: number
-  quotesLast7Days: number
-  verifiedQuotesCount?: number
   errorMessage?: string | null
 }
+
+const PHILOSOPHICAL_TRADITIONS = [
+  {
+    icon: "🏛️",
+    name: "Classical & Stoic Virtue",
+    description: "Reflections on duty, inner fortitude, and tranquil reason from Marcus Aurelius, Epictetus, and Seneca.",
+  },
+  {
+    icon: "🕯️",
+    name: "Eastern Contemplation",
+    description: "Upanishadic insight, Taoist harmony, and Sufi poetics exploring the stillness behind spoken words.",
+  },
+  {
+    icon: "📜",
+    name: "Enlightenment & Reason",
+    description: "Foundational treatises on individual freedom, human rights, and the boundless courage to think.",
+  },
+  {
+    icon: "🌿",
+    name: "Romantic & Existential Wonder",
+    description: "The arrest of beauty, melancholy, moral choice, and the deep mystery of the human condition.",
+  },
+] as const
 
 const HISTORICAL_EPOCHS = [
   {
     icon: "🏛️",
     name: "Classical Antiquity",
     period: "c. 800 BC – 500 AD",
-    description: "Stoic emperors, Upanishadic sages, and Greek dialogues on virtue and courage.",
+    description: "Greco-Roman thinkers, Vedic sages, and foundational dialogues on virtue and life.",
   },
   {
     icon: "🕯️",
     name: "Renaissance & Enlightenment",
     period: "c. 1400 – 1800",
-    description: "Humanism, the birth of modern science, and foundational treatises on freedom.",
+    description: "Humanism, early scientific inquiry, and revolutionary discourses on human liberty.",
   },
   {
     icon: "📜",
     name: "The 19th Century",
     period: "c. 1800 – 1900",
-    description: "Romanticism, Transcendentalism, realism, and existential self-interrogation.",
+    description: "Romanticism, Transcendentalism, realism, and existential philosophical questioning.",
   },
   {
     icon: "🌐",
     name: "20th Century & Beyond",
     period: "1900 – Present",
-    description: "Voices of resilience, civil reformers, Nobel laureates, and poetic innovators.",
+    description: "Voices of moral courage, civil reformers, Nobel laureates, and modern literary masters.",
   },
 ] as const
 
-export function HomeHighlights({
-  totalPublishedQuotes = 0,
-  totalAuthors = 0,
-  quotesLast7Days,
-  errorMessage,
-}: HomeHighlightsProps) {
+export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
   return (
     <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" aria-label="Curator Highlights">
       {errorMessage ? (
@@ -99,7 +91,7 @@ export function HomeHighlights({
         </div>
 
         {/* Interactive Folio Switcher & Cards */}
-        <CuratorFolioTabs quotesLast7Days={quotesLast7Days} />
+        <CuratorFolioTabs />
 
         {/* Curatorial Charter & Textual Oath Seal */}
         <div className="rounded-2xl border border-amber-900/12 bg-white/80 p-5 shadow-2xs backdrop-blur-xs">
@@ -156,67 +148,39 @@ export function HomeHighlights({
         </div>
       </section>
 
-      {/* Right: Sanctuary Scope & Historical Horizons */}
+      {/* Right: Traditions & Historical Horizons */}
       <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-        {/* Sanctuary Vitality Panel */}
+        {/* Philosophical Traditions Panel */}
         <Panel
-          title="Sanctuary Scope & Vitality"
-          subtitle="A living treasury curated for unhurried study and contemplation."
+          title="Philosophical Traditions"
+          subtitle="Enduring schools of reflection that have shaped human wisdom."
           tone="sand"
         >
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl" aria-hidden="true">🏛️</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)]">Preserved</span>
+          <div className="space-y-2.5">
+            {PHILOSOPHICAL_TRADITIONS.map((tradition) => (
+              <div
+                key={tradition.name}
+                className="rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-2xs transition-all hover:border-amber-800/30 hover:bg-white"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base" aria-hidden="true">{tradition.icon}</span>
+                  <h3 className="font-serif font-bold text-xs sm:text-sm text-stone-900">
+                    {tradition.name}
+                  </h3>
+                </div>
+                <p className="text-[11px] text-stone-600 mt-1 leading-relaxed">
+                  {tradition.description}
+                </p>
               </div>
-              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
-                {formatNumber(totalPublishedQuotes || 0)}
-              </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">Verified passages</div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl" aria-hidden="true">✒️</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)]">Thinkers</span>
-              </div>
-              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
-                {formatNumber(totalAuthors || 0)}
-              </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">Across civilizations</div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl" aria-hidden="true">📜</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Vitality</span>
-              </div>
-              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
-                +{formatNumber(quotesLast7Days || 0)}
-              </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">Added this week</div>
-            </div>
-
-            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl" aria-hidden="true">🔍</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">Standard</span>
-              </div>
-              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
-                100%
-              </div>
-              <div className="text-[11px] text-stone-500 mt-0.5">Primary editions</div>
-            </div>
+            ))}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-amber-900/10 flex items-center justify-between text-xs">
-            <span className="text-stone-600 font-serif italic text-[11px]">Free open knowledge for all readers</span>
+          <div className="mt-3 text-right">
             <Link
-              href="/quotes"
-              className="font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
+              href="/categories"
+              className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
             >
-              <span>Search all quotes</span>
+              <span>Explore all thematic horizons</span>
               <span>&rarr;</span>
             </Link>
           </div>
@@ -237,9 +201,9 @@ export function HomeHighlights({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg" aria-hidden="true">{epoch.icon}</span>
-                    <span className="font-serif font-bold text-xs text-stone-900">
+                    <h3 className="font-serif font-bold text-xs text-stone-900">
                       {epoch.name}
-                    </span>
+                    </h3>
                   </div>
                   <span className="text-[10px] font-mono text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
                     {epoch.period}

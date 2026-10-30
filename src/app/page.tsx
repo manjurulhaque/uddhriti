@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { prisma } from "@/lib/prisma"
-import { subtractDays } from "@/lib/datetime"
 import { getSiteUrl } from "@/lib/site"
 import {
   PublicLayout,
@@ -169,8 +168,6 @@ const serendipityQuoteSelect = {
 } as const
 
 export default async function HomePage() {
-  const sevenDaysAgo = subtractDays(new Date(), 7)
-
   const {
     dailyQuote,
     featuredQuote,
@@ -180,11 +177,8 @@ export default async function HomePage() {
     topTags,
     spotlightAuthors,
     spotlightCategories,
-    totalPublishedQuotes,
-    totalAuthors,
-    quotesLast7Days,
     errorMessage,
-  } = await loadHomePageData(sevenDaysAgo)
+  } = await loadHomePageData()
 
   // Strict mutual exclusion registry: guarantees zero quote duplication across all sections
   const usedQuoteIds = new Set<string>()
@@ -289,7 +283,6 @@ export default async function HomePage() {
       />
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
         <HomeHero
-          totalPublishedQuotes={totalPublishedQuotes}
           heroQuote={heroQuote}
           companionQuotes={companionQuotes}
         />
@@ -298,9 +291,6 @@ export default async function HomePage() {
 
         <div id="highlights" className="scroll-mt-20">
           <HomeHighlights
-            totalPublishedQuotes={totalPublishedQuotes}
-            totalAuthors={totalAuthors}
-            quotesLast7Days={quotesLast7Days}
             errorMessage={errorMessage}
           />
         </div>
@@ -318,7 +308,6 @@ export default async function HomePage() {
             <HomeTaxonomiesShowcase
               spotlightAuthors={spotlightAuthors}
               spotlightCategories={spotlightCategories}
-              totalAuthors={totalAuthors}
             />
           </div>
         )}
@@ -342,7 +331,7 @@ export default async function HomePage() {
   )
 }
 
-async function loadHomePageData(sevenDaysAgo: Date) {
+async function loadHomePageData() {
   try {
     // Deterministic daily seed based on UTC date string
     const todayStr = new Date().toISOString().slice(0, 10)
@@ -367,8 +356,6 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       spotlightCategoriesRaw,
       topTags,
       spotlightAuthorsRaw,
-      totalAuthors,
-      quotesLast7Days,
     ] = await Promise.all([
       prisma.quote.findFirst({
         where: { status: "PUBLISHED", deletedAt: null },
@@ -458,14 +445,6 @@ async function loadHomePageData(sevenDaysAgo: Date) {
           },
         },
       }),
-      prisma.author.count(),
-      prisma.quote.count({
-        where: {
-          status: "PUBLISHED",
-          deletedAt: null,
-          createdAt: { gte: sevenDaysAgo },
-        },
-      }),
     ])
 
     const spotlightAuthors = spotlightAuthorsRaw.map((a) => ({
@@ -487,13 +466,10 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       topTags,
       spotlightAuthors,
       spotlightCategories,
-      totalPublishedQuotes,
-      totalAuthors,
-      quotesLast7Days,
       errorMessage: null,
     }
   } catch (error) {
-    console.error("Failed to load homepage metrics", error)
+    console.error("Failed to load homepage data", error)
 
     return {
       dailyQuote: null,
@@ -504,10 +480,7 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       topTags: [],
       spotlightAuthors: [],
       spotlightCategories: [],
-      totalPublishedQuotes: 0,
-      totalAuthors: 0,
-      quotesLast7Days: 0,
-      errorMessage: "Some homepage data is temporarily unavailable. The page is still online, but metrics and listings may be incomplete.",
+      errorMessage: "Some homepage data is temporarily unavailable. The page is still online, but content may be incomplete.",
     }
   }
 }

@@ -3,7 +3,6 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { useSavedQuotes } from "@/lib/saved-quotes"
 import { useOnlineStatus } from "@/hooks"
 
 const QuoteShareModal = dynamic(
@@ -58,8 +57,7 @@ function getServerStandaloneSnapshot(): boolean {
   return false
 }
 
-export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps) {
-  const { count: savedCount } = useSavedQuotes()
+export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps = {}) {
   const [modalOpen, setModalOpen] = React.useState(false)
   const [previewTheme, setPreviewTheme] = React.useState<"cream" | "dark">("cream")
   const [pwaPrompt, setPwaPrompt] = React.useState<BeforeInstallPromptEvent | null>(null)
@@ -142,16 +140,10 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-3xl" aria-hidden="true">📓</span>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${
-                  savedCount > 0
-                    ? "bg-amber-100 text-amber-900 border border-amber-300"
-                    : "bg-stone-100 text-stone-600 border border-stone-200"
-                }`}
-              >
-                <span>{savedCount > 0 ? "Active Notebook" : "Empty Notebook"}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                <span>Personal Archive</span>
                 <span aria-hidden="true">•</span>
-                <span>{savedCount} saved</span>
+                <span>Offline Storage</span>
               </span>
             </div>
 
@@ -192,7 +184,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
               href="/saved"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] w-full"
             >
-              <span>{savedCount > 0 ? `Open Notebook (${savedCount})` : "Open Blank Notebook"}</span>
+              <span>Open Notebook</span>
               <span>&rarr;</span>
             </Link>
           </div>
@@ -251,7 +243,7 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
               <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
                 <span>✦ QUOTZEN ✦</span>
                 <span className={previewTheme === "dark" ? "text-stone-400" : "text-stone-500"}>
-                  1080×1080 High-Res
+                  Editorial Card Art
                 </span>
               </div>
               <blockquote className="font-serif italic text-xs leading-relaxed line-clamp-2">

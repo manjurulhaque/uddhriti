@@ -163,7 +163,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
             <span className="text-xs text-stone-400 hidden sm:inline" aria-hidden="true">•</span>
 
             <span className="text-xs font-semibold text-stone-600" suppressHydrationWarning>
-              {isDaily ? todayFormatted : `Passage ${currentIndex + 1} of ${allQuotes.length}`}
+              {isDaily ? todayFormatted : "Contemplative Reflection"}
             </span>
           </div>
 

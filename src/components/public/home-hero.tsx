@@ -42,7 +42,6 @@ const HERO_JUMP_LINKS = [
 ] as const
 
 export function HomeHero({
-  totalPublishedQuotes,
   heroQuote,
   companionQuotes = [],
 }: HomeHeroProps) {
@@ -93,7 +92,7 @@ export function HomeHero({
 
             {/* Prominent Quick-Search Bar */}
             <div className="pt-1">
-              <HeroSearch totalQuotes={totalPublishedQuotes} />
+              <HeroSearch />
             </div>
 
             {/* Quick Section Anchors */}
@@ -129,7 +128,6 @@ export function HomeHero({
                 sourceTitle={heroQuote.source?.title}
                 year={formatSourceYearLabel(heroQuote.source)}
                 tags={heroQuote.tags?.map((entry) => entry.tag.name) || []}
-                views={heroQuote.views}
                 variant="featured"
                 badgeLabel="Curator’s Choice"
                 className="w-full shadow-lg"

@@ -21,7 +21,7 @@ const SUGGESTED_SEARCHES = [
 
 const emptySubscribe = () => () => {}
 
-export function HeroSearch({ totalQuotes }: HeroSearchProps) {
+export function HeroSearch() {
   const router = useRouter()
   const [query, setQuery] = React.useState("")
   const isMac = React.useSyncExternalStore(
@@ -30,9 +30,7 @@ export function HeroSearch({ totalQuotes }: HeroSearchProps) {
     () => false
   )
 
-  const placeholder = totalQuotes
-    ? `Search over ${totalQuotes.toLocaleString()} reflections by thinker, passage...`
-    : "Search reflections by thinker, passage, or theme..."
+  const placeholder = "Search reflections by thinker, passage, or theme..."
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -58,7 +56,7 @@ export function HeroSearch({ totalQuotes }: HeroSearchProps) {
         {/* Search Icon */}
         <div className="flex pl-3.5 pr-2 text-white/50 transition-colors group-focus-within:text-[var(--accent-gold)]">
           <svg
-            className="h-5 w-5"
+            className="h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -75,48 +73,35 @@ export function HeroSearch({ totalQuotes }: HeroSearchProps) {
 
         {/* Text Input */}
         <input
-          type="text"
-          name="q"
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          aria-label="Search quotations"
-          className="w-full bg-transparent py-2.5 text-sm sm:text-base text-white placeholder:text-white/45 focus:outline-none"
+          aria-label="Search quotations by author or keyword"
+          className="w-full bg-transparent px-2 py-2 text-sm text-white placeholder-white/50 outline-none sm:text-base"
         />
 
-        {/* Keyboard shortcut hint */}
-        <div className="hidden sm:flex items-center gap-1 pr-2 text-xs text-white/40 font-mono">
-          <kbd className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60">
-            {isMac ? "⌘" : "Ctrl"}
-          </kbd>
-          <kbd className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60">
-            K
+        {/* Keyboard Shortcut Indicator */}
+        <div className="hidden sm:flex items-center pr-2">
+          <kbd className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-[11px] font-mono text-white/60">
+            {isMac ? "⌘K" : "Ctrl+K"}
           </kbd>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Search Button */}
         <button
           type="submit"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--accent-rust)] px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:bg-[#b55d32] hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+          className="ml-2 inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-gold)] px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--ink-900)] shadow-xs transition hover:bg-[#e2b765] hover:scale-[1.02] active:scale-[0.98] shrink-0 cursor-pointer"
         >
           <span>Search</span>
-          <svg
-            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
+          <span aria-hidden="true">&rarr;</span>
         </button>
       </form>
 
-      {/* Suggested Explorations */}
-      <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-white/65">
-        <span className="font-medium text-[var(--accent-sand)]/90 tracking-wide">
-          Popular themes:
+      {/* Suggested Search Pills */}
+      <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-white/70">
+        <span className="font-serif italic text-white/50 text-[11px]">
+          Curated pathways:
         </span>
         <div className="flex flex-wrap items-center gap-1.5">
           {SUGGESTED_SEARCHES.map((item) => (
@@ -155,9 +140,7 @@ export function HeroSavedBadge() {
       </svg>
       <span>Saved Notebook</span>
       {count > 0 ? (
-        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-rust)] px-1 text-[10px] font-bold text-white">
-          {count}
-        </span>
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)]" aria-hidden="true" />
       ) : null}
     </Link>
   )

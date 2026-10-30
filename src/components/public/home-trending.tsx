@@ -44,15 +44,15 @@ export function HomeTrendingSection({
   return (
     <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
       <Panel
-        title="Trending Now"
-        subtitle="The quotes currently pulling the most attention."
+        title="Trending Reflections"
+        subtitle="Quotations resonating deeply with readers across the archive."
         tone="ink"
       >
         {trendingQuotes.length === 0 ? (
           <Empty message="Trending content will appear here." variant="dark" />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {trendingQuotes.map((quote, index) => (
+            {trendingQuotes.map((quote) => (
               <QuoteCard
                 key={quote.id}
                 id={quote.id}
@@ -65,8 +65,6 @@ export function HomeTrendingSection({
                 sourceTitle={quote.source?.title}
                 year={formatSourceYearLabel(quote.source)}
                 tags={quote.tags.map((entry) => entry.tag.name)}
-                trendingRank={index + 1}
-                trendingScore={quote.trendingScore ?? undefined}
                 variant="dark"
               />
             ))}
@@ -76,8 +74,8 @@ export function HomeTrendingSection({
 
       <section className="grid gap-4">
         <Panel
-          title="Popular Tags"
-          subtitle="Fast signals for what the archive is clustering around."
+          title="Popular Themes &amp; Topics"
+          subtitle="Explore the central themes that unite human contemplation."
           tone="paper"
         >
           {topTags.length === 0 ? (
@@ -89,7 +87,6 @@ export function HomeTrendingSection({
                   key={tag.id}
                   name={tag.name}
                   type={tag.type}
-                  quoteCount={tag.quoteCount}
                 />
               ))}
             </div>

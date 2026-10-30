@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { QuoteCard } from "./quote-card"
 import { Empty } from "../ui/empty-state"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
@@ -35,9 +36,13 @@ export function HomeLatestQuotes({ quotes }: HomeLatestQuotesProps) {
           </p>
           <h2 className="mt-2 text-2xl font-serif font-bold text-[var(--ink-900)] sm:text-3xl">Latest Quotes</h2>
         </div>
-        <p className="rounded-full border border-stone-200/80 bg-white/90 px-4 py-2 text-xs font-medium text-stone-600 shadow-2xs">
-          {quotes.length} cards shown
-        </p>
+        <Link
+          href="/quotes"
+          className="rounded-full border border-stone-200/80 bg-white/90 px-4 py-2 text-xs font-semibold text-stone-700 shadow-2xs hover:border-[var(--accent-rust)] hover:text-[var(--accent-rust)] transition-colors inline-flex items-center gap-1.5"
+        >
+          <span>Explore All Additions</span>
+          <span>&rarr;</span>
+        </Link>
       </div>
 
       {quotes.length === 0 ? (

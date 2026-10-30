@@ -7,6 +7,19 @@ async function handleLogout() {
   const cookieStore = await cookies()
   const response = NextResponse.redirect(new URL("/admin/login", getSiteUrl()), 303)
 
+  // ── Anti-Caching Headers & Cache Purge ──────────────────────────────
+  // Prevents shared workstations or intermediate proxies from caching
+  // redirect states or retaining authenticated views via back-button.
+  response.headers.set(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  )
+  response.headers.set("Pragma", "no-cache")
+  response.headers.set("Expires", "0")
+  response.headers.set("Clear-Site-Data", '"cache"')
+
+  const isProduction = process.env.NODE_ENV === "production"
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,12 +30,18 @@ async function handleLogout() {
         },
         setAll(cookiesToSet) {
           for (const { name, value, options } of cookiesToSet) {
-            try {
-              cookieStore.set(name, value, options)
-            } catch {
-              // ignore if cookieStore cannot be modified directly
+            const hardenedOptions = {
+              ...options,
+              sameSite: options?.sameSite || ("lax" as const),
+              secure: isProduction,
             }
-            response.cookies.set(name, value, options)
+
+            try {
+              cookieStore.set(name, value, hardenedOptions)
+            } catch {
+              // Ignore if cookieStore cannot be modified directly in the current context
+            }
+            response.cookies.set(name, value, hardenedOptions)
           }
         },
       },
@@ -41,5 +60,3 @@ export async function POST() {
 export async function GET() {
   return handleLogout()
 }
-
-

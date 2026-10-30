@@ -110,11 +110,48 @@ const FONT_SIZE_CLASSES: Record<ZenFontSize, { quote: string; author: string }> 
   },
 }
 
-const BREATH_PHASES = [
-  { label: "Breathe In...", duration: 4000 },
-  { label: "Hold...", duration: 4000 },
-  { label: "Breathe Out...", duration: 4000 },
-  { label: "Rest in Stillness...", duration: 2000 },
+interface BreathPhase {
+  name: "inhale" | "hold-in" | "exhale" | "hold-out"
+  label: string
+  sublabel: string
+  duration: number
+  scale: number
+  opacity: number
+}
+
+const BREATH_PHASES: BreathPhase[] = [
+  {
+    name: "inhale",
+    label: "Breathe In",
+    sublabel: "Draw breath slowly and deeply...",
+    duration: 4,
+    scale: 1.25,
+    opacity: 0.95,
+  },
+  {
+    name: "hold-in",
+    label: "Hold Breath",
+    sublabel: "Remain still and mindful in the pause...",
+    duration: 4,
+    scale: 1.25,
+    opacity: 0.85,
+  },
+  {
+    name: "exhale",
+    label: "Breathe Out",
+    sublabel: "Gently release all tension and sound...",
+    duration: 4,
+    scale: 0.82,
+    opacity: 0.5,
+  },
+  {
+    name: "hold-out",
+    label: "Rest in Stillness",
+    sublabel: "Rest quietly before the next breath...",
+    duration: 2,
+    scale: 0.82,
+    opacity: 0.35,
+  },
 ]
 
 function emptySubscribe() {
@@ -146,6 +183,7 @@ export function QuoteZenMode({
   const [fontFamily, setFontFamily] = React.useState<ZenFontFamily>("serif")
   const [breathingGuide, setBreathingGuide] = React.useState(false)
   const [breathPhaseIndex, setBreathPhaseIndex] = React.useState(0)
+  const [secondsInPhase, setSecondsInPhase] = React.useState(0)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [controlsVisible, setControlsVisible] = React.useState(true)
   const [lockControls, setLockControls] = React.useState(false)
@@ -159,6 +197,19 @@ export function QuoteZenMode({
   const saved = isSaved(quoteKey)
   const currentTheme = THEME_STYLES[theme]
   const effectiveControlsVisible = lockControls || controlsVisible
+
+  const currentBreathPhase = BREATH_PHASES[breathPhaseIndex]
+  const breathCountdown = Math.max(1, currentBreathPhase.duration - secondsInPhase)
+
+  function handleToggleBreathing() {
+    setBreathingGuide((prev) => {
+      if (!prev) {
+        setBreathPhaseIndex(0)
+        setSecondsInPhase(0)
+      }
+      return !prev
+    })
+  }
 
   // Lock body scroll while Zen Mode is open
   React.useEffect(() => {
@@ -221,16 +272,22 @@ export function QuoteZenMode({
     }
   }, [isOpen, lockControls])
 
-  // Breathing guide cyclical progression
+  // Breathing guide cyclical progression synchronized per second
   React.useEffect(() => {
     if (!isOpen || !breathingGuide) return
 
-    const currentPhase = BREATH_PHASES[breathPhaseIndex]
-    const timer = setTimeout(() => {
-      setBreathPhaseIndex((prev) => (prev + 1) % BREATH_PHASES.length)
-    }, currentPhase.duration)
+    const timer = setInterval(() => {
+      setSecondsInPhase((prevSec) => {
+        const currentDuration = BREATH_PHASES[breathPhaseIndex].duration
+        if (prevSec + 1 >= currentDuration) {
+          setBreathPhaseIndex((currIdx) => (currIdx + 1) % BREATH_PHASES.length)
+          return 0
+        }
+        return prevSec + 1
+      })
+    }, 1000)
 
-    return () => clearTimeout(timer)
+    return () => clearInterval(timer)
   }, [isOpen, breathingGuide, breathPhaseIndex])
 
   // Toggle fullscreen
@@ -295,7 +352,7 @@ export function QuoteZenMode({
         toggleFullscreen()
       } else if (e.key.toLowerCase() === "b") {
         e.preventDefault()
-        setBreathingGuide((prev) => !prev)
+        handleToggleBreathing()
       } else if (e.key.toLowerCase() === "t") {
         e.preventDefault()
         cycleTheme()
@@ -457,29 +514,24 @@ export function QuoteZenMode({
           {/* Breathing Guide Toggle */}
           <button
             type="button"
-            onClick={() => setBreathingGuide((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all cursor-pointer ${
+            onClick={handleToggleBreathing}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-all cursor-pointer ${
               breathingGuide
                 ? currentTheme.activeButtonClass
                 : `${currentTheme.panelBg} ${currentTheme.panelBorder} ${currentTheme.buttonClass}`
             }`}
-            title="Toggle Mindful Breathing Guide (B)"
+            title="Toggle Mindful Breathing Guide (Shortcut: B)"
             aria-label="Toggle Mindful Breathing Guide"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-            <span className="hidden md:inline">Breath</span>
+            <span
+              className={`h-2 w-2 rounded-full transition-transform ${
+                breathingGuide ? "bg-amber-400 scale-125 animate-pulse" : "bg-current opacity-40"
+              }`}
+            />
+            <span className="hidden sm:inline">{breathingGuide ? "Breath On" : "Breath"}</span>
+            <kbd className="hidden md:inline rounded bg-black/10 px-1 py-0.2 text-[9px] font-mono">
+              B
+            </kbd>
           </button>
 
           {/* Fullscreen Toggle */}
@@ -545,7 +597,7 @@ export function QuoteZenMode({
       </header>
 
       {/* Main Contemplation Sanctuary Canvas */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full text-center px-4 py-8">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full text-center px-4 py-6 overflow-y-auto min-h-0">
         {/* Subtle Decorative Opening Glyph */}
         <div
           className="text-4xl sm:text-5xl opacity-40 select-none mb-3 font-serif"
@@ -565,7 +617,7 @@ export function QuoteZenMode({
         </blockquote>
 
         {/* Attribution & Provenance */}
-        <div className="mt-8 sm:mt-10 space-y-1.5">
+        <div className="mt-6 sm:mt-8 space-y-1.5">
           <p
             className={`font-medium transition-all ${
               fontFamily === "serif" ? "font-serif" : "font-sans"
@@ -583,23 +635,70 @@ export function QuoteZenMode({
           )}
         </div>
 
-        {/* Optional Mindful Breathing Guide Widget */}
+        {/* Synchronized Mindful Breathing Guide Widget */}
         {breathingGuide && (
-          <div className="mt-12 flex flex-col items-center justify-center space-y-3 animate-rise">
-            <div className="relative flex items-center justify-center">
+          <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center space-y-3 animate-rise select-none">
+            {/* Dynamic Breathing Halo and Orb */}
+            <div className="relative flex items-center justify-center h-28 w-28 sm:h-32 sm:w-32">
+              {/* Outer Radiant Soft Glow */}
               <div
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-2 animate-zen-breath flex items-center justify-center transition-all"
-                style={{ borderColor: currentTheme.accentColor }}
+                className="absolute inset-0 rounded-full blur-xl transition-all"
+                style={{
+                  backgroundColor: currentTheme.accentColor,
+                  opacity: currentBreathPhase.scale > 1 ? 0.35 : 0.12,
+                  transform: `scale(${currentBreathPhase.scale * 1.2})`,
+                  transitionDuration: `${currentBreathPhase.duration * 1000}ms`,
+                  transitionTimingFunction:
+                    currentBreathPhase.name === "inhale"
+                      ? "cubic-bezier(0.2, 0.9, 0.3, 1)"
+                      : "cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              />
+
+              {/* Dynamic Scaling Breath Ring */}
+              <div
+                className="relative flex items-center justify-center rounded-full border-2 transition-all shadow-md"
+                style={{
+                  width: "5.5rem",
+                  height: "5.5rem",
+                  borderColor: currentTheme.accentColor,
+                  backgroundColor: `${currentTheme.accentColor}18`,
+                  transform: `scale(${currentBreathPhase.scale})`,
+                  opacity: currentBreathPhase.opacity,
+                  transitionDuration: `${currentBreathPhase.duration * 1000}ms`,
+                  transitionTimingFunction:
+                    currentBreathPhase.name === "inhale"
+                      ? "cubic-bezier(0.2, 0.9, 0.3, 1)"
+                      : "cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
               >
-                <div
-                  className="h-6 w-6 rounded-full opacity-60 animate-ping"
-                  style={{ backgroundColor: currentTheme.accentColor }}
-                />
+                {/* Central Countdown Number */}
+                <div className="flex flex-col items-center justify-center">
+                  <span
+                    className="font-mono text-2xl font-light leading-none"
+                    style={{ color: currentTheme.accentColor }}
+                  >
+                    {breathCountdown}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-wider opacity-60 font-mono mt-0.5">
+                    sec
+                  </span>
+                </div>
               </div>
             </div>
-            <p className="text-xs sm:text-sm font-serif italic tracking-wide">
-              {BREATH_PHASES[breathPhaseIndex].label}
-            </p>
+
+            {/* Instruction and Guidance Text */}
+            <div className="text-center space-y-0.5">
+              <p
+                className="text-base sm:text-lg font-serif font-medium tracking-wide transition-colors"
+                style={{ color: currentTheme.accentColor }}
+              >
+                {currentBreathPhase.label}
+              </p>
+              <p className={`text-xs italic font-serif ${currentTheme.mutedClass}`}>
+                {currentBreathPhase.sublabel}
+              </p>
+            </div>
           </div>
         )}
       </main>
@@ -650,6 +749,25 @@ export function QuoteZenMode({
             title="Toggle Serif / Sans Font (S)"
           >
             {fontFamily === "serif" ? "Serif" : "Sans"}
+          </button>
+
+          <div className="h-4 w-px bg-current opacity-15 mx-0.5" />
+
+          {/* Quick Breath Mode Toggle in Dock */}
+          <button
+            type="button"
+            onClick={handleToggleBreathing}
+            className={`rounded-full px-2.5 py-1 text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+              breathingGuide ? currentTheme.activeButtonClass : currentTheme.buttonClass
+            }`}
+            title="Toggle Mindful Breathing Guide (B)"
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                breathingGuide ? "bg-amber-400 animate-pulse" : "bg-current opacity-40"
+              }`}
+            />
+            <span>Breathe</span>
           </button>
         </div>
 

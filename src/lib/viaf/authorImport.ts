@@ -1,5 +1,6 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
 import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type ViafHeadingEntry = {
   text?: string
@@ -71,7 +72,7 @@ export async function importAuthorFromViaf(payload: {
     throw new Error("Provide viafId or a valid viafUrl")
   }
 
-  const res = await fetch(`https://viaf.org/viaf/${encodeURIComponent(viafId)}/viaf.json`, {
+  const res = await fetchWithTimeout(`https://viaf.org/viaf/${encodeURIComponent(viafId)}/viaf.json`, {
     cache: "no-store",
   })
   if (!res.ok) {

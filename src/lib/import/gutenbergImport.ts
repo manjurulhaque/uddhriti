@@ -1,4 +1,5 @@
 import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type ParsedGutenbergUrl = {
   bookId: number
@@ -52,7 +53,7 @@ function parseGutenbergUrl(input: string): ParsedGutenbergUrl | null {
 }
 
 async function fetchBookMetadata(bookId: number) {
-  const res = await fetch(`https://gutendex.com/books/${bookId}`, { cache: "no-store" })
+  const res = await fetchWithTimeout(`https://gutendex.com/books/${bookId}`, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Gutenberg metadata")
   }
@@ -86,7 +87,7 @@ async function fetchBookText(textUrl: string) {
     throw new Error("Invalid or untrusted Gutenberg text source URL")
   }
 
-  const res = await fetch(textUrl, { cache: "no-store" })
+  const res = await fetchWithTimeout(textUrl, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Gutenberg text")
   }

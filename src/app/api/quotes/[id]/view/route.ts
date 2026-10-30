@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { enforceIpRateLimit } from "@/lib/api/rate-limit"
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+import { isValidUuid } from "@/lib/api/route-helpers"
+import { sanitizeSlug } from "@/lib/security/input"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -14,7 +13,8 @@ export async function POST(
   context: Context
 ) {
   try {
-    const { id: rawIdentifier } = await context.params
+    const rawParam = (await context.params).id
+    const rawIdentifier = sanitizeSlug(rawParam)
     if (!rawIdentifier) {
       return NextResponse.json(
         { error: "Quote identifier is required" },
@@ -26,7 +26,7 @@ export async function POST(
     const rateLimited = enforceIpRateLimit(request, "quoteView", rawIdentifier)
     if (rateLimited) return rateLimited
 
-    const isUuid = UUID_REGEX.test(rawIdentifier)
+    const isUuid = isValidUuid(rawIdentifier)
 
     // Lookup published quote by UUID or slug
     const quote = await prisma.quote.findFirst({

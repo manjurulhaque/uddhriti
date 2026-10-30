@@ -1,4 +1,5 @@
 import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type ParsedWikiquoteUrl = {
   host: string
@@ -159,7 +160,7 @@ export async function importQuotesFromWikiquoteUrl(input: {
     `https://${parsed.host}/w/api.php?action=query&format=json&redirects=1` +
     `&prop=revisions&rvprop=content&rvslots=main&titles=${encodeURIComponent(parsed.title)}`
 
-  const res = await fetch(apiUrl, { cache: "no-store" })
+  const res = await fetchWithTimeout(apiUrl, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Wikiquote page")
   }

@@ -1,5 +1,6 @@
 import slugify from "slugify"
 import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type WorkItem = {
   title: string
@@ -50,7 +51,7 @@ async function resolveWikidataIdFromWikipediaUrl(wikipediaUrl: string) {
     `?action=query&prop=pageprops&redirects=1&format=json` +
     `&titles=${encodeURIComponent(parsed.title)}`
 
-  const res = await fetch(apiUrl, { cache: "no-store" })
+  const res = await fetchWithTimeout(apiUrl, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Wikipedia page")
   }
@@ -124,7 +125,7 @@ export async function importSourcesFromWikidataAuthor(input: {
     LIMIT ${limit}
   `
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`,
     { cache: "no-store" }
   )

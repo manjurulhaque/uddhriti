@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 export type LocWork = {
   title: string
   year: number | null
@@ -67,7 +69,7 @@ export async function importSourcesFromLoc(input: {
   params.set("q", parts.join(" "))
   params.set("c", String(limit))
 
-  const res = await fetch(`https://www.loc.gov/books/?${params.toString()}`, {
+  const res = await fetchWithTimeout(`https://www.loc.gov/books/?${params.toString()}`, {
     cache: "no-store",
   })
   if (!res.ok) {

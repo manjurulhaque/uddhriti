@@ -1,4 +1,5 @@
 import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 export type ImportPayload = {
   wikipediaUrl?: string
@@ -189,7 +190,7 @@ function mediaWikiHeaders() {
 }
 
 async function fetchJson(url: string) {
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     cache: "no-store",
     headers: mediaWikiHeaders(),
   })
@@ -384,7 +385,7 @@ async function fetchWikipediaCategoryMembers(
       `&cmtitle=${encodeURIComponent(categoryTitle)}` +
       `&cmnamespace=0&cmtype=page&cmlimit=${pageLimit}${continuePart}`
 
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetchWithTimeout(url, { cache: "no-store" })
     if (!res.ok) {
       throw new Error("Failed to fetch category members from Wikipedia")
     }
@@ -434,7 +435,7 @@ async function fetchWikiquoteCategoryMembers(
       `&cmtitle=${encodeURIComponent(categoryTitle)}` +
       `&cmnamespace=0&cmtype=page&cmlimit=${pageLimit}${continuePart}`
 
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetchWithTimeout(url, { cache: "no-store" })
     if (!res.ok) {
       throw new Error("Failed to fetch category members from Wikiquote")
     }
@@ -484,7 +485,7 @@ async function fetchWikiquotePageLinks(
       `&titles=${encodeURIComponent(pageTitle)}` +
       `&plnamespace=0&pllimit=${pageLimit}${continuePart}`
 
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetchWithTimeout(url, { cache: "no-store" })
     if (!res.ok) {
       throw new Error("Failed to fetch links from Wikiquote page")
     }

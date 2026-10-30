@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 export type GoogleBooksWork = {
   title: string
   year: number | null
@@ -65,7 +67,7 @@ export async function importSourcesFromGoogleBooks(input: {
   params.set("maxResults", String(limit))
   params.set("printType", "books")
 
-  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?${params.toString()}`, {
+  const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?${params.toString()}`, {
     cache: "no-store",
   })
   if (!res.ok) {

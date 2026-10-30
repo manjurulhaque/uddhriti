@@ -6,6 +6,7 @@ import {
   HomeHero,
   HomeMoodFilter,
   HomeHighlights,
+  HomeDailyQuote,
   HomeTaxonomiesShowcase,
   HomeReaderStudio,
   HomeTrendingSection,
@@ -88,6 +89,51 @@ const quoteCardSelect = {
   },
 } as const
 
+const dailyQuoteSelect = {
+  id: true,
+  slug: true,
+  content: true,
+  meaning: true,
+  historicalContext: true,
+  authorName: true,
+  author: {
+    select: {
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
+    },
+  },
+  views: true,
+  tags: {
+    select: {
+      tag: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    take: 4,
+  },
+  category: {
+    select: {
+      name: true,
+      slug: true,
+    },
+  },
+  source: {
+    select: {
+      title: true,
+      year: true,
+      yearLabel: true,
+      yearApproximate: true,
+    },
+  },
+} as const
+
 const serendipityQuoteSelect = {
   id: true,
   slug: true,
@@ -123,6 +169,7 @@ const serendipityQuoteSelect = {
 
 export default async function HomePage() {
   const {
+    dailyQuote,
     featuredQuote,
     serendipityPool,
     latestQuotes,
@@ -137,10 +184,18 @@ export default async function HomePage() {
   const usedQuoteIds = new Set<string>()
 
   // 1. Featured Quote for Hero (Curator's Choice)
-  const heroQuote = featuredQuote ?? latestQuotes[0] ?? null
+  const heroQuote = featuredQuote && featuredQuote.id !== dailyQuote?.id
+    ? featuredQuote
+    : (latestQuotes.find((q) => q.id !== dailyQuote?.id) ?? dailyQuote ?? null)
   if (heroQuote?.id) usedQuoteIds.add(heroQuote.id)
 
-  // 2. Companion quotes pool for Hero (distinct from heroQuote)
+  // 2. Daily Quote (guaranteed distinct from heroQuote)
+  const finalDailyQuote = dailyQuote && !usedQuoteIds.has(dailyQuote.id)
+    ? dailyQuote
+    : (latestQuotes.find((q) => !usedQuoteIds.has(q.id)) ?? null)
+  if (finalDailyQuote?.id) usedQuoteIds.add(finalDailyQuote.id)
+
+  // 3. Companion quotes pool for Hero (distinct from heroQuote and dailyQuote)
   const eligibleCompanionQuotes = serendipityPool.filter((q) => !usedQuoteIds.has(q.id))
   const companionPool = eligibleCompanionQuotes.length > 0
     ? eligibleCompanionQuotes
@@ -159,7 +214,7 @@ export default async function HomePage() {
     if (q.id) usedQuoteIds.add(q.id)
   })
 
-  // 3. Trending quotes (distinct from hero and companion quotes)
+  // 4. Trending quotes (distinct from hero, daily, and companion quotes)
   const dedupedTrendingQuotes = trendingQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 4)
@@ -167,7 +222,7 @@ export default async function HomePage() {
     if (q.id) usedQuoteIds.add(q.id)
   })
 
-  // 4. Remaining latest quotes (distinct from all previous sections)
+  // 5. Remaining latest quotes (distinct from all previous sections)
   const remainingLatestQuotes = latestQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 8)
@@ -240,6 +295,14 @@ export default async function HomePage() {
           />
         </div>
 
+        {finalDailyQuote && (
+          <div id="daily-quote" className="scroll-mt-20">
+            <HomeDailyQuote
+              initialQuote={finalDailyQuote}
+            />
+          </div>
+        )}
+
         {spotlightAuthors.length > 0 && spotlightCategories.length > 0 && (
           <div id="taxonomies" className="scroll-mt-20">
             <HomeTaxonomiesShowcase
@@ -270,7 +333,22 @@ export default async function HomePage() {
 
 async function loadHomePageData() {
   try {
+    // Deterministic daily seed based on UTC date string
+    const todayStr = new Date().toISOString().slice(0, 10)
+    let hash = 0
+    for (let i = 0; i < todayStr.length; i++) {
+      hash = (hash << 5) - hash + todayStr.charCodeAt(i)
+      hash |= 0
+    }
+    const dailySeed = Math.abs(hash)
+
+    const totalPublishedQuotes = await prisma.quote.count({
+      where: { status: "PUBLISHED", deletedAt: null },
+    })
+    const dailySkip = totalPublishedQuotes > 0 ? dailySeed % totalPublishedQuotes : 0
+
     const [
+      dailyQuote,
       featuredQuote,
       serendipityPool,
       latestQuotes,
@@ -279,6 +357,11 @@ async function loadHomePageData() {
       topTags,
       spotlightAuthorsRaw,
     ] = await Promise.all([
+      prisma.quote.findFirst({
+        where: { status: "PUBLISHED", deletedAt: null },
+        skip: dailySkip,
+        select: dailyQuoteSelect,
+      }),
       prisma.quote.findFirst({
         where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
         orderBy: [{ popularityScore: "desc" }, { views: "desc" }],
@@ -375,6 +458,7 @@ async function loadHomePageData() {
     }))
 
     return {
+      dailyQuote,
       featuredQuote,
       serendipityPool,
       latestQuotes,
@@ -388,6 +472,7 @@ async function loadHomePageData() {
     console.error("Failed to load homepage data", error)
 
     return {
+      dailyQuote: null,
       featuredQuote: null,
       serendipityPool: [],
       latestQuotes: [],

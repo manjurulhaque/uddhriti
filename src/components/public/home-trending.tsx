@@ -116,20 +116,20 @@ export function HomeTrendingSection({
 
           <div className="grid gap-2.5 sm:grid-cols-3">
             <Link
-              href="/quotes/random"
+              href="#daily-quote"
               className="group flex flex-col justify-between rounded-xl border border-amber-900/10 bg-white/75 p-3.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
             >
               <div>
-                <span className="text-xl">🎲</span>
+                <span className="text-xl">🌅</span>
                 <h4 className="mt-2 text-xs font-serif font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors">
-                  Random Discovery
+                  Daily Contemplation
                 </h4>
                 <p className="mt-1 text-[10px] text-stone-500 leading-snug">
-                  Surprise reflection from the pool
+                  Today’s passage &amp; essence
                 </p>
               </div>
               <span className="mt-2 text-[10px] font-semibold text-[var(--accent-rust)] group-hover:underline">
-                Surprise me &rarr;
+                Reflect today &rarr;
               </span>
             </Link>
 

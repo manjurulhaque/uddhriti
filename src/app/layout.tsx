@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   alternates: {
     canonical: siteUrl,
+    types: {
+      "application/rss+xml": `${siteUrl}/feed.xml`,
+    },
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {

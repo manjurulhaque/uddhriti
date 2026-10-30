@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     "Explore our complete searchable archive of timeless quotations, curated philosophical fragments, and memorable passages.",
 }
 
+export const revalidate = 120
+
 const PAGE_SIZE = 18
 
 interface QuotesBrowsePageProps {

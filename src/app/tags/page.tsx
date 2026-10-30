@@ -12,6 +12,8 @@ export const metadata: Metadata = {
     "Browse quotes across nuanced dimensions: philosophical schools, emotional states, timeless virtues, literary eras, and human values.",
 }
 
+export const revalidate = 300
+
 interface TagsPageProps {
   searchParams: Promise<{ q?: string }>
 }

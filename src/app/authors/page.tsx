@@ -15,6 +15,8 @@ export const metadata: Metadata = {
     "Explore timeless wisdom from history's greatest philosophers, writers, poets, and leaders across antiquity, enlightenment, and modernity.",
 }
 
+export const revalidate = 120
+
 const PAGE_SIZE = 24
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
 

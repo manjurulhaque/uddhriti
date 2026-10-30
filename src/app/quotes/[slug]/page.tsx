@@ -12,6 +12,23 @@ interface IndividualQuotePageProps {
   params: Promise<{ slug: string }>
 }
 
+export const revalidate = 300
+
+export async function generateStaticParams() {
+  try {
+    const topQuotes = await prisma.quote.findMany({
+      where: { status: "PUBLISHED", deletedAt: null },
+      orderBy: { popularityScore: "desc" },
+      take: 50,
+      select: { slug: true },
+    })
+    return topQuotes.map((q) => ({ slug: q.slug }))
+  } catch (error) {
+    console.error("Failed to generate static params for quotes:", error)
+    return []
+  }
+}
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function generateMetadata({

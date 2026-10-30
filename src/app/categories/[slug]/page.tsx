@@ -15,6 +15,21 @@ interface CategoryDetailPageProps {
   searchParams: Promise<{ page?: string }>
 }
 
+export const revalidate = 300
+
+export async function generateStaticParams() {
+  try {
+    const categories = await prisma.category.findMany({
+      where: { quoteCount: { gt: 0 } },
+      select: { slug: true },
+    })
+    return categories.map((c) => ({ slug: c.slug }))
+  } catch (error) {
+    console.error("Failed to generate static params for categories:", error)
+    return []
+  }
+}
+
 export async function generateMetadata({
   params,
 }: CategoryDetailPageProps): Promise<Metadata> {

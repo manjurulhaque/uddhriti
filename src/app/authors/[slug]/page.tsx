@@ -16,6 +16,23 @@ interface AuthorDetailPageProps {
   searchParams: Promise<{ page?: string }>
 }
 
+export const revalidate = 300
+
+export async function generateStaticParams() {
+  try {
+    const topAuthors = await prisma.author.findMany({
+      where: { quoteCount: { gt: 0 } },
+      orderBy: { quoteCount: "desc" },
+      take: 30,
+      select: { slug: true },
+    })
+    return topAuthors.map((a) => ({ slug: a.slug }))
+  } catch (error) {
+    console.error("Failed to generate static params for authors:", error)
+    return []
+  }
+}
+
 export async function generateMetadata({
   params,
 }: AuthorDetailPageProps): Promise<Metadata> {

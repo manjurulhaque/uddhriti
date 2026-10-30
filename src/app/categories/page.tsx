@@ -11,6 +11,8 @@ export const metadata: Metadata = {
     "Explore timeless quotations organized by enduring philosophical and human themes: Wisdom, Love, Courage, Science, Truth, and Art.",
 }
 
+export const revalidate = 300
+
 function getCategoryMeta(name: string) {
   const lower = name.toLowerCase()
   if (lower.includes("philosoph")) {

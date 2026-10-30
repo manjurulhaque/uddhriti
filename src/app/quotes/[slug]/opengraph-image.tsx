@@ -9,6 +9,7 @@ export const size = {
   height: 630,
 }
 export const contentType = "image/png"
+export const revalidate = 86400
 
 type Props = {
   params: Promise<{ slug: string }>

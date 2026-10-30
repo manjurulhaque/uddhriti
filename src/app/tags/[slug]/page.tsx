@@ -15,6 +15,23 @@ interface TagDetailPageProps {
   searchParams: Promise<{ page?: string }>
 }
 
+export const revalidate = 300
+
+export async function generateStaticParams() {
+  try {
+    const topTags = await prisma.tag.findMany({
+      where: { quoteCount: { gt: 0 } },
+      orderBy: { quoteCount: "desc" },
+      take: 30,
+      select: { slug: true },
+    })
+    return topTags.map((t) => ({ slug: t.slug }))
+  } catch (error) {
+    console.error("Failed to generate static params for tags:", error)
+    return []
+  }
+}
+
 export async function generateMetadata({
   params,
 }: TagDetailPageProps): Promise<Metadata> {

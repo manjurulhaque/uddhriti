@@ -67,7 +67,8 @@ export async function proxy(request: NextRequest) {
   const isAdminSurface =
     pathname.startsWith("/api/admin/") ||
     pathname.startsWith("/api/users") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    pathname === "/quotes/random"
 
   if (isAdminSurface) {
     response.headers.set(

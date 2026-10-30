@@ -6,6 +6,7 @@ export const size = {
   height: 630,
 }
 export const contentType = "image/png"
+export const revalidate = 86400
 
 export default function Image() {
   return new ImageResponse(

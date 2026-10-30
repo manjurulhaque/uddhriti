@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
+import { sanitizeSlug } from "@/lib/security/input"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout, QuoteCard, QuoteActions } from "@/components/public"
 import { Badge } from "@/components/ui/badge"
@@ -16,7 +17,8 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export async function generateMetadata({
   params,
 }: IndividualQuotePageProps): Promise<Metadata> {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
   const isUuid = UUID_REGEX.test(slug)
 
   const quote = await prisma.quote.findFirst({
@@ -66,7 +68,8 @@ export async function generateMetadata({
 export default async function IndividualQuotePage({
   params,
 }: IndividualQuotePageProps) {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
   const isUuid = UUID_REGEX.test(slug)
 
   const quote = await prisma.quote.findFirst({

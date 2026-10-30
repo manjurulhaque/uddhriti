@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { PublicLayout, QuoteCard } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
+import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
 
 export const metadata: Metadata = {
   title: "Browse All Quotations",
@@ -26,9 +27,10 @@ interface QuotesBrowsePageProps {
 export default async function QuotesBrowsePage({
   searchParams,
 }: QuotesBrowsePageProps) {
-  const { q, category: categorySlug, sort, page } = await searchParams
-  const currentPage = Math.max(1, Number(page) || 1)
-  const searchQuery = q?.trim() || ""
+  const { q, category: rawCategorySlug, sort, page } = await searchParams
+  const currentPage = parseSafePageNumber(page, 500)
+  const searchQuery = sanitizeSearchQuery(q, 100)
+  const categorySlug = rawCategorySlug ? sanitizeSlug(rawCategorySlug, 100) : undefined
   const selectedSort = sort?.toLowerCase() || "trending"
 
   // Fetch all categories for filter pills

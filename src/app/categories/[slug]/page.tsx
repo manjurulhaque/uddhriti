@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { PublicLayout, QuoteCard } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
+import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
 
 const QUOTES_PER_PAGE = 12
 
@@ -17,7 +18,8 @@ interface CategoryDetailPageProps {
 export async function generateMetadata({
   params,
 }: CategoryDetailPageProps): Promise<Metadata> {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
   const category = await prisma.category.findUnique({
     where: { slug },
     select: { name: true, description: true, metaTitle: true, metaDescription: true },
@@ -50,9 +52,10 @@ export default async function CategoryDetailPage({
   params,
   searchParams,
 }: CategoryDetailPageProps) {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
   const { page } = await searchParams
-  const currentPage = Math.max(1, Number(page) || 1)
+  const currentPage = parseSafePageNumber(page, 500)
 
   const category = await prisma.category.findUnique({
     where: { slug },

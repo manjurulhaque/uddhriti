@@ -7,6 +7,7 @@ import { PublicLayout } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { formatEpoch, formatLifespan, cleanProfession } from "@/components/public/home-taxonomies-showcase"
+import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
 
 export const metadata: Metadata = {
   title: "Authors & Thinkers",
@@ -27,9 +28,9 @@ interface AuthorsPageProps {
 
 export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
   const { q, letter, page } = await searchParams
-  const currentPage = Math.max(1, Number(page) || 1)
-  const searchQuery = q?.trim() || ""
-  const selectedLetter = letter?.toUpperCase() || ""
+  const currentPage = parseSafePageNumber(page, 500)
+  const searchQuery = sanitizeSearchQuery(q, 100)
+  const selectedLetter = letter ? sanitizeSlug(letter, 10).toUpperCase() : ""
 
   // Build where conditions
   const whereConditions: {

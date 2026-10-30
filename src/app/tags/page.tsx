@@ -4,6 +4,7 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout } from "@/components/public"
 import { formatCountWithNoun } from "@/lib/formatters"
+import { sanitizeSearchQuery } from "@/lib/security/input"
 
 export const metadata: Metadata = {
   title: "Literary Tags & Catalog",
@@ -17,7 +18,7 @@ interface TagsPageProps {
 
 export default async function TagsPage({ searchParams }: TagsPageProps) {
   const { q } = await searchParams
-  const searchQuery = q?.trim() || ""
+  const searchQuery = sanitizeSearchQuery(q, 100)
 
   const whereConditions = {
     quoteCount: { gt: 0 },

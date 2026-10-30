@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { QuotesListManager } from "./QuotesListManager"
 import { PageHeader, FilterTabs } from "@/components/admin"
 import { Button } from "@/components/ui"
+import { parseSafePageNumber } from "@/lib/security/input"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
@@ -33,11 +34,7 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
 
 function getPageNumber(value: string | string[] | undefined) {
   if (typeof value !== "string") return 1
-
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed) || parsed < 1) return 1
-
-  return parsed
+  return parseSafePageNumber(value, 1000)
 }
 
 function buildQuoteWhere(activeFilter: QuoteFilter): Prisma.QuoteWhereInput {

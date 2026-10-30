@@ -12,6 +12,7 @@ interface OfflineQuote {
   author: string;
   work?: string;
   theme: string;
+  isUserSaved?: boolean;
 }
 
 const OFFLINE_QUOTES: OfflineQuote[] = [
@@ -20,54 +21,77 @@ const OFFLINE_QUOTES: OfflineQuote[] = [
     author: "Marcus Aurelius",
     work: "Meditations",
     theme: "Resilience",
+    isUserSaved: false,
   },
   {
     quote: "Silence is an ocean. Speech is a river. When the ocean is searching for you, don't walk into the river.",
     author: "Rumi",
     theme: "Stillness",
+    isUserSaved: false,
   },
   {
     quote: "Clouds come floating into my life, no longer to carry rain or usher storm, but to add color to my sunset sky.",
     author: "Rabindranath Tagore",
     work: "Stray Birds",
     theme: "Perspective",
+    isUserSaved: false,
   },
   {
     quote: "We suffer more often in imagination than in reality.",
     author: "Seneca",
     work: "Letters from a Stoic",
     theme: "Peace of Mind",
+    isUserSaved: false,
   },
   {
     quote: "Nature does not hurry, yet everything is accomplished.",
     author: "Lao Tzu",
     theme: "Patience",
+    isUserSaved: false,
   },
   {
     quote: "Hope is the thing with feathers that perches in the soul - and sings the tune without the words - and never stops at all.",
     author: "Emily Dickinson",
     theme: "Hope",
+    isUserSaved: false,
   },
 ];
 
 function OfflinePageContent() {
   const router = useRouter();
-  const { count: savedCount } = useSavedQuotes();
+  const { savedQuotes, count: savedCount } = useSavedQuotes();
+  const [filterMode, setFilterMode] = React.useState<"all" | "saved" | "classics">("all");
   const [quoteIndex, setQuoteIndex] = React.useState(0);
   const [isChecking, setIsChecking] = React.useState(false);
   const { copied, copy } = useCopyToClipboard();
   const isOnline = useOnlineStatus();
 
-  const currentQuote = OFFLINE_QUOTES[quoteIndex];
+  const userQuotes: OfflineQuote[] = React.useMemo(() => {
+    return savedQuotes.map((sq) => ({
+      quote: sq.content,
+      author: sq.authorName || "Unknown",
+      work: sq.sourceTitle || undefined,
+      theme: sq.category || "Personal Reflection",
+      isUserSaved: true,
+    }));
+  }, [savedQuotes]);
+
+  const activeQuotes: OfflineQuote[] = React.useMemo(() => {
+    if (filterMode === "saved" && userQuotes.length > 0) return userQuotes;
+    if (filterMode === "classics") return OFFLINE_QUOTES;
+    return [...userQuotes, ...OFFLINE_QUOTES];
+  }, [filterMode, userQuotes]);
+
+  const safeIndex = quoteIndex % (activeQuotes.length || 1);
+  const currentQuote = activeQuotes[safeIndex] || OFFLINE_QUOTES[0];
 
   function handleNextQuote() {
-    setQuoteIndex((prev) => (prev + 1) % OFFLINE_QUOTES.length);
+    setQuoteIndex((prev) => (prev + 1) % activeQuotes.length);
   }
 
   async function handleRetry() {
     setIsChecking(true);
     try {
-      // Ping a lightweight endpoint with cache-busting
       const res = await fetch("/icons/icon-192x192.png?ping=" + Date.now(), {
         method: "HEAD",
         cache: "no-store",
@@ -129,11 +153,79 @@ function OfflinePageContent() {
 
       {/* Main Sanctuary Card */}
       <main className="max-w-2xl mx-auto w-full my-auto py-12 flex flex-col items-center text-center">
-        {/* Editorial Subheading badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-serif italic tracking-wide text-[var(--accent-rust)] bg-[#c76b3e]/10 border border-[#c76b3e]/20 mb-6">
-          <span>✦ Timeless Reflections</span>
-          <span>•</span>
-          <span>{currentQuote.theme}</span>
+        {/* Reconnected notification banner */}
+        {isOnline && (
+          <div className="w-full mb-6 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-900 shadow-2xs">
+            <div className="flex items-center gap-2.5 text-left">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              <span>
+                <strong className="font-semibold">Connection restored!</strong> You are back online.
+              </span>
+            </div>
+            <button
+              onClick={() => router.push("/")}
+              type="button"
+              className="px-3 py-1.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-2xs cursor-pointer ml-3 shrink-0"
+            >
+              Return Home
+            </button>
+          </div>
+        )}
+
+        {/* Editorial Subheading badge & filter */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-serif italic tracking-wide text-[var(--accent-rust)] bg-[#c76b3e]/10 border border-[#c76b3e]/20">
+            <span>{currentQuote.isUserSaved ? "✦ From Your Notebook" : "✦ Timeless Reflections"}</span>
+            <span>•</span>
+            <span>{currentQuote.theme}</span>
+          </div>
+
+          {savedCount > 0 && (
+            <div className="inline-flex items-center rounded-full border border-stone-300/60 bg-white/80 p-0.5 text-[11px] font-medium shadow-2xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMode("all");
+                  setQuoteIndex(0);
+                }}
+                className={`px-2.5 py-0.5 rounded-full transition-colors cursor-pointer ${
+                  filterMode === "all"
+                    ? "bg-[var(--ink-900)] text-white"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                All ({activeQuotes.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMode("saved");
+                  setQuoteIndex(0);
+                }}
+                className={`px-2.5 py-0.5 rounded-full transition-colors cursor-pointer ${
+                  filterMode === "saved"
+                    ? "bg-[var(--ink-900)] text-white"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                Notebook ({userQuotes.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMode("classics");
+                  setQuoteIndex(0);
+                }}
+                className={`px-2.5 py-0.5 rounded-full transition-colors cursor-pointer ${
+                  filterMode === "classics"
+                    ? "bg-[var(--ink-900)] text-white"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                Classics ({OFFLINE_QUOTES.length})
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Quote presentation */}
@@ -175,7 +267,7 @@ function OfflinePageContent() {
               >
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
               </svg>
-              Another Thought
+              Another Thought ({safeIndex + 1}/{activeQuotes.length})
             </button>
 
             <button
@@ -191,10 +283,10 @@ function OfflinePageContent() {
         {/* Connection Notice & Refresh Action */}
         <div className="mt-10 flex flex-col items-center gap-4">
           <p className="text-xs text-stone-600 max-w-md leading-relaxed">
-            You are currently browsing offline. Previously viewed quotes and cached sections remain accessible, and full discovery will resume as soon as your internet reconnects.
+            You are browsing offline. Previously viewed quotes and your saved notebook remain fully accessible, and live discovery will resume as soon as your internet reconnects.
           </p>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={handleRetry}
               disabled={isChecking}

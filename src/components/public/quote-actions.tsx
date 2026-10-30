@@ -5,6 +5,7 @@ import { BookmarkIcon } from "@/components/ui"
 import { useCopyToClipboard } from "@/hooks"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { QuoteShareModal } from "./quote-share-modal"
+import { QuoteZenMode } from "./quote-zen-mode"
 
 interface QuoteActionsProps {
   id?: string
@@ -37,8 +38,24 @@ export function QuoteActions({
 }: QuoteActionsProps) {
   const { copied, copyQuote } = useCopyToClipboard()
   const [shareModalOpen, setShareModalOpen] = React.useState(false)
+  const [zenModeOpen, setZenModeOpen] = React.useState(false)
   const [overrideViews, setOverrideViews] = React.useState<number | null>(null)
   const { isSaved, toggleSave } = useSavedQuotes()
+
+  // Listen for keyboard 'Z' to enter Zen Focus Mode
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (zenModeOpen || shareModalOpen) return
+      const target = e.target as HTMLElement | null
+      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return
+      if (e.key === "z" || e.key === "Z") {
+        e.preventDefault()
+        setZenModeOpen(true)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [zenModeOpen, shareModalOpen])
 
   const displayViews = overrideViews ?? views
 
@@ -209,6 +226,31 @@ export function QuoteActions({
             />
             <span>{saved ? "Saved" : "Save Quote"}</span>
           </button>
+
+          {/* Zen Contemplation Mode Button */}
+          <button
+            type="button"
+            onClick={() => setZenModeOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-50/90 to-orange-50/70 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-amber-950 hover:border-amber-400 hover:bg-amber-100/80 shadow-2xs transition-all cursor-pointer group"
+            aria-label="Enter distraction-free Zen contemplation mode (Press Z)"
+            title="Distraction-Free Zen Contemplation (Shortcut: Z)"
+          >
+            <svg
+              className="h-4 w-4 text-[var(--accent-rust)] transition-transform group-hover:scale-110"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" strokeWidth="2" />
+              <circle cx="12" cy="12" r="8" strokeWidth="1.5" strokeDasharray="3 3" />
+            </svg>
+            <span>Zen Mode</span>
+            <kbd className="hidden sm:inline-block rounded bg-amber-200/60 px-1 py-0.2 text-[9px] font-mono font-bold text-amber-900">
+              Z
+            </kbd>
+          </button>
         </div>
 
         {typeof displayViews === "number" && (
@@ -229,6 +271,23 @@ export function QuoteActions({
         content={content}
         authorName={authorName}
         sourceTitle={sourceTitle}
+        quoteUrl={quoteUrl}
+      />
+
+      {/* Zen Contemplation Mode Overlay */}
+      <QuoteZenMode
+        isOpen={zenModeOpen}
+        onClose={() => setZenModeOpen(false)}
+        id={id}
+        slug={slug}
+        content={content}
+        authorName={authorName}
+        authorSlug={authorSlug}
+        category={category}
+        categorySlug={categorySlug}
+        sourceTitle={sourceTitle}
+        year={year}
+        tags={tags}
         quoteUrl={quoteUrl}
       />
     </>

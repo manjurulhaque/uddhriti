@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { authorSchema } from "@/lib/validation/author"
 import {
   importAuthorFromWikipediaOrWikidata,
@@ -94,18 +95,18 @@ function normalizeImportedForSchema(
 }
 
 function normalizeManualForSchema(item: z.infer<typeof itemSchema>) {
-  const name = item.name?.trim() || ""
+  const name = sanitizeSpreadsheetCell(item.name?.trim() || "")
 
   return {
     name,
     slug: slugify((item.slug || name).trim(), { lower: true, strict: true }),
-    bio: item.bio || null,
+    bio: item.bio ? sanitizeSpreadsheetCell(item.bio.trim()) : null,
     birthYear: item.birthYear ?? null,
     deathYear: item.deathYear ?? null,
     dateOfBirth: item.dateOfBirth || null,
     dateOfDeath: item.dateOfDeath || null,
-    profession: item.profession || null,
-    nationality: item.nationality || null,
+    profession: item.profession ? sanitizeSpreadsheetCell(item.profession) : null,
+    nationality: item.nationality ? sanitizeSpreadsheetCell(item.nationality) : null,
     imageUrl: item.imageUrl || null,
     wikipediaUrl: item.wikipediaUrl || null,
     wikidataId: item.wikidataId || null,

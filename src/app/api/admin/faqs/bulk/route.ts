@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { faqSchema } from "@/lib/validation/faq"
 
 const bulkItemSchema = z.object({
@@ -52,8 +53,8 @@ export async function POST(req: Request) {
     .map((item, index) => {
       const rowNo = index + 1
       const normalized = {
-        question: item.question.trim(),
-        answer: item.answer.trim(),
+        question: sanitizeSpreadsheetCell(item.question.trim()),
+        answer: sanitizeSpreadsheetCell(item.answer.trim()),
         pageType: item.pageType.trim().toUpperCase(),
         pageSlug: item.pageSlug.trim(),
         position: item.position ?? 0,

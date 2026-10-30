@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -69,11 +70,11 @@ export async function POST(req: Request) {
       }
 
       return {
-        name: item.name.trim(),
+        name: sanitizeSpreadsheetCell(item.name.trim()),
         slug: uniqueSlug(baseSlug, usedSlugs),
-        description: item.description || null,
-        metaTitle: item.metaTitle || null,
-        metaDescription: item.metaDescription || null,
+        description: item.description ? sanitizeSpreadsheetCell(item.description.trim()) : null,
+        metaTitle: item.metaTitle ? sanitizeSpreadsheetCell(item.metaTitle.trim()) : null,
+        metaDescription: item.metaDescription ? sanitizeSpreadsheetCell(item.metaDescription.trim()) : null,
       }
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)

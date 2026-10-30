@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 
 const workTypeSchema = z.enum([
   "BOOK",
@@ -121,14 +122,14 @@ export async function POST(req: Request) {
       }
 
       return {
-        title: item.title.trim(),
+        title: sanitizeSpreadsheetCell(item.title.trim()),
         slug: uniqueSlug(baseSlug, usedSlugs),
         type: item.type || "BOOK",
         year: item.year ?? null,
         yearApproximate: item.yearApproximate ?? false,
-        publisher: item.publisher || null,
-        location: item.location || null,
-        description: item.description || null,
+        publisher: item.publisher ? sanitizeSpreadsheetCell(item.publisher.trim()) : null,
+        location: item.location ? sanitizeSpreadsheetCell(item.location.trim()) : null,
+        description: item.description ? sanitizeSpreadsheetCell(item.description.trim()) : null,
         externalUrl: item.externalUrl || null,
         authorId: item.authorId || null,
       }

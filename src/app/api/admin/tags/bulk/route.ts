@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 
 const tagTypeSchema = z.enum(tagTypeOptions)
@@ -91,10 +92,10 @@ export async function POST(req: Request) {
       seenInPayload.add(normalizedName)
 
       return {
-        name: item.name.trim(),
+        name: sanitizeSpreadsheetCell(item.name.trim()),
         slug: uniqueSlug(baseSlug, usedSlugs),
         type: item.type || "TOPIC",
-        description: item.description || null,
+        description: item.description ? sanitizeSpreadsheetCell(item.description.trim()) : null,
       }
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)

@@ -15,6 +15,7 @@ import {
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 
 type ImportItem = {
   content?: string
@@ -506,7 +507,7 @@ export async function POST(req: Request) {
       continue
     }
 
-    const content = typeof row.content === "string" ? row.content.trim() : ""
+    const content = typeof row.content === "string" ? sanitizeSpreadsheetCell(row.content.trim()) : ""
     const rowAuthorId = typeof row.authorId === "string" ? row.authorId.trim() : ""
     const rowAuthorName =
       typeof row.authorName === "string" && row.authorName.trim()
@@ -564,19 +565,19 @@ export async function POST(req: Request) {
       content,
       meaning:
         typeof row.meaning === "string" && row.meaning.trim()
-          ? row.meaning.trim()
+          ? sanitizeSpreadsheetCell(row.meaning.trim())
           : null,
       historicalContext:
         typeof row.historicalContext === "string" && row.historicalContext.trim()
-          ? row.historicalContext.trim()
+          ? sanitizeSpreadsheetCell(row.historicalContext.trim())
           : null,
       modernRelevance:
         typeof row.modernRelevance === "string" && row.modernRelevance.trim()
-          ? row.modernRelevance.trim()
+          ? sanitizeSpreadsheetCell(row.modernRelevance.trim())
           : null,
       authorId,
       categoryId,
-      sourceTitle: typeof row.sourceTitle === "string" && row.sourceTitle.trim() ? row.sourceTitle.trim() : null,
+      sourceTitle: typeof row.sourceTitle === "string" && row.sourceTitle.trim() ? sanitizeSpreadsheetCell(row.sourceTitle.trim()) : null,
       sourceType,
       sourceExternalUrl: null,
       publish: typeof row.publish === "boolean" ? row.publish : Boolean(body.publish),
@@ -592,7 +593,7 @@ export async function POST(req: Request) {
   for (let i = 0; i < selectedSourceCandidates.length; i += 1) {
     const row = selectedSourceCandidates[i]
     const rowNo = i + 1
-    const content = typeof row.content === "string" ? row.content.trim() : ""
+    const content = typeof row.content === "string" ? sanitizeSpreadsheetCell(row.content.trim()) : ""
     if (!content) {
       errors.push(`Selected candidate ${rowNo}: content is required.`)
       continue
@@ -624,7 +625,7 @@ export async function POST(req: Request) {
       authorId: defaultAuthorId || undefined,
       authorName: typeof row.authorName === "string" ? row.authorName.trim() : undefined,
       categoryId,
-      sourceTitle: typeof row.sourceTitle === "string" && row.sourceTitle.trim() ? row.sourceTitle.trim() : null,
+      sourceTitle: typeof row.sourceTitle === "string" && row.sourceTitle.trim() ? sanitizeSpreadsheetCell(row.sourceTitle.trim()) : null,
       sourceType,
       sourceExternalUrl: typeof row.sourceUrl === "string" && row.sourceUrl.trim() ? row.sourceUrl.trim() : null,
       publish: Boolean(body.publish),

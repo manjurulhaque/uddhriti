@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
-import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
+import { invalidJsonBodyResponse, isValidUuid, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { authorSchema } from "@/lib/validation/author"
 import { slugify } from "@/lib/slug"
 
@@ -34,6 +34,7 @@ export async function GET(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const { response } = await requireAdmin()
   if (response) return response
@@ -55,6 +56,7 @@ export async function PATCH(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const { response } = await requireAdmin()
   if (response) return response
@@ -140,6 +142,7 @@ export async function DELETE(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const { response } = await requireAdmin()
   if (response) return response

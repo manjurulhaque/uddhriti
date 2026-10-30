@@ -13,6 +13,7 @@ import {
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { isValidUuid } from "@/lib/api/route-helpers"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -35,6 +36,7 @@ export async function GET(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {
@@ -69,6 +71,7 @@ export async function PATCH(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {
@@ -289,6 +292,7 @@ export async function DELETE(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {
@@ -358,6 +362,7 @@ export async function POST(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {

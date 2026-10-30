@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { mapPrismaRouteError } from "@/lib/api/route-helpers"
+import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { tagSchema } from "@/lib/validation/tag"
 
 type Context = {
@@ -17,6 +17,7 @@ export async function GET(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {
@@ -39,6 +40,7 @@ export async function PATCH(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {
@@ -103,6 +105,7 @@ export async function DELETE(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const admin = await getAdmin()
   if (!admin) {

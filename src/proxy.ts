@@ -2,8 +2,41 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
+function isAllowedRequestOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin")
+  if (!origin) {
+    const referer = request.headers.get("referer")
+    if (!referer) return true // Same-origin navigation or direct request
+    try {
+      const refererUrl = new URL(referer)
+      const host = request.headers.get("host") || request.nextUrl.host
+      return refererUrl.host.toLowerCase() === host.toLowerCase()
+    } catch {
+      return false
+    }
+  }
+
+  try {
+    const originUrl = new URL(origin)
+    const host = request.headers.get("host") || request.nextUrl.host
+    return originUrl.host.toLowerCase() === host.toLowerCase()
+  } catch {
+    return false
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+
+  // ── CSRF Protection on Mutating Requests ───────────────────────────
+  const mutatingMethods = ["POST", "PUT", "DELETE", "PATCH"]
+  if (mutatingMethods.includes(request.method) && !isAllowedRequestOrigin(request)) {
+    return NextResponse.json(
+      { error: "Forbidden: cross-origin request rejected" },
+      { status: 403 }
+    )
+  }
+
   const response = NextResponse.next()
 
   // ── Security headers ──────────────────────────────────────────────
@@ -12,7 +45,7 @@ export async function proxy(request: NextRequest) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
+    "camera=(), microphone=(), geolocation=(), browsing-topics=()"
   )
   response.headers.set(
     "Strict-Transport-Security",
@@ -20,10 +53,23 @@ export async function proxy(request: NextRequest) {
   )
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin")
 
+  // ── Cache-Control for Sensitive & Admin Surfaces ───────────────────
+  if (
+    pathname.startsWith("/api/admin/") ||
+    pathname.startsWith("/api/users") ||
+    pathname.startsWith("/admin")
+  ) {
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    )
+    response.headers.set("Pragma", "no-cache")
+    response.headers.set("Expires", "0")
+  }
+
   // ── Supabase auth token refresh ───────────────────────────────────
   // Keeps the session alive by writing refreshed cookies on every
-  // matched request. Without this the server-side Supabase client
-  // (which has setAll as a no-op) can silently lose the session.
+  // matched request with hardened cookie flags (sameSite=lax, secure).
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -35,7 +81,11 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet) {
           for (const { name, value, options } of cookiesToSet) {
             request.cookies.set(name, value)
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, {
+              ...options,
+              sameSite: options?.sameSite || "lax",
+              secure: process.env.NODE_ENV === "production",
+            })
           }
         },
       },
@@ -79,9 +129,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on admin routes (pages + API) to keep the auth session fresh and enforce edge access control
+    // Run on admin routes (pages + API) to keep auth fresh, enforce edge auth, and protect against CSRF
     "/admin/:path*",
     "/api/admin/:path*",
     "/api/users/:path*",
+    "/api/quotes/:path*",
   ],
 }

@@ -189,6 +189,9 @@ export default async function QuotesBrowsePage({
 
           {/* Category Filter Pills */}
           <div className="flex flex-wrap items-center gap-1.5 py-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 mr-1">
+              Theme:
+            </span>
             <Link
               href={(() => {
                 const p = new URLSearchParams()
@@ -203,7 +206,7 @@ export default async function QuotesBrowsePage({
                   : "bg-white border border-stone-200 text-stone-700 hover:border-stone-400"
               }`}
             >
-              All Topics
+              All Themes
             </Link>
             {categories.map((c) => {
               const isActive = categorySlug === c.slug

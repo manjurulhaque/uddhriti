@@ -192,7 +192,7 @@ export default async function IndividualQuotePage({
             href={`/categories/${quote.category.slug}`}
             className="hover:text-stone-900 transition-colors font-medium"
           >
-            {quote.category.name}
+            Theme: {quote.category.name}
           </Link>
           <span>/</span>
           <span className="font-semibold text-stone-900 truncate max-w-xs">
@@ -207,9 +207,10 @@ export default async function IndividualQuotePage({
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={`/categories/${quote.category.slug}`}
-                className="inline-flex items-center rounded-full bg-[var(--page-cream)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-stone-800 border border-stone-200 hover:bg-stone-100 transition-colors"
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--page-cream)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-stone-800 border border-stone-200 hover:bg-stone-100 transition-colors"
               >
-                {quote.category.name}
+                <span className="text-stone-500 font-normal">Theme:</span>
+                <span>{quote.category.name}</span>
               </Link>
 
               {quote.isFeatured && (
@@ -442,17 +443,17 @@ export default async function IndividualQuotePage({
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-rust)]">
-                  Topic Exploration
+                  Thematic Exploration
                 </span>
                 <h3 className="font-serif text-2xl font-bold tracking-tight text-stone-900">
-                  More Quotations on {quote.category.name}
+                  More Quotations on Theme: {quote.category.name}
                 </h3>
               </div>
               <Link
                 href={`/categories/${quote.category.slug}`}
                 className="text-xs font-semibold text-stone-800 hover:text-[var(--accent-rust)] transition-colors"
               >
-                Browse category &rarr;
+                Browse theme &rarr;
               </Link>
             </div>
 

@@ -168,7 +168,7 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
             href={`/categories/${categorySlug}`}
             className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-white/70 hover:border-white/20 hover:text-white transition-colors"
           >
-            <span>{categoryName}</span>
+            <span>Theme: {categoryName}</span>
           </Link>
         ) : (
           <span />

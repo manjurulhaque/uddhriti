@@ -51,10 +51,10 @@ export function QuoteMeta({
         {category && (
           categorySlug ? (
             <Link href={`/categories/${categorySlug}`} className="hover:text-[var(--accent-rust)] hover:underline transition-colors font-medium">
-              {category}
+              Theme: {category}
             </Link>
           ) : (
-            <span>{category}</span>
+            <span>Theme: {category}</span>
           )
         )}
         {category && (sourceTitle || year) && <span aria-hidden="true">·</span>}

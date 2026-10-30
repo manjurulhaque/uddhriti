@@ -139,7 +139,7 @@ export default async function CategoryDetailPage({
             Categories
           </Link>
           <span>/</span>
-          <span className="font-semibold text-stone-900 truncate">{category.name}</span>
+          <span className="font-semibold text-stone-900 truncate">Theme: {category.name}</span>
         </nav>
 
         {/* Category Header */}
@@ -154,6 +154,7 @@ export default async function CategoryDetailPage({
           </div>
 
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
+            <span className="text-stone-400 font-normal text-2xl sm:text-3xl lg:text-4xl">Theme: </span>
             {category.name}
           </h1>
 
@@ -189,7 +190,7 @@ export default async function CategoryDetailPage({
         <div className="space-y-6">
           <div className="border-b border-stone-900/10 pb-4 flex items-center justify-between">
             <h2 className="font-serif text-2xl font-bold tracking-tight text-[var(--ink-900)]">
-              Quotations on {category.name}
+              Quotations on Theme: {category.name}
             </h2>
             <span className="text-xs text-stone-500 font-mono">
               Page {currentPage} of {totalPages || 1}

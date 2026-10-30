@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
+import { enforceIpRateLimit } from "@/lib/api/rate-limit"
 
 function isAllowedRequestOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin")
@@ -37,6 +38,14 @@ export async function proxy(request: NextRequest) {
     )
   }
 
+  // ── Edge Rate Limiting on Scraping-Prone Dynamic Endpoints ──────────
+  if (pathname === "/quotes/random") {
+    const rateLimited = enforceIpRateLimit(request, "randomQuote")
+    if (rateLimited) {
+      return rateLimited
+    }
+  }
+
   const response = NextResponse.next()
 
   // ── Security headers ──────────────────────────────────────────────
@@ -54,73 +63,74 @@ export async function proxy(request: NextRequest) {
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin")
 
   // ── Cache-Control for Sensitive & Admin Surfaces ───────────────────
-  if (
+  const isAdminSurface =
     pathname.startsWith("/api/admin/") ||
     pathname.startsWith("/api/users") ||
     pathname.startsWith("/admin")
-  ) {
+
+  if (isAdminSurface) {
     response.headers.set(
       "Cache-Control",
       "no-store, no-cache, must-revalidate, proxy-revalidate"
     )
     response.headers.set("Pragma", "no-cache")
     response.headers.set("Expires", "0")
-  }
 
-  // ── Supabase auth token refresh ───────────────────────────────────
-  // Keeps the session alive by writing refreshed cookies on every
-  // matched request with hardened cookie flags (sameSite=lax, secure).
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
+    // ── Supabase auth token refresh & edge defense ───────────────────
+    // Keeps the session alive by writing refreshed cookies on admin requests
+    // with hardened cookie flags (sameSite=lax, secure).
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            for (const { name, value, options } of cookiesToSet) {
+              request.cookies.set(name, value)
+              response.cookies.set(name, value, {
+                ...options,
+                sameSite: options?.sameSite || "lax",
+                secure: process.env.NODE_ENV === "production",
+              })
+            }
+          },
         },
-        setAll(cookiesToSet) {
-          for (const { name, value, options } of cookiesToSet) {
-            request.cookies.set(name, value)
-            response.cookies.set(name, value, {
-              ...options,
-              sameSite: options?.sameSite || "lax",
-              secure: process.env.NODE_ENV === "production",
-            })
-          }
-        },
-      },
-    }
-  )
+      }
+    )
 
-  // Validate and refresh the user session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    // Validate and refresh the user session
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  // ── Edge Defense-in-Depth for Protected API Endpoints ─────────────
-  if (pathname.startsWith("/api/admin/") || pathname.startsWith("/api/users")) {
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-  }
-
-  // ── Edge Defense-in-Depth for Admin UI Pages ───────────────────────
-  if (pathname.startsWith("/admin")) {
-    const isLoginPage = pathname === "/admin/login"
-    const isLogoutPage = pathname === "/admin/logout"
-
-    // If authenticated user visits login page, redirect to dashboard
-    if (user && isLoginPage) {
-      const dashboardUrl = request.nextUrl.clone()
-      dashboardUrl.pathname = "/admin/dashboard"
-      return NextResponse.redirect(dashboardUrl)
+    // ── Edge Defense-in-Depth for Protected API Endpoints ─────────────
+    if (pathname.startsWith("/api/admin/") || pathname.startsWith("/api/users")) {
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
     }
 
-    // If unauthenticated user tries to access protected admin pages, redirect to login
-    if (!user && !isLoginPage && !isLogoutPage) {
-      const loginUrl = request.nextUrl.clone()
-      loginUrl.pathname = "/admin/login"
-      return NextResponse.redirect(loginUrl)
+    // ── Edge Defense-in-Depth for Admin UI Pages ───────────────────────
+    if (pathname.startsWith("/admin")) {
+      const isLoginPage = pathname === "/admin/login"
+      const isLogoutPage = pathname === "/admin/logout"
+
+      // If authenticated user visits login page, redirect to dashboard
+      if (user && isLoginPage) {
+        const dashboardUrl = request.nextUrl.clone()
+        dashboardUrl.pathname = "/admin/dashboard"
+        return NextResponse.redirect(dashboardUrl)
+      }
+
+      // If unauthenticated user tries to access protected admin pages, redirect to login
+      if (!user && !isLoginPage && !isLogoutPage) {
+        const loginUrl = request.nextUrl.clone()
+        loginUrl.pathname = "/admin/login"
+        return NextResponse.redirect(loginUrl)
+      }
     }
   }
 
@@ -134,5 +144,6 @@ export const config = {
     "/api/admin/:path*",
     "/api/users/:path*",
     "/api/quotes/:path*",
+    "/quotes/random",
   ],
 }

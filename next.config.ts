@@ -11,6 +11,7 @@ const cspHeader = `
   base-uri 'self';
   form-action 'self';
   object-src 'none';
+  upgrade-insecure-requests;
 `
   .replace(/\s{2,}/g, " ")
   .trim();
@@ -40,6 +41,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Download-Options", value: "noopen" },
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",

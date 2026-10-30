@@ -6,7 +6,8 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout, QuoteCard } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
-import { formatCountWithNoun } from "@/lib/formatters"
+import { formatCountWithNoun, formatEpoch, formatLifespan } from "@/lib/formatters"
+import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
 
 const QUOTES_PER_PAGE = 12
@@ -134,10 +135,26 @@ export default async function AuthorDetailPage({
 
   const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
 
-  const lifespan =
-    author.birthYear || author.deathYear
-      ? `${author.birthYear ?? "?"} – ${author.deathYear ?? (author.birthYear ? "Present" : "")}`
-      : null
+  const lifespan = formatLifespan(author)
+  const epoch = formatEpoch(author.birthYear)
+
+  const siteUrl = getSiteUrl()
+  const authorUrl = `${siteUrl}/authors/${author.slug}`
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": authorUrl,
+    url: authorUrl,
+    name: author.name,
+    ...(author.imageUrl ? { image: author.imageUrl } : {}),
+    ...(author.bio ? { description: author.bio } : {}),
+    ...(author.profession ? { jobTitle: author.profession } : {}),
+    ...(author.nationality ? { nationality: author.nationality } : {}),
+    ...(author.birthYear ? { birthDate: String(author.birthYear) } : {}),
+    ...(author.deathYear ? { deathDate: String(author.deathYear) } : {}),
+    ...(author.wikipediaUrl ? { sameAs: [author.wikipediaUrl] } : {}),
+  }
 
   function buildHref(newPage: number) {
     return `/authors/${slug}${newPage > 1 ? `?page=${newPage}` : ""}`
@@ -145,6 +162,12 @@ export default async function AuthorDetailPage({
 
   return (
     <PublicLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className="text-xs text-stone-500 flex items-center gap-2">
@@ -195,6 +218,11 @@ export default async function AuthorDetailPage({
                   )}
                   {lifespan && (
                     <span className="text-xs font-mono text-stone-500">• {lifespan}</span>
+                  )}
+                  {epoch && (
+                    <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
+                      {epoch}
+                    </span>
                   )}
                 </div>
 

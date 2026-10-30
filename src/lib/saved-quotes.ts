@@ -13,6 +13,7 @@ export interface SavedQuote {
   sourceTitle?: string | null;
   year?: string | null;
   tags?: string[];
+  isVerified?: boolean;
   savedAt: number;
 }
 

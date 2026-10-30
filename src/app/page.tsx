@@ -55,6 +55,7 @@ const quoteCardSelect = {
   slug: true,
   content: true,
   authorName: true,
+  isVerified: true,
   author: {
     select: {
       name: true,
@@ -96,6 +97,7 @@ const dailyQuoteSelect = {
   meaning: true,
   historicalContext: true,
   authorName: true,
+  isVerified: true,
   author: {
     select: {
       name: true,

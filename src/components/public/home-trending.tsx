@@ -23,6 +23,7 @@ export interface TrendingQuote {
   } | null
   tags: Array<{ tag: { id: string; name: string } }>
   trendingScore?: number | null
+  isVerified?: boolean
 }
 
 export interface PopularTag {
@@ -66,6 +67,7 @@ export function HomeTrendingSection({
                 year={formatSourceYearLabel(quote.source)}
                 tags={quote.tags.map((entry) => entry.tag.name)}
                 variant="dark"
+                isVerified={quote.isVerified}
               />
             ))}
           </div>

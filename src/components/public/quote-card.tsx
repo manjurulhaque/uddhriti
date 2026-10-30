@@ -25,6 +25,7 @@ export interface QuoteCardProps {
   badgeLabel?: string
   className?: string
   style?: React.CSSProperties
+  isVerified?: boolean
 }
 
 export function QuoteCard({
@@ -45,6 +46,7 @@ export function QuoteCard({
   badgeLabel,
   className = "",
   style,
+  isVerified,
 }: QuoteCardProps) {
   const isDark = variant === "dark"
   const isFeatured = variant === "featured"
@@ -68,6 +70,7 @@ export function QuoteCard({
       sourceTitle,
       year,
       tags,
+      isVerified,
     })
   }
 
@@ -103,6 +106,12 @@ export function QuoteCard({
           <div className="flex items-center gap-2">
             <span>{badgeLabel || "Quote of the Day"}</span>
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)]" aria-hidden="true" />
+            {isVerified && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-normal text-emerald-300">
+                <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                Verified
+              </span>
+            )}
           </div>
           {bookmarkButton}
         </div>
@@ -148,15 +157,23 @@ export function QuoteCard({
         style={style}
       >
         <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-          {trendingRank !== undefined ? (
-            <span className="inline-flex items-center gap-1.5 text-[var(--accent-sand)]">
-              Rank #{trendingRank}
-            </span>
-          ) : trendingScore !== undefined ? (
-            <span>Score {formatScore(trendingScore)}</span>
-          ) : (
-            <span />
-          )}
+          <div className="flex items-center gap-2">
+            {trendingRank !== undefined ? (
+              <span className="inline-flex items-center gap-1.5 text-[var(--accent-sand)]">
+                Rank #{trendingRank}
+              </span>
+            ) : trendingScore !== undefined ? (
+              <span>Score {formatScore(trendingScore)}</span>
+            ) : (
+              <span />
+            )}
+            {isVerified && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-normal text-emerald-300">
+                <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                Verified
+              </span>
+            )}
+          </div>
           {bookmarkButton}
         </div>
 
@@ -214,7 +231,18 @@ export function QuoteCard({
               &ldquo;{content}&rdquo;
             </blockquote>
           )}
-          <div className="shrink-0 -mt-0.5 -mr-0.5">{bookmarkButton}</div>
+          <div className="shrink-0 -mt-0.5 -mr-0.5 flex items-center gap-2">
+            {isVerified && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800"
+                title="Verified citation against primary historical source"
+              >
+                <span className="h-1 w-1 rounded-full bg-emerald-600" />
+                Verified
+              </span>
+            )}
+            {bookmarkButton}
+          </div>
         </div>
 
         <QuoteMeta

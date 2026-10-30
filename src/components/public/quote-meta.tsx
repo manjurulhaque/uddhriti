@@ -58,13 +58,16 @@ export function QuoteMeta({
           )
         )}
         {category && (sourceTitle || year) && <span aria-hidden="true">·</span>}
-        {sourceTitle && <span>{sourceTitle}</span>}
+        {sourceTitle && <span>Source: {sourceTitle}</span>}
         {sourceTitle && year && <span aria-hidden="true">·</span>}
         {year && <span className="font-mono">{year}</span>}
       </div>
 
       {tags.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className={`text-[11px] font-medium tracking-wide ${variant === "dark" ? "text-white/50" : "text-stone-500"}`}>
+            Topics:
+          </span>
           {tags.map((tag) => (
             <span
               key={tag}

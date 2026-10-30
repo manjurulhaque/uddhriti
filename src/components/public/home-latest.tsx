@@ -20,6 +20,7 @@ export interface LatestQuote {
     yearApproximate?: boolean | null
   } | null
   tags: Array<{ tag: { id: string; name: string } }>
+  isVerified?: boolean
 }
 
 export interface HomeLatestQuotesProps {
@@ -64,6 +65,7 @@ export function HomeLatestQuotes({ quotes }: HomeLatestQuotesProps) {
               tags={quote.tags.map((entry) => entry.tag.name)}
               variant="paper"
               style={{ animationDelay: `${index * 70}ms` }}
+              isVerified={quote.isVerified}
             />
           ))}
         </div>

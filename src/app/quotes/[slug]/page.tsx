@@ -431,6 +431,7 @@ export default async function IndividualQuotePage({
                   tags={item.tags.map((t) => t.tag.name)}
                   views={item.views}
                   variant="paper"
+                  isVerified={item.isVerified}
                 />
               ))}
             </div>
@@ -473,6 +474,7 @@ export default async function IndividualQuotePage({
                   tags={item.tags.map((t) => t.tag.name)}
                   views={item.views}
                   variant="paper"
+                  isVerified={item.isVerified}
                 />
               ))}
             </div>

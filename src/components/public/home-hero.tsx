@@ -23,6 +23,7 @@ export interface HomeHeroQuote {
   } | null
   tags?: Array<{ tag: { id: string; name: string } }>
   views?: number
+  isVerified?: boolean
 }
 
 export interface HomeHeroProps {
@@ -131,6 +132,7 @@ export function HomeHero({
                 variant="featured"
                 badgeLabel="Curator’s Choice"
                 className="w-full shadow-lg"
+                isVerified={heroQuote.isVerified}
               />
             ) : (
               <div className="w-full rounded-[1.6rem] border border-white/12 bg-white/9 p-5 backdrop-blur-md">

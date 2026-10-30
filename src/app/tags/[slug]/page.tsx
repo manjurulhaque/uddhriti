@@ -181,6 +181,7 @@ export default async function TagDetailPage({
                   tags={quote.tags.map((t) => t.tag.name)}
                   views={quote.views}
                   variant="paper"
+                  isVerified={quote.isVerified}
                 />
               ))}
             </div>

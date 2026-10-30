@@ -148,8 +148,8 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
           )}
 
           {sourceTitle && (
-            <span className="text-white/60 italic text-[11px]">
-              in <span className="text-white/80">{sourceTitle}</span>
+            <span className="text-white/60 text-[11px]">
+              Source: <span className="text-white/80 italic">{sourceTitle}</span>
             </span>
           )}
 

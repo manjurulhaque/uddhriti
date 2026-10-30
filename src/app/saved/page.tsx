@@ -229,6 +229,7 @@ function SavedQuotesContent() {
                   year={q.year}
                   tags={q.tags}
                   variant="paper"
+                  isVerified={q.isVerified}
                 />
               </div>
             ))}

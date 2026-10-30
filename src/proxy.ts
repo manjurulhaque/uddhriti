@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { enforceIpRateLimit } from "@/lib/api/rate-limit"
+import { getSupabaseConfig } from "@/lib/security/env"
 
 function isAllowedRequestOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin")
@@ -79,9 +80,10 @@ export async function proxy(request: NextRequest) {
     // ── Supabase auth token refresh & edge defense ───────────────────
     // Keeps the session alive by writing refreshed cookies on admin requests
     // with hardened cookie flags (sameSite=lax, secure).
+    const { url, anonKey } = getSupabaseConfig()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      url,
+      anonKey,
       {
         cookies: {
           getAll() {

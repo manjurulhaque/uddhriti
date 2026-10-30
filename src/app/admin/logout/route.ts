@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { getSiteUrl } from "@/lib/site"
+import { getSupabaseConfig } from "@/lib/security/env"
 
 async function handleLogout() {
   const cookieStore = await cookies()
@@ -19,34 +20,31 @@ async function handleLogout() {
   response.headers.set("Clear-Site-Data", '"cache"')
 
   const isProduction = process.env.NODE_ENV === "production"
+  const { url, anonKey } = getSupabaseConfig()
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value, options } of cookiesToSet) {
-            const hardenedOptions = {
-              ...options,
-              sameSite: options?.sameSite || ("lax" as const),
-              secure: isProduction,
-            }
-
-            try {
-              cookieStore.set(name, value, hardenedOptions)
-            } catch {
-              // Ignore if cookieStore cannot be modified directly in the current context
-            }
-            response.cookies.set(name, value, hardenedOptions)
-          }
-        },
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
       },
-    }
-  )
+      setAll(cookiesToSet) {
+        for (const { name, value, options } of cookiesToSet) {
+          const hardenedOptions = {
+            ...options,
+            sameSite: options?.sameSite || ("lax" as const),
+            secure: isProduction,
+          }
+
+          try {
+            cookieStore.set(name, value, hardenedOptions)
+          } catch {
+            // Ignore if cookieStore cannot be modified directly in the current context
+          }
+          response.cookies.set(name, value, hardenedOptions)
+        }
+      },
+    },
+  })
 
   await supabase.auth.signOut()
 

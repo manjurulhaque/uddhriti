@@ -30,9 +30,9 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DEFAULT_SAMPLE_QUOTE = {
-  content: "Silence is an ocean. Speech is a river. When the ocean is searching for you, don't walk into the river.",
-  authorName: "Rumi",
-  sourceTitle: "The Masnavi",
+  content: "Dwell on the beauty of life. Watch the stars, and see yourself running with them.",
+  authorName: "Marcus Aurelius",
+  sourceTitle: "Meditations",
 }
 
 function subscribeStandalone(callback: () => void) {
@@ -358,28 +358,28 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps)
         </div>
       </div>
 
-      {/* Serendipity Banner Callout */}
+      {/* Sanctuary Reader Quick Access Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-amber-900/15 bg-gradient-to-r from-amber-50 via-white to-amber-50/50 p-5 shadow-2xs">
         <div className="flex items-center gap-3.5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-800/10 text-xl text-amber-900">
-            🎲
+            ⌨️
           </span>
           <div className="space-y-0.5">
             <h4 className="font-serif text-sm sm:text-base font-bold text-stone-900">
-              Seeker’s Serendipity Generator
+              Quick Reader Shortcuts
             </h4>
             <p className="text-xs text-stone-600 font-sans">
-              Looking for unexpected inspiration? Let serendipity select a random passage from our catalog.
+              Press <kbd className="rounded border border-stone-300 bg-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-stone-700 shadow-2xs">⌘K</kbd> or <kbd className="rounded border border-stone-300 bg-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-stone-700 shadow-2xs">Ctrl+K</kbd> anywhere to search thinkers, topics, and lines instantly.
             </p>
           </div>
         </div>
 
         <Link
-          href="/quotes/random"
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-rust)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#b55d32] hover:scale-[1.02] active:scale-[0.98] shrink-0"
+          href="/saved"
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] shrink-0"
         >
-          <span>Surprise Me</span>
-          <span>🎲</span>
+          <span>Open Notebook</span>
+          <span>&rarr;</span>
         </Link>
       </div>
 

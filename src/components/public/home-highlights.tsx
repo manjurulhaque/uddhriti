@@ -1,8 +1,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { Panel } from "../ui/card"
-import { Empty } from "../ui/empty-state"
-import { formatNumber, formatLifespan, getAuthorInitials } from "@/lib/formatters"
+import { formatNumber } from "@/lib/formatters"
 import { CuratorFolioTabs } from "./curator-folio-tabs"
 
 export interface RankedCategoryItem {
@@ -25,21 +24,48 @@ export interface RankedAuthorItem {
 }
 
 export interface HomeHighlightsProps {
-  topCategories: RankedCategoryItem[]
-  recentAuthors: RankedAuthorItem[]
+  topCategories?: RankedCategoryItem[]
+  recentAuthors?: RankedAuthorItem[]
+  totalPublishedQuotes?: number
+  totalAuthors?: number
   quotesLast7Days: number
+  verifiedQuotesCount?: number
   errorMessage?: string | null
 }
 
+const HISTORICAL_EPOCHS = [
+  {
+    icon: "🏛️",
+    name: "Classical Antiquity",
+    period: "c. 800 BC – 500 AD",
+    description: "Stoic emperors, Upanishadic sages, and Greek dialogues on virtue and courage.",
+  },
+  {
+    icon: "🕯️",
+    name: "Renaissance & Enlightenment",
+    period: "c. 1400 – 1800",
+    description: "Humanism, the birth of modern science, and foundational treatises on freedom.",
+  },
+  {
+    icon: "📜",
+    name: "The 19th Century",
+    period: "c. 1800 – 1900",
+    description: "Romanticism, Transcendentalism, realism, and existential self-interrogation.",
+  },
+  {
+    icon: "🌐",
+    name: "20th Century & Beyond",
+    period: "1900 – Present",
+    description: "Voices of resilience, civil reformers, Nobel laureates, and poetic innovators.",
+  },
+] as const
+
 export function HomeHighlights({
-  topCategories,
-  recentAuthors,
+  totalPublishedQuotes = 0,
+  totalAuthors = 0,
   quotesLast7Days,
   errorMessage,
 }: HomeHighlightsProps) {
-  // Find max category count for relative progress bars
-  const maxCategoryCount = Math.max(...topCategories.map((c) => c.quoteCount), 1)
-
   return (
     <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" aria-label="Curator Highlights">
       {errorMessage ? (
@@ -75,7 +101,7 @@ export function HomeHighlights({
         {/* Interactive Folio Switcher & Cards */}
         <CuratorFolioTabs quotesLast7Days={quotesLast7Days} />
 
-        {/* Illuminated Curatorial Inscription & Sanctuary Matrix */}
+        {/* Curatorial Charter & Textual Oath Seal */}
         <div className="rounded-2xl border border-amber-900/12 bg-white/80 p-5 shadow-2xs backdrop-blur-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/8 pb-3">
             <div className="flex items-center gap-2">
@@ -93,26 +119,18 @@ export function HomeHighlights({
             “We reject the ephemeral speed and algorithmic noise of modern feeds. Every quotation in this archive is cross-checked against primary texts, preserved in full historical context, and made freely available for unhurried contemplation.”
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base" aria-hidden="true">🏛️</div>
-              <div className="mt-1 text-xs font-bold text-stone-900">Textual Fidelity</div>
-              <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Primary editions &amp; verified manuscripts</div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-amber-900/10 pt-3 text-xs text-stone-700">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
+              <span className="font-serif">Primary Source Verified</span>
             </div>
-            <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base" aria-hidden="true">🕯️</div>
-              <div className="mt-1 text-xs font-bold text-stone-900">Historical Setting</div>
-              <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Era, thinker lifespan, and context noted</div>
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
+              <span className="font-serif">Preserved in Historical Context</span>
             </div>
-            <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base" aria-hidden="true">🌿</div>
-              <div className="mt-1 text-xs font-bold text-stone-900">Pure Sanctuary</div>
-              <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Zero ads, no tracking, quiet focus</div>
-            </div>
-            <div className="rounded-xl border border-stone-200/70 bg-white/90 p-3 shadow-2xs">
-              <div className="text-base" aria-hidden="true">💾</div>
-              <div className="mt-1 text-xs font-bold text-stone-900">Private Notebook</div>
-              <div className="text-[10px] sm:text-[11px] text-stone-500 mt-0.5 leading-snug">Offline-first personal storage</div>
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
+              <span className="font-serif">Distraction-Free Sanctuary</span>
             </div>
           </div>
         </div>
@@ -138,137 +156,111 @@ export function HomeHighlights({
         </div>
       </section>
 
-      {/* Right: Thematic Pillars & Revered Thinkers */}
+      {/* Right: Sanctuary Scope & Historical Horizons */}
       <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-        {/* Leading Themes Panel */}
+        {/* Sanctuary Vitality Panel */}
         <Panel
-          title="Leading Themes"
-          subtitle="Explore the collection’s deepest intellectual clusters."
+          title="Sanctuary Scope & Vitality"
+          subtitle="A living treasury curated for unhurried study and contemplation."
           tone="sand"
         >
-          {topCategories.length === 0 ? (
-            <Empty message="Categories with published quotes will appear here." />
-          ) : (
-            <div className="space-y-3">
-              {topCategories.slice(0, 4).map((category, index) => {
-                const percentage = Math.max(15, Math.round((category.quoteCount / maxCategoryCount) * 100))
-                return (
-                  <Link
-                    key={category.id}
-                    href={`/categories/${category.slug || category.id}`}
-                    className="group block rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-2xs transition-all duration-200 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-rust)]/12 text-[11px] font-bold text-[var(--accent-rust)]">
-                          {index + 1}
-                        </span>
-                        <span className="font-medium text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
-                          {category.name}
-                        </span>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-700">
-                        {formatNumber(category.quoteCount)}
-                      </span>
-                    </div>
-
-                    {/* Collection Depth Indicator Bar */}
-                    <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[var(--accent-gold)] to-[var(--accent-rust)] transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </Link>
-                )
-              })}
-
-              <div className="pt-1 text-right">
-                <Link
-                  href="/categories"
-                  className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
-                >
-                  <span>Browse all themes</span>
-                  <span>&rarr;</span>
-                </Link>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl" aria-hidden="true">🏛️</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)]">Preserved</span>
               </div>
+              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
+                {formatNumber(totalPublishedQuotes || 0)}
+              </div>
+              <div className="text-[11px] text-stone-500 mt-0.5">Verified passages</div>
             </div>
-          )}
+
+            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl" aria-hidden="true">✒️</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)]">Thinkers</span>
+              </div>
+              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
+                {formatNumber(totalAuthors || 0)}
+              </div>
+              <div className="text-[11px] text-stone-500 mt-0.5">Across civilizations</div>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl" aria-hidden="true">📜</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Vitality</span>
+              </div>
+              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
+                +{formatNumber(quotesLast7Days || 0)}
+              </div>
+              <div className="text-[11px] text-stone-500 mt-0.5">Added this week</div>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl" aria-hidden="true">🔍</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">Standard</span>
+              </div>
+              <div className="mt-2 text-xl font-bold font-serif text-stone-900">
+                100%
+              </div>
+              <div className="text-[11px] text-stone-500 mt-0.5">Primary editions</div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-amber-900/10 flex items-center justify-between text-xs">
+            <span className="text-stone-600 font-serif italic text-[11px]">Free open knowledge for all readers</span>
+            <Link
+              href="/quotes"
+              className="font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
+            >
+              <span>Search all quotes</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
         </Panel>
 
-        {/* Revered Thinkers Panel */}
+        {/* Epochs of Human Thought Panel */}
         <Panel
-          title="Revered Thinkers"
-          subtitle="Voices whose words have outlived their centuries."
+          title="Epochs of Human Inquiry"
+          subtitle="Trace the evolution of contemplation across three thousand years."
           tone="mist"
         >
-          {recentAuthors.length === 0 ? (
-            <Empty message="Authors with published quotes will appear here." />
-          ) : (
-            <div className="space-y-3">
-              {recentAuthors.slice(0, 4).map((author) => {
-                const lifespan = formatLifespan(author)
-                const initials = getAuthorInitials(author.name)
-                const subtitle = [author.profession, author.nationality, lifespan]
-                  .filter(Boolean)
-                  .join(" • ")
-
-                return (
-                  <Link
-                    key={author.id}
-                    href={`/authors/${author.slug || author.id}`}
-                    className="group block rounded-2xl border border-stone-200/80 bg-white/90 p-3.5 shadow-2xs transition-all duration-200 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Elegant Author Monogram Seal */}
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--ink-900)] to-[#3a4454] font-serif text-xs font-bold text-[var(--accent-gold)] shadow-2xs group-hover:from-[var(--accent-rust)] group-hover:to-[#8a3e1b] transition-all">
-                          {initials}
-                        </div>
-
-                        <div className="min-w-0">
-                          <h4 className="font-serif font-bold text-sm text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
-                            {author.name}
-                          </h4>
-                          {subtitle && (
-                            <p className="text-[11px] text-stone-500 truncate mt-0.5">
-                              {subtitle}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-700">
-                          {formatNumber(author.quoteCount)}
-                        </span>
-                        <svg
-                          className="h-3.5 w-3.5 text-stone-400 transition-transform group-hover:translate-x-1 group-hover:text-[var(--accent-rust)]"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-
-              <div className="pt-1 text-right">
-                <Link
-                  href="/authors"
-                  className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
-                >
-                  <span>Explore all thinkers</span>
-                  <span>&rarr;</span>
-                </Link>
+          <div className="space-y-2.5">
+            {HISTORICAL_EPOCHS.map((epoch) => (
+              <div
+                key={epoch.name}
+                className="rounded-2xl border border-stone-200/80 bg-white/90 p-3 shadow-2xs transition-all hover:border-amber-800/30 hover:bg-white"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg" aria-hidden="true">{epoch.icon}</span>
+                    <span className="font-serif font-bold text-xs text-stone-900">
+                      {epoch.name}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
+                    {epoch.period}
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-600 mt-1 line-clamp-1">
+                  {epoch.description}
+                </p>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
+
+          <div className="mt-3 text-right">
+            <Link
+              href="/authors"
+              className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
+            >
+              <span>Explore all thinkers across eras</span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
         </Panel>
       </section>
     </section>

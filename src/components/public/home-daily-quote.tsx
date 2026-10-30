@@ -47,7 +47,7 @@ export interface HomeDailyQuoteProps {
 }
 
 export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDailyQuoteProps) {
-  // Combine initial quote with serendipity pool and deduplicate by ID
+  // Combine initial quote with serendipity pool and deduplicate by ID if a pool is provided
   const allQuotes = React.useMemo(() => {
     const map = new Map<string, DailyQuoteItem>()
     if (initialQuote?.id) map.set(initialQuote.id, initialQuote)
@@ -77,6 +77,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
   const saved = isSaved(quoteKey)
 
   const isDaily = currentIndex === 0
+  const hasPool = allQuotes.length > 1
 
   // Format today's date
   const todayFormatted = React.useMemo(() => {
@@ -90,6 +91,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
   }, [])
 
   function handleShuffle() {
+    if (!hasPool) return
     setIsTransitioning(true)
     setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % allQuotes.length)
@@ -131,7 +133,7 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
     <section
       id="daily-quote"
       className="scroll-mt-20 relative overflow-hidden rounded-[2.25rem] border-2 border-amber-900/15 bg-gradient-to-br from-[#fffefc] via-[#faf5ec] to-[#f3ebd9] p-6 sm:p-10 lg:p-12 text-stone-900 shadow-[0_24px_70px_rgba(120,53,15,0.08)]"
-      aria-label="Quote of the Day and Serendipity Generator"
+      aria-label="Quote of the Day and Daily Contemplation"
     >
       {/* Decorative Gold Header Filament */}
       <div
@@ -161,22 +163,33 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
             <span className="text-xs text-stone-400 hidden sm:inline" aria-hidden="true">•</span>
 
             <span className="text-xs font-semibold text-stone-600" suppressHydrationWarning>
-              {isDaily ? todayFormatted : `Serendipitous Passage ${currentIndex + 1} of ${allQuotes.length}`}
+              {isDaily ? todayFormatted : `Passage ${currentIndex + 1} of ${allQuotes.length}`}
             </span>
           </div>
 
-          {/* Quick Shuffle Trigger in Header */}
-          <button
-            type="button"
-            onClick={handleShuffle}
-            className="group inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 shadow-2xs transition hover:border-[var(--accent-rust)] hover:bg-white hover:text-[var(--accent-rust)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-            title="Reveal another reflection from the serendipity pool"
-          >
-            <span className="text-sm transition-transform duration-300 group-hover:rotate-180" aria-hidden="true">
-              🔄
-            </span>
-            <span>Surprise Me</span>
-          </button>
+          {/* Quick Shuffle Trigger (if pool present) or Random Link */}
+          {hasPool ? (
+            <button
+              type="button"
+              onClick={handleShuffle}
+              className="group inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/95 px-4 py-1.5 text-xs font-semibold text-stone-800 shadow-2xs transition hover:border-[var(--accent-rust)] hover:bg-white hover:text-[var(--accent-rust)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              title="Reveal another reflection from the pool"
+            >
+              <span className="text-sm transition-transform duration-300 group-hover:rotate-180" aria-hidden="true">
+                🔄
+              </span>
+              <span>Next Thought</span>
+            </button>
+          ) : (
+            <Link
+              href="/quotes/random"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-900/15 bg-white/90 px-3.5 py-1 text-xs font-semibold text-stone-700 hover:border-[var(--accent-rust)] hover:bg-white hover:text-[var(--accent-rust)] transition-colors shadow-2xs"
+              title="Discover a random passage from the archive"
+            >
+              <span>🎲</span>
+              <span>Random Discovery</span>
+            </Link>
+          )}
         </div>
 
         {/* Main Quotation Body with Smooth Transition */}

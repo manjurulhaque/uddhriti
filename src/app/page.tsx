@@ -173,12 +173,11 @@ export default async function HomePage() {
 
   const {
     dailyQuote,
+    featuredQuote,
     serendipityPool,
     latestQuotes,
     trendingQuotes,
-    topCategories,
     topTags,
-    recentAuthors,
     spotlightAuthors,
     spotlightCategories,
     totalPublishedQuotes,
@@ -187,21 +186,52 @@ export default async function HomePage() {
     errorMessage,
   } = await loadHomePageData(sevenDaysAgo)
 
-  const heroQuote = dailyQuote ?? latestQuotes[0] ?? null
-  const companionPool = serendipityPool.filter((q) => q.id !== heroQuote?.id)
-  const remainingLatestQuotes = latestQuotes.filter((q) => q.id !== heroQuote?.id)
+  // Strict mutual exclusion registry: guarantees zero quote duplication across all sections
+  const usedQuoteIds = new Set<string>()
 
-  const companionQuotes = companionPool.length > 0
-    ? companionPool.slice(0, 5).map((q) => ({
-        id: q.id,
-        slug: q.slug,
-        content: q.content,
-        authorName: q.author?.name || q.authorName,
-        author: q.author ? { name: q.author.name, slug: q.author.slug } : null,
-        category: q.category ? { name: q.category.name, slug: q.category.slug } : null,
-        source: q.source,
-      }))
-    : remainingLatestQuotes.slice(0, 5)
+  // 1. Featured Quote for Hero (Curator's Choice)
+  const heroQuote = featuredQuote && featuredQuote.id !== dailyQuote?.id
+    ? featuredQuote
+    : (latestQuotes.find((q) => q.id !== dailyQuote?.id) ?? dailyQuote ?? null)
+  if (heroQuote?.id) usedQuoteIds.add(heroQuote.id)
+
+  // 2. Daily Quote (guaranteed distinct from heroQuote)
+  const finalDailyQuote = dailyQuote && !usedQuoteIds.has(dailyQuote.id)
+    ? dailyQuote
+    : (latestQuotes.find((q) => !usedQuoteIds.has(q.id)) ?? null)
+  if (finalDailyQuote?.id) usedQuoteIds.add(finalDailyQuote.id)
+
+  // 3. Companion quotes pool for Hero (distinct from heroQuote and dailyQuote)
+  const eligibleCompanionQuotes = serendipityPool.filter((q) => !usedQuoteIds.has(q.id))
+  const companionPool = eligibleCompanionQuotes.length > 0
+    ? eligibleCompanionQuotes
+    : latestQuotes.filter((q) => !usedQuoteIds.has(q.id))
+
+  const companionQuotes = companionPool.slice(0, 5).map((q) => ({
+    id: q.id,
+    slug: q.slug,
+    content: q.content,
+    authorName: q.author?.name || q.authorName,
+    author: q.author ? { name: q.author.name, slug: q.author.slug } : null,
+    category: q.category ? { name: q.category.name, slug: q.category.slug } : null,
+    source: q.source,
+  }))
+  companionQuotes.forEach((q) => {
+    if (q.id) usedQuoteIds.add(q.id)
+  })
+
+  // 4. Trending quotes (distinct from hero, daily, and companion quotes)
+  const dedupedTrendingQuotes = trendingQuotes
+    .filter((q) => !usedQuoteIds.has(q.id))
+    .slice(0, 4)
+  dedupedTrendingQuotes.forEach((q) => {
+    if (q.id) usedQuoteIds.add(q.id)
+  })
+
+  // 5. Remaining latest quotes (distinct from all previous sections)
+  const remainingLatestQuotes = latestQuotes
+    .filter((q) => !usedQuoteIds.has(q.id))
+    .slice(0, 8)
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -268,18 +298,17 @@ export default async function HomePage() {
 
         <div id="highlights" className="scroll-mt-20">
           <HomeHighlights
-            topCategories={topCategories}
-            recentAuthors={recentAuthors}
+            totalPublishedQuotes={totalPublishedQuotes}
+            totalAuthors={totalAuthors}
             quotesLast7Days={quotesLast7Days}
             errorMessage={errorMessage}
           />
         </div>
 
-        {dailyQuote && (
+        {finalDailyQuote && (
           <div id="daily-quote" className="scroll-mt-20">
             <HomeDailyQuote
-              initialQuote={dailyQuote}
-              serendipityPool={serendipityPool}
+              initialQuote={finalDailyQuote}
             />
           </div>
         )}
@@ -295,23 +324,12 @@ export default async function HomePage() {
         )}
 
         <div id="reader-studio" className="scroll-mt-20">
-          <HomeReaderStudio
-            featuredSampleQuote={
-              heroQuote
-                ? {
-                    content: heroQuote.content,
-                    authorName: heroQuote.author?.name || heroQuote.authorName,
-                    sourceTitle: heroQuote.source?.title,
-                    slug: heroQuote.slug,
-                  }
-                : null
-            }
-          />
+          <HomeReaderStudio />
         </div>
 
         <div id="trending" className="scroll-mt-20">
           <HomeTrendingSection
-            trendingQuotes={trendingQuotes}
+            trendingQuotes={dedupedTrendingQuotes}
             topTags={topTags}
           />
         </div>
@@ -342,6 +360,7 @@ async function loadHomePageData(sevenDaysAgo: Date) {
 
     const [
       dailyQuote,
+      featuredQuote,
       serendipityPool,
       latestQuotes,
       trendingQuotes,
@@ -356,22 +375,27 @@ async function loadHomePageData(sevenDaysAgo: Date) {
         skip: dailySkip,
         select: dailyQuoteSelect,
       }),
+      prisma.quote.findFirst({
+        where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
+        orderBy: [{ popularityScore: "desc" }, { views: "desc" }],
+        select: quoteCardSelect,
+      }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
-        take: 6,
+        take: 10,
         select: serendipityQuoteSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }],
-        take: 8,
+        take: 16,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }],
-        take: 4,
+        take: 8,
         select: {
           ...quoteCardSelect,
           trendingScore: true,
@@ -448,37 +472,19 @@ async function loadHomePageData(sevenDaysAgo: Date) {
       ...a,
       topQuote: a.quotes[0] ?? null,
     }))
-    const recentAuthors = spotlightAuthorsRaw.slice(0, 5).map((a) => ({
-      id: a.id,
-      name: a.name,
-      slug: a.slug,
-      birthYear: a.birthYear,
-      deathYear: a.deathYear,
-      profession: a.profession,
-      nationality: a.nationality,
-      quoteCount: a.quoteCount,
-    }))
 
     const spotlightCategories = spotlightCategoriesRaw.map((c) => ({
       ...c,
       topQuote: c.quotes[0] ?? null,
     }))
-    const topCategories = spotlightCategoriesRaw.slice(0, 6).map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      description: c.description,
-      quoteCount: c.quoteCount,
-    }))
 
     return {
       dailyQuote,
+      featuredQuote,
       serendipityPool,
       latestQuotes,
       trendingQuotes,
-      topCategories,
       topTags,
-      recentAuthors,
       spotlightAuthors,
       spotlightCategories,
       totalPublishedQuotes,
@@ -491,12 +497,11 @@ async function loadHomePageData(sevenDaysAgo: Date) {
 
     return {
       dailyQuote: null,
+      featuredQuote: null,
       serendipityPool: [],
       latestQuotes: [],
       trendingQuotes: [],
-      topCategories: [],
       topTags: [],
-      recentAuthors: [],
       spotlightAuthors: [],
       spotlightCategories: [],
       totalPublishedQuotes: 0,

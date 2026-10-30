@@ -131,7 +131,7 @@ export function HomeHero({
                 tags={heroQuote.tags?.map((entry) => entry.tag.name) || []}
                 views={heroQuote.views}
                 variant="featured"
-                badgeLabel="Quote of the Day"
+                badgeLabel="Curator’s Choice"
                 className="w-full shadow-lg"
               />
             ) : (

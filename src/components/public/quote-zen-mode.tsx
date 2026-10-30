@@ -6,7 +6,7 @@ import { BookmarkIcon } from "@/components/ui"
 import { useCopyToClipboard, formatQuoteCopyText } from "@/hooks"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 
-export type ZenTheme = "parchment" | "obsidian" | "forest" | "sand"
+export type ZenTheme = "parchment" | "sand" | "obsidian" | "forest" | "twilight"
 export type ZenFontSize = "sm" | "md" | "lg" | "xl"
 export type ZenFontFamily = "serif" | "sans"
 
@@ -43,51 +43,63 @@ const THEME_STYLES: Record<
 > = {
   parchment: {
     name: "Warm Parchment",
-    bgClass: "bg-[#f6efe7]",
-    textClass: "text-[#201c18]",
-    mutedClass: "text-[#756d64]",
-    accentColor: "#c76b3e",
-    panelBg: "bg-[#ebe2d6]/80 backdrop-blur-md",
-    panelBorder: "border-[#201c18]/10",
-    buttonClass: "text-[#554d45] hover:text-[#201c18] hover:bg-[#201c18]/5",
-    activeButtonClass: "bg-[#201c18] text-[#f6efe7] shadow-sm",
-    glowClass: "bg-amber-400/10",
+    bgClass: "bg-[#eddcc4]",
+    textClass: "text-[#271a0e]",
+    mutedClass: "text-[#6e5640]",
+    accentColor: "#b8531d",
+    panelBg: "bg-[#dfccb0]/85 backdrop-blur-md",
+    panelBorder: "border-[#271a0e]/15",
+    buttonClass: "text-[#5c4632] hover:text-[#271a0e] hover:bg-[#271a0e]/10",
+    activeButtonClass: "bg-[#271a0e] text-[#eddcc4] shadow-sm font-semibold",
+    glowClass: "bg-amber-600/15",
+  },
+  sand: {
+    name: "Clean Linen",
+    bgClass: "bg-[#fbfbf9]",
+    textClass: "text-[#111827]",
+    mutedClass: "text-[#6b7280]",
+    accentColor: "#0d9488",
+    panelBg: "bg-[#f0f0ee]/85 backdrop-blur-md",
+    panelBorder: "border-[#111827]/10",
+    buttonClass: "text-[#4b5563] hover:text-[#111827] hover:bg-[#111827]/5",
+    activeButtonClass: "bg-[#111827] text-[#fbfbf9] shadow-sm font-semibold",
+    glowClass: "bg-teal-500/10",
   },
   obsidian: {
     name: "Deep Obsidian",
-    bgClass: "bg-[#0d0e11]",
-    textClass: "text-[#f3efe8]",
-    mutedClass: "text-[#94908a]",
+    bgClass: "bg-[#0a0b0e]",
+    textClass: "text-[#f1ede7]",
+    mutedClass: "text-[#8e8a83]",
     accentColor: "#f4c78b",
-    panelBg: "bg-[#181920]/80 backdrop-blur-md",
+    panelBg: "bg-[#16171d]/85 backdrop-blur-md",
     panelBorder: "border-white/10",
-    buttonClass: "text-[#a29e97] hover:text-[#f3efe8] hover:bg-white/5",
-    activeButtonClass: "bg-white text-[#0d0e11] shadow-sm",
-    glowClass: "bg-amber-300/5",
+    buttonClass: "text-[#9ca3af] hover:text-[#f1ede7] hover:bg-white/5",
+    activeButtonClass: "bg-white text-[#0a0b0e] shadow-sm font-semibold",
+    glowClass: "bg-amber-300/10",
   },
   forest: {
     name: "Forest Moss",
-    bgClass: "bg-[#0e1713]",
-    textClass: "text-[#e6f0e9]",
-    mutedClass: "text-[#7b9685]",
-    accentColor: "#72c295",
-    panelBg: "bg-[#15241d]/85 backdrop-blur-md",
+    bgClass: "bg-[#0c1611]",
+    textClass: "text-[#e5efe8]",
+    mutedClass: "text-[#769180]",
+    accentColor: "#68c491",
+    panelBg: "bg-[#14231b]/85 backdrop-blur-md",
     panelBorder: "border-white/10",
-    buttonClass: "text-[#8ea998] hover:text-[#e6f0e9] hover:bg-white/5",
-    activeButtonClass: "bg-[#72c295] text-[#0e1713] shadow-sm font-semibold",
-    glowClass: "bg-emerald-400/5",
+    buttonClass: "text-[#8fa897] hover:text-[#e5efe8] hover:bg-white/5",
+    activeButtonClass: "bg-[#68c491] text-[#0c1611] shadow-sm font-semibold",
+    glowClass: "bg-emerald-400/10",
   },
-  sand: {
-    name: "Soft Sand",
-    bgClass: "bg-[#faf6ee]",
-    textClass: "text-[#1c1917]",
-    mutedClass: "text-[#78716c]",
-    accentColor: "#b45309",
-    panelBg: "bg-[#eee7dc]/80 backdrop-blur-md",
-    panelBorder: "border-[#1c1917]/10",
-    buttonClass: "text-[#5c544d] hover:text-[#1c1917] hover:bg-[#1c1917]/5",
-    activeButtonClass: "bg-[#1c1917] text-[#faf6ee] shadow-sm",
-    glowClass: "bg-amber-500/10",
+  twilight: {
+    name: "Midnight Twilight",
+    bgClass: "bg-[#0a1122]",
+    textClass: "text-[#e2e8f0]",
+    mutedClass: "text-[#8595ad]",
+    accentColor: "#38bdf8",
+    panelBg: "bg-[#131d36]/85 backdrop-blur-md",
+    panelBorder: "border-white/10",
+    buttonClass: "text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-white/5",
+    activeButtonClass: "bg-[#38bdf8] text-[#0a1122] shadow-sm font-semibold",
+    glowClass: "bg-sky-400/10",
   },
 }
 
@@ -305,7 +317,7 @@ export function QuoteZenMode({
 
   // Cycle themes
   const cycleTheme = React.useCallback(() => {
-    const order: ZenTheme[] = ["parchment", "obsidian", "forest", "sand"]
+    const order: ZenTheme[] = ["parchment", "sand", "obsidian", "forest", "twilight"]
     setTheme((prev) => {
       const idx = order.indexOf(prev)
       return order[(idx + 1) % order.length]

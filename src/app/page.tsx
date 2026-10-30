@@ -333,8 +333,11 @@ export default async function HomePage() {
 
 async function loadHomePageData() {
   try {
-    // Deterministic daily seed based on UTC date string
+    // Deterministic calendar-based seeds using UTC date
     const todayStr = new Date().toISOString().slice(0, 10)
+    const [year, month, day] = todayStr.split("-").map(Number)
+    const dayIndex = Math.floor(Date.UTC(year, month - 1, day) / 86400000)
+
     let hash = 0
     for (let i = 0; i < todayStr.length; i++) {
       hash = (hash << 5) - hash + todayStr.charCodeAt(i)
@@ -342,14 +345,24 @@ async function loadHomePageData() {
     }
     const dailySeed = Math.abs(hash)
 
-    const totalPublishedQuotes = await prisma.quote.count({
-      where: { status: "PUBLISHED", deletedAt: null },
-    })
+    const [totalPublishedQuotes, totalFeaturedQuotes] = await Promise.all([
+      prisma.quote.count({
+        where: { status: "PUBLISHED", deletedAt: null },
+      }),
+      prisma.quote.count({
+        where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
+      }),
+    ])
+
     const dailySkip = totalPublishedQuotes > 0 ? dailySeed % totalPublishedQuotes : 0
+    // Rotate Curator's Choice daily across the featured pool (or top-tier published quotes if none flagged featured)
+    const curatorSkip = totalFeaturedQuotes > 0
+      ? dayIndex % totalFeaturedQuotes
+      : (totalPublishedQuotes > 0 ? (dayIndex + 7) % Math.min(totalPublishedQuotes, 50) : 0)
 
     const [
       dailyQuote,
-      featuredQuote,
+      featuredQuotesPool,
       serendipityPool,
       latestQuotes,
       trendingQuotes,
@@ -359,12 +372,17 @@ async function loadHomePageData() {
     ] = await Promise.all([
       prisma.quote.findFirst({
         where: { status: "PUBLISHED", deletedAt: null },
+        orderBy: [{ id: "asc" }],
         skip: dailySkip,
         select: dailyQuoteSelect,
       }),
-      prisma.quote.findFirst({
-        where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
-        orderBy: [{ popularityScore: "desc" }, { views: "desc" }],
+      prisma.quote.findMany({
+        where: totalFeaturedQuotes > 0
+          ? { status: "PUBLISHED", deletedAt: null, isFeatured: true }
+          : { status: "PUBLISHED", deletedAt: null },
+        orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
+        skip: curatorSkip,
+        take: 2,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
@@ -456,6 +474,11 @@ async function loadHomePageData() {
       ...c,
       topQuote: c.quotes[0] ?? null,
     }))
+
+    const featuredQuote =
+      featuredQuotesPool.find((q) => q.id !== dailyQuote?.id) ??
+      featuredQuotesPool[0] ??
+      null
 
     return {
       dailyQuote,

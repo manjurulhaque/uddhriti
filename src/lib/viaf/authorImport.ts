@@ -1,4 +1,5 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
+import { isAllowedDomain } from "@/lib/ip"
 
 type ViafHeadingEntry = {
   text?: string
@@ -19,7 +20,7 @@ type ViafRecord = {
 function parseViafIdFromUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("viaf.org")) return null
+    if (!isAllowedDomain(url.hostname, "viaf.org")) return null
     const match = url.pathname.match(/\/viaf\/(\d+)/)
     return match?.[1] || null
   } catch {

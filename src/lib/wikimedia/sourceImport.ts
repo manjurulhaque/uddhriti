@@ -1,4 +1,5 @@
 import slugify from "slugify"
+import { isAllowedDomain } from "@/lib/ip"
 
 type WorkItem = {
   title: string
@@ -17,7 +18,7 @@ function normalizeWikidataId(input?: string | null) {
 function parseWikiUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikipedia.org")) {
+    if (!isAllowedDomain(url.hostname, "wikipedia.org")) {
       return null
     }
 

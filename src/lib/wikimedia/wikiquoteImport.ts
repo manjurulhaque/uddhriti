@@ -1,3 +1,5 @@
+import { isAllowedDomain } from "@/lib/ip"
+
 type ParsedWikiquoteUrl = {
   host: string
   title: string
@@ -7,7 +9,7 @@ type ParsedWikiquoteUrl = {
 function parseWikiquoteUrl(input: string): ParsedWikiquoteUrl | null {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikiquote.org")) {
+    if (!isAllowedDomain(url.hostname, "wikiquote.org")) {
       return null
     }
 

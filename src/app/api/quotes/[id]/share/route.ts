@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { enforceIpRateLimit } from "@/lib/api/rate-limit"
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -9,7 +10,7 @@ type Context = {
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: Context
 ) {
   try {
@@ -20,6 +21,10 @@ export async function POST(
         { status: 400 }
       )
     }
+
+    // IP-level rate limiting to prevent automated share inflation and DoS attacks
+    const rateLimited = enforceIpRateLimit(request, "quoteShare", rawIdentifier)
+    if (rateLimited) return rateLimited
 
     const isUuid = UUID_REGEX.test(rawIdentifier)
 
@@ -88,4 +93,3 @@ export async function POST(
     )
   }
 }
-

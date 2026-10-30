@@ -1,7 +1,15 @@
 import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 
-export async function parseJsonObjectBody(req: Request) {
+export async function parseJsonObjectBody(req: Request, maxSizeBytes = 5 * 1024 * 1024) {
+  const contentLength = req.headers.get("content-length")
+  if (contentLength) {
+    const size = parseInt(contentLength, 10)
+    if (!Number.isNaN(size) && size > maxSizeBytes) {
+      return null
+    }
+  }
+
   const body = await req.json().catch(() => null)
   return body && typeof body === "object" ? body : null
 }
@@ -10,7 +18,7 @@ export function invalidJsonBodyResponse() {
   return NextResponse.json(
     {
       error: "Validation failed",
-      errors: { formErrors: ["Invalid JSON body"], fieldErrors: {} },
+      errors: { formErrors: ["Invalid or oversized JSON body"], fieldErrors: {} },
     },
     { status: 400 }
   )

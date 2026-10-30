@@ -1,3 +1,5 @@
+import { isAllowedDomain } from "@/lib/ip"
+
 type ParsedWikisourceUrl = {
   host: string
   title: string
@@ -14,7 +16,7 @@ type ExtractedQuote = {
 function parseWikisourceUrl(input: string): ParsedWikisourceUrl | null {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikisource.org")) {
+    if (!isAllowedDomain(url.hostname, "wikisource.org")) {
       return null
     }
 

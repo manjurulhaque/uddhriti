@@ -34,3 +34,14 @@ export function isPrivateOrLocalIp(value: string) {
     (first === 169 && second === 254)
   )
 }
+
+/**
+ * Safely check if a hostname matches an allowed domain or its subdomains.
+ * Prevents domain spoofing where an attacker domain ends with the allowed string
+ * (e.g. "evil-wikipedia.org" vs "en.wikipedia.org").
+ */
+export function isAllowedDomain(hostname: string, allowedDomain: string): boolean {
+  const host = hostname.trim().toLowerCase()
+  const domain = allowedDomain.trim().toLowerCase()
+  return host === domain || host.endsWith(`.${domain}`)
+}

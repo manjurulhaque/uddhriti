@@ -1,3 +1,5 @@
+import { isAllowedDomain } from "@/lib/ip"
+
 export type ImportPayload = {
   wikipediaUrl?: string
   wikidataId?: string
@@ -24,7 +26,7 @@ export type ImportedAuthor = {
 function parseWikiUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikipedia.org")) {
+    if (!isAllowedDomain(url.hostname, "wikipedia.org")) {
       return null
     }
 
@@ -49,7 +51,7 @@ function parseWikiUrl(input: string) {
 function parseWikiquoteUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikiquote.org")) {
+    if (!isAllowedDomain(url.hostname, "wikiquote.org")) {
       return null
     }
 

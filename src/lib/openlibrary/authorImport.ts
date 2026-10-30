@@ -1,4 +1,5 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
+import { isAllowedDomain } from "@/lib/ip"
 
 type OpenLibraryAuthor = {
   key?: string
@@ -28,7 +29,7 @@ function toIsoDate(raw?: string | null) {
 function parseOpenLibraryAuthorUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("openlibrary.org")) return null
+    if (!isAllowedDomain(url.hostname, "openlibrary.org")) return null
     const match = url.pathname.match(/\/authors\/(OL\d+A)/i)
     if (!match) return null
     return match[1].toUpperCase()

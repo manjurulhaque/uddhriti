@@ -1,9 +1,10 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
+import { isAllowedDomain } from "@/lib/ip"
 
 function parseLocIdFromUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("id.loc.gov")) return null
+    if (!isAllowedDomain(url.hostname, "id.loc.gov")) return null
     const match = url.pathname.match(/\/authorities\/names\/([A-Za-z0-9-]+)/)
     return match?.[1] || null
   } catch {

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 export async function POST() {
-  const { response } = await requireSuperAdmin()
-  if (response) return response
+  const { admin, response } = await requireSuperAdmin()
+  if (response || !admin) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "recalculate")
+  if (rateLimited) return rateLimited
 
   const [authorsSet, authorsReset, sourcesSet, sourcesReset, categoriesSet, categoriesReset, collectionsSet, collectionsReset, tagsSet, tagsReset] = await prisma.$transaction([
     prisma.$executeRaw`

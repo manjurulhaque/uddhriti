@@ -118,16 +118,18 @@ export default async function CategoriesPage() {
                   </div>
 
                   {/* Featured Excerpt Quote */}
-                  {sampleQuote && (
-                    <div className="rounded-xl border border-stone-200/80 bg-white/90 p-3.5 space-y-1.5 shadow-2xs">
-                      <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
-                        &ldquo;{sampleQuote.content}&rdquo;
-                      </blockquote>
+                  <div className="rounded-xl border border-stone-200/80 bg-white/90 p-3.5 space-y-1.5 shadow-2xs">
+                    <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
+                      {sampleQuote?.content
+                        ? `“${sampleQuote.content}”`
+                        : `Explore preserved literary quotations and philosophical passages on ${category.name.toLowerCase()}.`}
+                    </blockquote>
+                    {sampleQuote?.authorName && (
                       <p className="text-[11px] text-stone-500 font-sans text-right">
-                        — {sampleQuote.authorName || "Anonymous"}
+                        — {sampleQuote.authorName}
                       </p>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* Card Footer */}

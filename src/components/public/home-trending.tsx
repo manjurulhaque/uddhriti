@@ -74,11 +74,20 @@ export function HomeTrendingSection({
         )}
       </Panel>
 
-      <section className="grid gap-4">
+      <section className="flex flex-col gap-4">
         <Panel
           title="Popular Themes &amp; Topics"
           subtitle="Explore the central themes that unite human contemplation."
           tone="paper"
+          action={
+            <Link
+              href="/tags"
+              className="text-xs font-semibold text-[var(--accent-rust)] hover:underline inline-flex items-center gap-1"
+            >
+              <span>All tags</span>
+              <span>&rarr;</span>
+            </Link>
+          }
         >
           {topTags.length === 0 ? (
             <Empty message="Tags will appear when quote tagging grows." />

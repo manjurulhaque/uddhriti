@@ -71,7 +71,7 @@ export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
       ) : null}
 
       {/* Left: The Literary Sanctuary Parchment */}
-      <section className="animate-rise relative isolate flex flex-col justify-between gap-6 overflow-hidden rounded-[2rem] border border-amber-900/10 bg-gradient-to-br from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_rgba(33,37,41,0.08)]">
+      <section className="animate-rise relative isolate flex flex-col justify-start gap-6 overflow-hidden rounded-[2rem] border border-amber-900/10 bg-gradient-to-br from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_rgba(33,37,41,0.08)]">
         {/* Subtle Watermark Seal */}
         <div
           className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full border-[12px] border-amber-800/5 bg-radial from-amber-600/5 to-transparent blur-xs select-none"

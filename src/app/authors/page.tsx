@@ -250,7 +250,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                     )}
 
                     {/* Signature Excerpt Quote Preview */}
-                    {author.quotes[0]?.content && (
+                    {author.quotes[0]?.content ? (
                       <div className="rounded-xl border border-amber-900/10 bg-[#faf6f0]/70 p-3 space-y-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
                           Notable Excerpt
@@ -258,6 +258,15 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                         <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
                           &ldquo;{author.quotes[0].content}&rdquo;
                         </blockquote>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/60 p-3 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
+                          Curated Thinker
+                        </span>
+                        <p className="font-serif italic text-xs text-stone-500 line-clamp-3 leading-relaxed">
+                          Explore preserved fragments, treatises, and historical citations.
+                        </p>
                       </div>
                     )}
                   </div>

@@ -116,7 +116,7 @@ export function HomeHero({
             </nav>
           </div>
 
-          <div className="animate-rise-delayed flex flex-col justify-between gap-5 h-full">
+          <div className="animate-rise-delayed flex flex-col gap-5 justify-start">
             {heroQuote ? (
               <QuoteCard
                 id={heroQuote.id}

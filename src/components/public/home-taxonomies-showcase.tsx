@@ -137,7 +137,7 @@ export function HomeTaxonomiesShowcase({
                 )}
 
                 {/* Signature Excerpt Quote Preview */}
-                {author.topQuote?.content && (
+                {author.topQuote?.content ? (
                   <div className="rounded-xl border border-amber-900/10 bg-[#faf6f0]/70 p-3 space-y-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
                       Notable Excerpt
@@ -145,6 +145,15 @@ export function HomeTaxonomiesShowcase({
                     <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
                       &ldquo;{author.topQuote.content}&rdquo;
                     </blockquote>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/60 p-3 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
+                      Curated Thinker
+                    </span>
+                    <p className="font-serif italic text-xs text-stone-500 line-clamp-3 leading-relaxed">
+                      Discover preserved fragments, treatises, and philosophical discourses.
+                    </p>
                   </div>
                 )}
               </div>
@@ -222,18 +231,18 @@ export function HomeTaxonomiesShowcase({
                 </div>
 
                 {/* Featured Excerpt */}
-                {category.topQuote?.content && (
-                  <div className="rounded-xl border border-stone-200/80 bg-white/90 p-3 space-y-1 mt-2 shadow-2xs">
-                    <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-2 leading-relaxed">
-                      &ldquo;{category.topQuote.content}&rdquo;
-                    </blockquote>
-                    {category.topQuote.authorName && (
-                      <p className="text-[10px] font-sans text-stone-500 text-right">
-                        — {category.topQuote.authorName}
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="rounded-xl border border-stone-200/80 bg-white/90 p-3 space-y-1 mt-2 shadow-2xs">
+                  <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-2 leading-relaxed">
+                    {category.topQuote?.content
+                      ? `“${category.topQuote.content}”`
+                      : `Explore philosophical reflections and preserved quotations on ${category.name.toLowerCase()}.`}
+                  </blockquote>
+                  {category.topQuote?.authorName && (
+                    <p className="text-[10px] font-sans text-stone-500 text-right">
+                      — {category.topQuote.authorName}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Card Footer */}

@@ -21,19 +21,21 @@ function FolioCard({
   description: React.ReactNode
 }) {
   return (
-    <article className="group rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
-      <div className="flex items-center justify-between">
-        <span className="text-xl" aria-hidden="true">{icon}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
-          {tag}
-        </span>
+    <article className="group flex flex-col justify-between h-full rounded-2xl border border-stone-200/90 bg-white/95 p-5 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-700/30 hover:shadow-md">
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="text-xl" aria-hidden="true">{icon}</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
+            {tag}
+          </span>
+        </div>
+        <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
+          {title}
+        </h3>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
+          {description}
+        </p>
       </div>
-      <h3 className="mt-3 font-serif text-base font-bold text-[var(--ink-900)]">
-        {title}
-      </h3>
-      <p className="mt-2 text-xs leading-relaxed text-[var(--ink-700)]/85">
-        {description}
-      </p>
     </article>
   )
 }

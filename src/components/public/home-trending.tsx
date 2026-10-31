@@ -43,7 +43,7 @@ export function HomeTrendingSection({
   topTags,
 }: HomeTrendingSectionProps) {
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+    <section id="trending" className="scroll-mt-20 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
       <Panel
         title="Trending Reflections"
         subtitle="Quotations resonating deeply with readers across the archive."
@@ -154,20 +154,20 @@ export function HomeTrendingSection({
             </Link>
 
             <Link
-              href="/saved"
+              href="/authors"
               className="group flex flex-col justify-between rounded-xl border border-amber-900/10 bg-white/75 p-3.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-800/30 hover:bg-white hover:shadow-sm"
             >
               <div>
-                <span className="text-xl">📓</span>
+                <span className="text-xl">📜</span>
                 <h4 className="mt-2 text-xs font-serif font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors">
-                  Saved Notebook
+                  Thinkers Archive
                 </h4>
                 <p className="mt-1 text-[10px] text-stone-500 leading-snug">
-                  Private offline reading space
+                  Philosophers &amp; poets across history
                 </p>
               </div>
               <span className="mt-2 text-[10px] font-semibold text-[var(--accent-rust)] group-hover:underline">
-                Open notebook &rarr;
+                Explore thinkers &rarr;
               </span>
             </Link>
           </div>

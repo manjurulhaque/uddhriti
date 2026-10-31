@@ -193,7 +193,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                 <Link
                   key={author.id}
                   href={`/authors/${author.slug}`}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99]"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99] h-full"
                 >
                   {/* Subtle Top Gradient Accent on Hover */}
                   <div

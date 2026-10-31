@@ -293,43 +293,31 @@ export default async function HomePage() {
 
         <HomeMoodFilter />
 
-        <div id="highlights" className="scroll-mt-20">
-          <HomeHighlights
-            errorMessage={errorMessage}
-          />
-        </div>
+        <HomeHighlights
+          errorMessage={errorMessage}
+        />
 
         {finalDailyQuote && (
-          <div id="daily-quote" className="scroll-mt-20">
-            <HomeDailyQuote
-              initialQuote={finalDailyQuote}
-            />
-          </div>
+          <HomeDailyQuote
+            initialQuote={finalDailyQuote}
+          />
         )}
 
         {spotlightAuthors.length > 0 && spotlightCategories.length > 0 && (
-          <div id="taxonomies" className="scroll-mt-20">
-            <HomeTaxonomiesShowcase
-              spotlightAuthors={spotlightAuthors}
-              spotlightCategories={spotlightCategories}
-            />
-          </div>
+          <HomeTaxonomiesShowcase
+            spotlightAuthors={spotlightAuthors}
+            spotlightCategories={spotlightCategories}
+          />
         )}
 
-        <div id="reader-studio" className="scroll-mt-20">
-          <HomeReaderStudio />
-        </div>
+        <HomeReaderStudio />
 
-        <div id="trending" className="scroll-mt-20">
-          <HomeTrendingSection
-            trendingQuotes={dedupedTrendingQuotes}
-            topTags={topTags}
-          />
-        </div>
+        <HomeTrendingSection
+          trendingQuotes={dedupedTrendingQuotes}
+          topTags={topTags}
+        />
 
-        <div id="latest" className="scroll-mt-20">
-          <HomeLatestQuotes quotes={remainingLatestQuotes} />
-        </div>
+        <HomeLatestQuotes quotes={remainingLatestQuotes} />
       </main>
     </PublicLayout>
   )

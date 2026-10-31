@@ -6,11 +6,12 @@ import {
   formatLifespan,
   cleanProfession,
   getAuthorInitials,
+  getCategoryMeta,
 } from "@/lib/formatters"
 import { TaxonomiesTabs } from "./taxonomies-tabs"
 
-// Re-export author formatters for backward compatibility
-export { formatEpoch, formatLifespan, cleanProfession }
+// Re-export formatters for backward compatibility
+export { formatEpoch, formatLifespan, cleanProfession, getCategoryMeta }
 
 export interface SpotlightAuthorItem {
   id: string
@@ -46,38 +47,6 @@ export interface HomeTaxonomiesShowcaseProps {
   totalAuthors?: number
 }
 
-function getCategoryMeta(name: string) {
-  const lower = name.toLowerCase()
-  if (lower.includes("philosoph")) {
-    return { icon: "🌌", gradient: "from-indigo-500/10 via-purple-500/5 to-transparent", border: "border-indigo-500/25", badge: "text-indigo-800 bg-indigo-50" }
-  }
-  if (lower.includes("friend")) {
-    return { icon: "🤝", gradient: "from-amber-500/10 via-orange-500/5 to-transparent", border: "border-amber-500/25", badge: "text-amber-800 bg-amber-50" }
-  }
-  if (lower.includes("love")) {
-    return { icon: "🤍", gradient: "from-pink-500/10 via-rose-500/5 to-transparent", border: "border-pink-500/25", badge: "text-pink-800 bg-pink-50" }
-  }
-  if (lower.includes("polit") || lower.includes("freedom") || lower.includes("libert")) {
-    return { icon: "🏛️", gradient: "from-blue-500/10 via-sky-500/5 to-transparent", border: "border-blue-500/25", badge: "text-blue-800 bg-blue-50" }
-  }
-  if (lower.includes("positiv") || lower.includes("hope") || lower.includes("happ")) {
-    return { icon: "🌅", gradient: "from-yellow-500/10 via-amber-500/5 to-transparent", border: "border-yellow-500/25", badge: "text-yellow-800 bg-yellow-50" }
-  }
-  if (lower.includes("fail") || lower.includes("resilien") || lower.includes("courag")) {
-    return { icon: "⚡", gradient: "from-orange-500/10 via-amber-500/5 to-transparent", border: "border-orange-500/25", badge: "text-orange-800 bg-orange-50" }
-  }
-  if (lower.includes("sad") || lower.includes("grief") || lower.includes("solac")) {
-    return { icon: "🕯️", gradient: "from-slate-500/10 via-stone-500/5 to-transparent", border: "border-slate-500/25", badge: "text-slate-800 bg-slate-50" }
-  }
-  if (lower.includes("attitud") || lower.includes("mind") || lower.includes("grow")) {
-    return { icon: "🎯", gradient: "from-emerald-500/10 via-teal-500/5 to-transparent", border: "border-emerald-500/25", badge: "text-emerald-800 bg-emerald-50" }
-  }
-  if (lower.includes("time") || lower.includes("histor")) {
-    return { icon: "⏳", gradient: "from-amber-600/10 via-stone-500/5 to-transparent", border: "border-amber-700/25", badge: "text-amber-900 bg-amber-50" }
-  }
-  return { icon: "📜", gradient: "from-stone-500/10 via-amber-500/5 to-transparent", border: "border-stone-300", badge: "text-stone-800 bg-stone-100" }
-}
-
 export function HomeTaxonomiesShowcase({
   spotlightAuthors,
   spotlightCategories,
@@ -111,7 +80,7 @@ export function HomeTaxonomiesShowcase({
             <Link
               key={author.id}
               href={`/authors/${author.slug}`}
-              className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99]"
+              className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99] h-full"
             >
               {/* Subtle Top Gradient Accent */}
               <div
@@ -222,7 +191,7 @@ export function HomeTaxonomiesShowcase({
             <Link
               key={category.id}
               href={`/categories/${category.slug}`}
-              className={`group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border bg-gradient-to-b ${meta.gradient} bg-white p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99] ${meta.border}`}
+              className={`group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border bg-gradient-to-b ${meta.gradient} bg-white p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99] h-full ${meta.border}`}
             >
               <div className="space-y-3.5">
                 {/* Header: Icon + Badge */}

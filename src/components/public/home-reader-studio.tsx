@@ -4,6 +4,7 @@ import * as React from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useOnlineStatus } from "@/hooks"
+import { openCommandPalette } from "./command-palette"
 
 const QuoteShareModal = dynamic(
   () => import("./quote-share-modal").then((mod) => mod.QuoteShareModal),
@@ -366,13 +367,14 @@ export function HomeReaderStudio({ featuredSampleQuote }: HomeReaderStudioProps 
           </div>
         </div>
 
-        <Link
-          href="/saved"
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] shrink-0"
+        <button
+          type="button"
+          onClick={() => openCommandPalette()}
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-black hover:scale-[1.02] active:scale-[0.98] shrink-0 cursor-pointer"
         >
-          <span>Open Notebook</span>
-          <span>&rarr;</span>
-        </Link>
+          <span>Search Archive</span>
+          <kbd className="font-mono text-[10px] text-white/70 bg-white/15 px-1.5 py-0.5 rounded">⌘K</kbd>
+        </button>
       </div>
 
       {/* Share Modal Trigger */}

@@ -181,14 +181,10 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
               <span>Next Thought</span>
             </button>
           ) : (
-            <Link
-              href="/quotes/random"
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-900/15 bg-white/90 px-3.5 py-1 text-xs font-semibold text-stone-700 hover:border-[var(--accent-rust)] hover:bg-white hover:text-[var(--accent-rust)] transition-colors shadow-2xs"
-              title="Discover a random passage from the archive"
-            >
-              <span>🎲</span>
-              <span>Random Discovery</span>
-            </Link>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-900/12 bg-white/90 px-3.5 py-1 text-[11px] font-serif italic text-stone-600 shadow-2xs">
+              <span>✦</span>
+              <span>Updated daily at midnight UTC</span>
+            </span>
           )}
         </div>
 

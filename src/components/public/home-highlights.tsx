@@ -59,7 +59,11 @@ const HISTORICAL_EPOCHS = [
 
 export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
   return (
-    <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" aria-label="Curator Highlights">
+    <section
+      id="highlights"
+      className="scroll-mt-20 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]"
+      aria-label="Curator Highlights"
+    >
       {errorMessage ? (
         <div className="lg:col-span-2 rounded-[1.4rem] border border-amber-300/60 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-[0_10px_30px_rgba(120,53,15,0.08)]">
           {errorMessage}
@@ -67,7 +71,7 @@ export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
       ) : null}
 
       {/* Left: The Literary Sanctuary Parchment */}
-      <section className="animate-rise relative isolate flex flex-col justify-start gap-6 overflow-hidden rounded-[2rem] border border-amber-900/10 bg-gradient-to-br from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_rgba(33,37,41,0.08)]">
+      <section className="animate-rise relative isolate flex flex-col justify-between gap-6 overflow-hidden rounded-[2rem] border border-amber-900/10 bg-gradient-to-br from-white via-[#faf6f0] to-[#f4ede2] p-6 sm:p-8 lg:p-10 shadow-[0_20px_60px_rgba(33,37,41,0.08)]">
         {/* Subtle Watermark Seal */}
         <div
           className="pointer-events-none absolute -right-12 -top-12 h-64 w-64 rounded-full border-[12px] border-amber-800/5 bg-radial from-amber-600/5 to-transparent blur-xs select-none"
@@ -75,7 +79,7 @@ export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
         />
 
         {/* Header & Pillar Badge */}
-        <div className="space-y-2 max-w-2xl">
+        <div className="space-y-3 max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-800/15 bg-amber-800/6 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-rust)] animate-pulse" />
             The Curator’s Parchment
@@ -88,47 +92,29 @@ export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
             Here, passages are gathered with scholarly care—treated not as disposable internet
             snippets, but as living cultural monuments.
           </p>
+
+          {/* Verification Guarantee Strip */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs text-stone-700 border-t border-amber-900/8 pt-3">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
+              <span>Primary source verified</span>
+            </span>
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
+              <span>Historical context cited</span>
+            </span>
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
+              <span>Distraction-free sanctuary</span>
+            </span>
+          </div>
         </div>
 
         {/* Interactive Folio Switcher & Cards */}
         <CuratorFolioTabs />
 
-        {/* Curatorial Charter & Textual Oath Seal */}
-        <div className="rounded-2xl border border-amber-900/12 bg-white/80 p-5 shadow-2xs backdrop-blur-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/8 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-base" aria-hidden="true">📜</span>
-              <span className="text-xs font-serif font-bold uppercase tracking-[0.16em] text-[var(--ink-900)]">
-                The Curatorial Charter &amp; Textual Oath
-              </span>
-            </div>
-            <span className="rounded-full bg-amber-800/8 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--accent-rust)] uppercase tracking-wider">
-              Scholarly Rigor
-            </span>
-          </div>
-
-          <p className="mt-3 text-xs leading-relaxed text-[var(--ink-700)]/90 font-serif italic">
-            “We reject the ephemeral speed and algorithmic noise of modern feeds. Every quotation in this archive is cross-checked against primary texts, preserved in full historical context, and made freely available for unhurried contemplation.”
-          </p>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-amber-900/10 pt-3 text-xs text-stone-700">
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
-              <span className="font-serif">Primary Source Verified</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
-              <span className="font-serif">Preserved in Historical Context</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-700 font-bold" aria-hidden="true">✓</span>
-              <span className="font-serif">Distraction-Free Sanctuary</span>
-            </div>
-          </div>
-        </div>
-
         {/* Footer Marginalia Callout */}
-        <div className="rounded-2xl border border-amber-900/10 bg-amber-800/4 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="rounded-2xl border border-amber-900/10 bg-amber-800/4 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 mt-auto">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-800/10 text-amber-900 text-lg" aria-hidden="true">
               ✒️
@@ -149,7 +135,7 @@ export function HomeHighlights({ errorMessage }: HomeHighlightsProps = {}) {
       </section>
 
       {/* Right: Traditions & Historical Horizons */}
-      <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
+      <section className="flex flex-col gap-6">
         {/* Philosophical Traditions Panel */}
         <Panel
           title="Philosophical Traditions"

@@ -29,7 +29,7 @@ export interface HomeLatestQuotesProps {
 
 export function HomeLatestQuotes({ quotes }: HomeLatestQuotesProps) {
   return (
-    <section>
+    <section id="latest" className="scroll-mt-20">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-rust)]">

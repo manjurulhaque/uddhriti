@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { prisma } from "@/lib/prisma"
 import { getSiteUrl } from "@/lib/site"
+import { formatSourceYearLabel } from "@/lib/sourceYear"
 import {
   PublicLayout,
   HomeHero,
@@ -11,6 +12,7 @@ import {
   HomeReaderStudio,
   HomeTrendingSection,
   HomeLatestQuotes,
+  type DynamicMoodQuote,
 } from "@/components"
 
 export const revalidate = 60
@@ -174,6 +176,8 @@ export default async function HomePage() {
     dailyQuote,
     featuredQuote,
     serendipityPool,
+    moodQuotesPool,
+    dayIndex,
     latestQuotes,
     trendingQuotes,
     topTags,
@@ -197,7 +201,46 @@ export default async function HomePage() {
     : (latestQuotes.find((q) => !usedQuoteIds.has(q.id)) ?? null)
   if (finalDailyQuote?.id) usedQuoteIds.add(finalDailyQuote.id)
 
-  // 3. Companion quotes pool for Hero (distinct from heroQuote and dailyQuote)
+  // 3. Dynamic Daily Calendar Rotation for Reflect by Feeling (Moods)
+  const moodCategoryMap: Record<string, { categories: string[]; offset: number }> = {
+    stillness: { categories: ["philosophical"], offset: 5 },
+    grit: { categories: ["failure"], offset: 1 },
+    solace: { categories: ["sad"], offset: 2 },
+    wonder: { categories: ["philosophical"], offset: 0 },
+    focus: { categories: ["success", "attitude"], offset: 3 },
+    connection: { categories: ["love", "friendship"], offset: 4 },
+    hope: { categories: ["positive"], offset: 6 },
+    time: { categories: ["time"], offset: 7 },
+  }
+
+  const initialMoodQuotes: Record<string, DynamicMoodQuote> = {}
+
+  for (const [moodId, config] of Object.entries(moodCategoryMap)) {
+    const eligibleQuotes = moodQuotesPool.filter(
+      (q) =>
+        q.category?.slug &&
+        config.categories.includes(q.category.slug) &&
+        !usedQuoteIds.has(q.id)
+    )
+
+    if (eligibleQuotes.length > 0) {
+      const quoteIndex = (dayIndex + config.offset) % eligibleQuotes.length
+      const selectedQuote = eligibleQuotes[quoteIndex]
+      if (selectedQuote) {
+        usedQuoteIds.add(selectedQuote.id)
+        initialMoodQuotes[moodId] = {
+          id: selectedQuote.id,
+          content: selectedQuote.content,
+          author: selectedQuote.author?.name || selectedQuote.authorName || "Unknown Author",
+          authorSlug: selectedQuote.author?.slug,
+          source: selectedQuote.source?.title,
+          year: formatSourceYearLabel(selectedQuote.source),
+        }
+      }
+    }
+  }
+
+  // 4. Companion quotes pool for Hero (distinct from hero, daily, and mood quotes)
   const eligibleCompanionQuotes = serendipityPool.filter((q) => !usedQuoteIds.has(q.id))
   const companionPool = eligibleCompanionQuotes.length > 0
     ? eligibleCompanionQuotes
@@ -216,7 +259,7 @@ export default async function HomePage() {
     if (q.id) usedQuoteIds.add(q.id)
   })
 
-  // 4. Trending quotes (distinct from hero, daily, and companion quotes)
+  // 5. Trending quotes (distinct from hero, daily, mood, and companion quotes)
   const dedupedTrendingQuotes = trendingQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 4)
@@ -224,7 +267,7 @@ export default async function HomePage() {
     if (q.id) usedQuoteIds.add(q.id)
   })
 
-  // 5. Remaining latest quotes (distinct from all previous sections)
+  // 6. Remaining latest quotes (distinct from all previous sections)
   const remainingLatestQuotes = latestQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 8)
@@ -291,7 +334,7 @@ export default async function HomePage() {
           companionQuotes={companionQuotes}
         />
 
-        <HomeMoodFilter />
+        <HomeMoodFilter initialMoodQuotes={initialMoodQuotes} />
 
         <HomeHighlights
           errorMessage={errorMessage}
@@ -356,6 +399,7 @@ async function loadHomePageData() {
       dailyQuote,
       featuredQuotesPool,
       serendipityPool,
+      moodQuotesPool,
       latestQuotes,
       trendingQuotes,
       spotlightCategoriesRaw,
@@ -382,6 +426,54 @@ async function loadHomePageData() {
         orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
         take: 10,
         select: serendipityQuoteSelect,
+      }),
+      prisma.quote.findMany({
+        where: {
+          status: "PUBLISHED",
+          deletedAt: null,
+          category: {
+            slug: {
+              in: [
+                "philosophical",
+                "failure",
+                "sad",
+                "success",
+                "attitude",
+                "love",
+                "friendship",
+                "positive",
+                "time",
+              ],
+            },
+          },
+        },
+        orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
+        take: 120,
+        select: {
+          id: true,
+          slug: true,
+          content: true,
+          authorName: true,
+          author: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          category: {
+            select: {
+              slug: true,
+            },
+          },
+          source: {
+            select: {
+              title: true,
+              year: true,
+              yearLabel: true,
+              yearApproximate: true,
+            },
+          },
+        },
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
@@ -476,6 +568,8 @@ async function loadHomePageData() {
       dailyQuote,
       featuredQuote,
       serendipityPool,
+      moodQuotesPool,
+      dayIndex,
       latestQuotes,
       trendingQuotes,
       topTags,
@@ -490,6 +584,8 @@ async function loadHomePageData() {
       dailyQuote: null,
       featuredQuote: null,
       serendipityPool: [],
+      moodQuotesPool: [],
+      dayIndex: 0,
       latestQuotes: [],
       trendingQuotes: [],
       topTags: [],

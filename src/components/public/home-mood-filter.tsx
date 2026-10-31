@@ -9,37 +9,52 @@ import { MOODS, type MoodItem } from "@/data/home-moods"
 
 export type { MoodItem }
 
-export function HomeMoodFilter() {
+export interface DynamicMoodQuote {
+  id?: string
+  content: string
+  author: string
+  authorSlug?: string | null
+  source?: string | null
+  year?: string | null
+}
+
+export interface HomeMoodFilterProps {
+  initialMoodQuotes?: Record<string, DynamicMoodQuote>
+}
+
+export function HomeMoodFilter({ initialMoodQuotes = {} }: HomeMoodFilterProps = {}) {
   const [selectedMoodId, setSelectedMoodId] = React.useState<string>("stillness")
   const { copied, copyQuote } = useCopyToClipboard()
   const { isSaved, toggleSave } = useSavedQuotes()
 
-  const activeMood = MOODS.find((m) => m.id === selectedMoodId) || MOODS[0]
-  const quoteKey = `mood-${activeMood.id}-${activeMood.quote.author}`
+  const activeMoodBase = MOODS.find((m) => m.id === selectedMoodId) || MOODS[0]
+  const currentQuote = initialMoodQuotes[activeMoodBase.id] || activeMoodBase.quote
+  const quoteKey = initialMoodQuotes[activeMoodBase.id]?.id || `mood-${activeMoodBase.id}-${currentQuote.author}`
   const saved = isSaved(quoteKey)
 
   function handleCopy() {
     copyQuote({
-      content: activeMood.quote.content,
-      author: activeMood.quote.author,
-      source: activeMood.quote.source,
+      content: currentQuote.content,
+      author: currentQuote.author,
+      source: currentQuote.source ?? undefined,
     })
   }
 
   function handleSave() {
     toggleSave({
       id: quoteKey,
-      content: activeMood.quote.content,
-      authorName: activeMood.quote.author,
-      sourceTitle: activeMood.quote.source,
-      year: activeMood.quote.year,
-      category: activeMood.label,
+      content: currentQuote.content,
+      authorName: currentQuote.author,
+      authorSlug: currentQuote.authorSlug ?? undefined,
+      sourceTitle: currentQuote.source ?? undefined,
+      year: currentQuote.year ?? undefined,
+      category: activeMoodBase.label,
     })
   }
 
-  const exploreHref = activeMood.searchQuery
-    ? `/quotes?q=${encodeURIComponent(activeMood.searchQuery)}`
-    : `/categories/${activeMood.categorySlug}`
+  const exploreHref = activeMoodBase.searchQuery
+    ? `/quotes?q=${encodeURIComponent(activeMoodBase.searchQuery)}`
+    : `/categories/${activeMoodBase.categorySlug}`
 
   return (
     <section
@@ -119,39 +134,43 @@ export function HomeMoodFilter() {
           <div className="space-y-4 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border border-stone-300/80 bg-white text-stone-800 shadow-2xs">
-                <span>{activeMood.icon}</span>
-                <span>{activeMood.label}</span>
+                <span>{activeMoodBase.icon}</span>
+                <span>{activeMoodBase.label}</span>
               </span>
               <span className="text-xs text-stone-500 italic">
-                {activeMood.tagline}
+                {activeMoodBase.tagline}
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono text-stone-600 bg-white/80 px-2.5 py-0.5 rounded-full border border-stone-200/80 shadow-2xs">
+                <span>✦</span>
+                <span>Daily Calendar Rotation</span>
               </span>
             </div>
 
             <blockquote className="font-serif text-xl sm:text-2xl lg:text-3xl text-[var(--ink-900)] leading-relaxed font-normal">
-              “{activeMood.quote.content}”
+              “{currentQuote.content}”
             </blockquote>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ink-700)]">
               <span className="font-serif font-bold text-stone-900">
                 —{" "}
-                {activeMood.quote.authorSlug ? (
+                {currentQuote.authorSlug ? (
                   <Link
-                    href={`/authors/${activeMood.quote.authorSlug}`}
+                    href={`/authors/${currentQuote.authorSlug}`}
                     className="hover:text-[var(--accent-rust)] hover:underline transition-colors"
                   >
-                    {activeMood.quote.author}
+                    {currentQuote.author}
                   </Link>
                 ) : (
-                  activeMood.quote.author
+                  currentQuote.author
                 )}
               </span>
-              {activeMood.quote.source && (
+              {currentQuote.source && (
                 <span className="text-stone-500">
-                  in <em className="text-stone-700">{activeMood.quote.source}</em>
+                  in <em className="text-stone-700">{currentQuote.source}</em>
                 </span>
               )}
-              {activeMood.quote.year && (
-                <span className="text-xs text-stone-400">({activeMood.quote.year})</span>
+              {currentQuote.year && (
+                <span className="text-xs text-stone-400">({currentQuote.year})</span>
               )}
             </div>
           </div>

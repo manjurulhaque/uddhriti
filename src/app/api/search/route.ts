@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sanitizeSearchQuery } from "@/lib/security/input"
+import { enforceIpRateLimit } from "@/lib/api/rate-limit"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
+  // IP-level rate limiting to prevent automated scraping and database resource exhaustion
+  const rateLimited = enforceIpRateLimit(req, "publicApi")
+  if (rateLimited) return rateLimited
+
   const { searchParams } = new URL(req.url)
   const rawQ = searchParams.get("q")
   const query = sanitizeSearchQuery(rawQ, 80)

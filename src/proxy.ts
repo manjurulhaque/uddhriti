@@ -147,6 +147,7 @@ export const config = {
     "/api/admin/:path*",
     "/api/users/:path*",
     "/api/quotes/:path*",
+    "/api/search",
     "/quotes/random",
   ],
 }

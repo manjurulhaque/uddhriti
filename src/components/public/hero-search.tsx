@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSavedQuotes } from "@/lib/saved-quotes"
+import { openCommandPalette } from "./command-palette"
 
 export interface HeroSearchProps {
   totalQuotes?: number
@@ -83,9 +84,15 @@ export function HeroSearch() {
 
         {/* Keyboard Shortcut Indicator */}
         <div className="hidden sm:flex items-center pr-2">
-          <kbd className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-[11px] font-mono text-white/60">
+          <button
+            type="button"
+            onClick={() => openCommandPalette(query.trim() || undefined)}
+            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-[11px] font-mono text-white/60 hover:text-white hover:bg-white/20 hover:border-white/30 transition-colors cursor-pointer"
+            title={`Open Command Palette (${isMac ? "⌘K" : "Ctrl+K"})`}
+            aria-label="Open Command Palette"
+          >
             {isMac ? "⌘K" : "Ctrl+K"}
-          </kbd>
+          </button>
         </div>
 
         {/* Submit Search Button */}

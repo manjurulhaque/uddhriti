@@ -2,16 +2,15 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { Modal } from "../ui/modal"
+import { usePathname } from "next/navigation"
 import { BookmarkIcon } from "../ui/bookmark-icon"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { useOnlineStatus } from "@/hooks"
+import { openCommandPalette } from "./command-palette"
 
 const emptySubscribe = () => () => {}
 
 export function PublicHeader() {
-  const router = useRouter()
   const pathname = usePathname()
   const { count: savedCount } = useSavedQuotes()
   const isOnline = useOnlineStatus()
@@ -21,19 +20,6 @@ export function PublicHeader() {
     () => false
   )
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
-  const [searchModalOpen, setSearchModalOpen] = React.useState(false)
-  const [searchQuery, setSearchQuery] = React.useState("")
-
-  React.useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault()
-        setSearchModalOpen(true)
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -45,8 +31,7 @@ export function PublicHeader() {
   ]
 
   return (
-    <>
-      <header className="sticky top-0 z-40 w-full border-b border-stone-900/8 bg-[var(--page-cream)]/90 backdrop-blur-md transition-all">
+    <header className="sticky top-0 z-40 w-full border-b border-stone-900/8 bg-[var(--page-cream)]/90 backdrop-blur-md transition-all">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-8">
@@ -107,7 +92,7 @@ export function PublicHeader() {
             {/* Search Trigger Button */}
             <button
               type="button"
-              onClick={() => setSearchModalOpen(true)}
+              onClick={() => openCommandPalette()}
               className="hidden sm:flex items-center gap-2.5 rounded-full border border-stone-300/80 bg-white/80 px-3.5 py-1.5 text-xs text-stone-500 shadow-2xs hover:border-stone-400 hover:bg-white hover:text-stone-800 transition-all cursor-pointer"
               aria-label="Quick search quotes"
             >
@@ -134,7 +119,7 @@ export function PublicHeader() {
             {/* Mobile Search Button */}
             <button
               type="button"
-              onClick={() => setSearchModalOpen(true)}
+              onClick={() => openCommandPalette()}
               className="flex sm:hidden h-9 w-9 items-center justify-center rounded-full border border-stone-300/80 bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50"
               aria-label="Search"
             >
@@ -272,80 +257,5 @@ export function PublicHeader() {
           </div>
         )}
       </header>
-
-      {/* Quick Search Modal */}
-      <Modal
-        isOpen={searchModalOpen}
-        onClose={() => {
-          setSearchModalOpen(false)
-          setSearchQuery("")
-        }}
-        title="Quick Search"
-        description="Search quotations, authors, or literary topics"
-      >
-        <div className="space-y-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (searchQuery.trim()) {
-                setSearchModalOpen(false)
-                router.push(`/quotes?q=${encodeURIComponent(searchQuery.trim())}`)
-              }
-            }}
-            className="relative"
-          >
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by quote, author name, or topic..."
-              autoFocus
-              className="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 pl-10 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900/10"
-            />
-            <svg
-              className="absolute left-3.5 top-3 h-4 w-4 text-stone-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </form>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
-              Quick Suggestions
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {["Wisdom", "Courage", "Truth", "Marcus Aurelius", "Rumi", "Freedom"].map(
-                (term) => (
-                  <button
-                    key={term}
-                    type="button"
-                    onClick={() => {
-                      setSearchModalOpen(false)
-                      router.push(`/quotes?q=${encodeURIComponent(term)}`)
-                    }}
-                    className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-700 hover:border-stone-400 hover:bg-stone-50 transition-colors"
-                  >
-                    #{term}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
-            <span>Press Enter to search, ESC to dismiss</span>
-            <span className="font-mono text-[11px]">Quotzen Archive</span>
-          </div>
-        </div>
-      </Modal>
-    </>
   )
 }

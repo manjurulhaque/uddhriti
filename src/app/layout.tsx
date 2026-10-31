@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ServiceWorkerRegister, InstallPrompt } from "@/components";
+import { CommandPalette } from "@/components/public/command-palette";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
@@ -75,6 +76,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         {children}
+        <CommandPalette />
         <ServiceWorkerRegister />
         <InstallPrompt />
         <Analytics />

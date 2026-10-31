@@ -24,6 +24,7 @@ export * from "./legal-nav"
 export * from "./quote-actions"
 export * from "./quote-share-modal"
 export * from "./quote-zen-mode"
+export * from "./command-palette"
 
 // Re-export UI primitives commonly used on public pages
 export { Panel, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../ui/card"

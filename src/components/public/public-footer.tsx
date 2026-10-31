@@ -149,11 +149,6 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/admin/dashboard" className="hover:text-white transition-colors">
-                  Control Dashboard
-                </Link>
-              </li>
-              <li>
                 <Link href="/robots.txt" className="hover:text-white transition-colors">
                   Robots &amp; Sitemap
                 </Link>

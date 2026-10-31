@@ -116,7 +116,7 @@ export function HomeHero({
             </nav>
           </div>
 
-          <div className="animate-rise-delayed flex flex-col gap-5 justify-start">
+          <div className="animate-rise-delayed flex flex-col justify-between gap-4 h-full">
             {heroQuote ? (
               <QuoteCard
                 id={heroQuote.id}
@@ -143,6 +143,29 @@ export function HomeHero({
             {companionQuotes && companionQuotes.length > 0 && (
               <HeroCompanionQuote quotes={companionQuotes} />
             )}
+
+            {/* Sanctuary Reading Quick Strip */}
+            <div className="rounded-[1.4rem] border border-white/12 bg-white/6 p-4 backdrop-blur-md shadow-md transition-all hover:border-white/20 hover:bg-white/9">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-gold)]/20 text-sm" aria-hidden="true">
+                    🕊️
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white/90 truncate">Sanctuary Reading Room</p>
+                    <p className="text-[11px] text-white/60 truncate">Distraction-free • Offline notebook • Primary sources</p>
+                  </div>
+                </div>
+                <a
+                  href="#daily-quote"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-sand)] transition hover:border-[var(--accent-gold)]/50 hover:bg-white/20 hover:text-white"
+                  title="Jump to today's contemplative quotation"
+                >
+                  <span>Today’s Line</span>
+                  <span aria-hidden="true">&darr;</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>

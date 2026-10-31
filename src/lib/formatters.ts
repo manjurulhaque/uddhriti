@@ -114,34 +114,300 @@ export interface CategoryMeta {
 
 export function getCategoryMeta(name: string): CategoryMeta {
   const lower = name.toLowerCase()
+
+  // 1. Self Love (must precede generic love)
+  if (lower.includes("self love") || lower.includes("self-love")) {
+    return {
+      icon: "🪞",
+      gradient: "from-rose-400/10 via-pink-400/5 to-transparent",
+      border: "border-rose-400/25",
+      badge: "text-rose-900 bg-rose-50",
+    }
+  }
+
+  // 2. Love & Devotion
+  if (lower.includes("love") || lower.includes("romance") || lower.includes("passion")) {
+    return {
+      icon: "🤍",
+      gradient: "from-pink-500/10 via-rose-500/5 to-transparent",
+      border: "border-pink-500/25",
+      badge: "text-pink-800 bg-pink-50",
+    }
+  }
+
+  // 3. Wisdom & Insight
+  if (lower.includes("wisdom") || lower.includes("sage") || lower.includes("discern")) {
+    return {
+      icon: "🦉",
+      gradient: "from-amber-500/10 via-yellow-500/5 to-transparent",
+      border: "border-amber-500/25",
+      badge: "text-amber-900 bg-amber-50",
+    }
+  }
+
+  // 4. Life & Being
+  if (lower.includes("life") || lower.includes("living") || lower.includes("exist")) {
+    return {
+      icon: "🌱",
+      gradient: "from-emerald-500/10 via-green-500/5 to-transparent",
+      border: "border-emerald-500/25",
+      badge: "text-emerald-900 bg-emerald-50",
+    }
+  }
+
+  // 5. Education & Learning
+  if (lower.includes("educat") || lower.includes("learn") || lower.includes("school") || lower.includes("teach")) {
+    return {
+      icon: "📚",
+      gradient: "from-blue-500/10 via-sky-500/5 to-transparent",
+      border: "border-blue-500/25",
+      badge: "text-blue-900 bg-blue-50",
+    }
+  }
+
+  // 6. Leadership & Governance
+  if (lower.includes("leader") || lower.includes("rule") || lower.includes("governan")) {
+    return {
+      icon: "👑",
+      gradient: "from-yellow-600/10 via-amber-500/5 to-transparent",
+      border: "border-yellow-600/25",
+      badge: "text-yellow-950 bg-yellow-50",
+    }
+  }
+
+  // 7. Success & Triumph
+  if (lower.includes("success") || lower.includes("achiev") || lower.includes("triumph") || lower.includes("victor")) {
+    return {
+      icon: "🏆",
+      gradient: "from-amber-400/10 via-orange-400/5 to-transparent",
+      border: "border-amber-400/25",
+      badge: "text-amber-900 bg-amber-50",
+    }
+  }
+
+  // 8. Motivation & Inner Fire
+  if (lower.includes("motivat") || lower.includes("ambiti") || lower.includes("drive")) {
+    return {
+      icon: "🔥",
+      gradient: "from-rose-500/10 via-orange-500/5 to-transparent",
+      border: "border-rose-500/25",
+      badge: "text-rose-900 bg-rose-50",
+    }
+  }
+
+  // 9. Inspiration & Wonder
+  if (lower.includes("inspir") || lower.includes("wonder") || lower.includes("vision")) {
+    return {
+      icon: "✨",
+      gradient: "from-violet-500/10 via-fuchsia-500/5 to-transparent",
+      border: "border-violet-500/25",
+      badge: "text-violet-900 bg-violet-50",
+    }
+  }
+
+  // 10. Humor & Wit
+  if (lower.includes("humor") || lower.includes("wit") || lower.includes("laugh") || lower.includes("satir") || lower.includes("iron")) {
+    return {
+      icon: "🎭",
+      gradient: "from-orange-400/10 via-amber-300/5 to-transparent",
+      border: "border-orange-400/25",
+      badge: "text-orange-900 bg-orange-50",
+    }
+  }
+
+  // 11. Ethics & Morality
+  if (lower.includes("ethic") || lower.includes("moral") || lower.includes("justic") || lower.includes("virtu")) {
+    return {
+      icon: "⚖️",
+      gradient: "from-slate-600/10 via-zinc-500/5 to-transparent",
+      border: "border-slate-500/25",
+      badge: "text-slate-900 bg-slate-50",
+    }
+  }
+
+  // 12. Faith & Spirituality
+  if (lower.includes("faith") || lower.includes("religi") || lower.includes("spirit") || lower.includes("prayer") || lower.includes("god")) {
+    return {
+      icon: "🕊️",
+      gradient: "from-sky-500/10 via-indigo-500/5 to-transparent",
+      border: "border-sky-500/25",
+      badge: "text-sky-900 bg-sky-50",
+    }
+  }
+
+  // 13. Family & Hearth
+  if (lower.includes("famil") || lower.includes("parent") || lower.includes("child") || lower.includes("home") || lower.includes("mother") || lower.includes("father")) {
+    return {
+      icon: "🏡",
+      gradient: "from-amber-700/10 via-stone-500/5 to-transparent",
+      border: "border-amber-700/25",
+      badge: "text-amber-950 bg-amber-50",
+    }
+  }
+
+  // 14. Happiness & Joy
+  if (lower.includes("happ") || lower.includes("joy") || lower.includes("delight") || lower.includes("cheer")) {
+    return {
+      icon: "☀️",
+      gradient: "from-amber-400/10 via-yellow-400/5 to-transparent",
+      border: "border-amber-400/25",
+      badge: "text-amber-900 bg-amber-50",
+    }
+  }
+
+  // 15. Philosophy & Metaphysics
   if (lower.includes("philosoph")) {
-    return { icon: "🌌", gradient: "from-indigo-500/10 via-purple-500/5 to-transparent", border: "border-indigo-500/25", badge: "text-indigo-800 bg-indigo-50" }
+    return {
+      icon: "🌌",
+      gradient: "from-indigo-600/10 via-purple-600/5 to-transparent",
+      border: "border-indigo-600/25",
+      badge: "text-indigo-900 bg-indigo-50",
+    }
   }
-  if (lower.includes("friend")) {
-    return { icon: "🤝", gradient: "from-amber-500/10 via-orange-500/5 to-transparent", border: "border-amber-500/25", badge: "text-amber-800 bg-amber-50" }
+
+  // 16. Friendship & Fellowship
+  if (lower.includes("friend") || lower.includes("fellow") || lower.includes("companion")) {
+    return {
+      icon: "🤝",
+      gradient: "from-amber-500/10 via-orange-500/5 to-transparent",
+      border: "border-amber-500/25",
+      badge: "text-amber-800 bg-amber-50",
+    }
   }
-  if (lower.includes("love")) {
-    return { icon: "🤍", gradient: "from-pink-500/10 via-rose-500/5 to-transparent", border: "border-pink-500/25", badge: "text-pink-800 bg-pink-50" }
+
+  // 17. Political, Freedom & Statecraft
+  if (lower.includes("polit") || lower.includes("freedom") || lower.includes("libert") || lower.includes("democra") || lower.includes("republic")) {
+    return {
+      icon: "🏛️",
+      gradient: "from-blue-600/10 via-indigo-600/5 to-transparent",
+      border: "border-blue-600/25",
+      badge: "text-blue-900 bg-blue-50",
+    }
   }
-  if (lower.includes("polit") || lower.includes("freedom") || lower.includes("libert")) {
-    return { icon: "🏛️", gradient: "from-blue-500/10 via-sky-500/5 to-transparent", border: "border-blue-500/25", badge: "text-blue-800 bg-blue-50" }
+
+  // 18. Positive, Hope & Optimism
+  if (lower.includes("positiv") || lower.includes("hope") || lower.includes("optimis")) {
+    return {
+      icon: "🌅",
+      gradient: "from-yellow-500/10 via-amber-500/5 to-transparent",
+      border: "border-yellow-500/25",
+      badge: "text-yellow-800 bg-yellow-50",
+    }
   }
-  if (lower.includes("positiv") || lower.includes("hope") || lower.includes("happ")) {
-    return { icon: "🌅", gradient: "from-yellow-500/10 via-amber-500/5 to-transparent", border: "border-yellow-500/25", badge: "text-yellow-800 bg-yellow-50" }
+
+  // 19. Failure, Resilience & Trial
+  if (lower.includes("fail") || lower.includes("resilien") || lower.includes("advers") || lower.includes("mistake")) {
+    return {
+      icon: "⚡",
+      gradient: "from-orange-500/10 via-amber-500/5 to-transparent",
+      border: "border-orange-500/25",
+      badge: "text-orange-800 bg-orange-50",
+    }
   }
-  if (lower.includes("fail") || lower.includes("resilien") || lower.includes("courag")) {
-    return { icon: "⚡", gradient: "from-orange-500/10 via-amber-500/5 to-transparent", border: "border-orange-500/25", badge: "text-orange-800 bg-orange-50" }
+
+  // 20. Sadness, Grief & Solace
+  if (lower.includes("sad") || lower.includes("grief") || lower.includes("solac") || lower.includes("sorrow") || lower.includes("melanchol")) {
+    return {
+      icon: "🕯️",
+      gradient: "from-slate-500/10 via-stone-500/5 to-transparent",
+      border: "border-slate-500/25",
+      badge: "text-slate-800 bg-slate-50",
+    }
   }
-  if (lower.includes("sad") || lower.includes("grief") || lower.includes("solac")) {
-    return { icon: "🕯️", gradient: "from-slate-500/10 via-stone-500/5 to-transparent", border: "border-slate-500/25", badge: "text-slate-800 bg-slate-50" }
+
+  // 21. Attitude, Mindset & Focus
+  if (lower.includes("attitud") || lower.includes("mind") || lower.includes("perspectiv")) {
+    return {
+      icon: "🎯",
+      gradient: "from-emerald-500/10 via-teal-500/5 to-transparent",
+      border: "border-emerald-500/25",
+      badge: "text-emerald-800 bg-emerald-50",
+    }
   }
-  if (lower.includes("attitud") || lower.includes("mind") || lower.includes("grow")) {
-    return { icon: "🎯", gradient: "from-emerald-500/10 via-teal-500/5 to-transparent", border: "border-emerald-500/25", badge: "text-emerald-800 bg-emerald-50" }
+
+  // 22. Time, History & Ephemerality
+  if (lower.includes("time") || lower.includes("histor") || lower.includes("past") || lower.includes("future")) {
+    return {
+      icon: "⏳",
+      gradient: "from-amber-600/10 via-stone-500/5 to-transparent",
+      border: "border-amber-700/25",
+      badge: "text-amber-900 bg-amber-50",
+    }
   }
-  if (lower.includes("time") || lower.includes("histor")) {
-    return { icon: "⏳", gradient: "from-amber-600/10 via-stone-500/5 to-transparent", border: "border-amber-700/25", badge: "text-amber-900 bg-amber-50" }
+
+  // Additional thematic archetypes
+  if (lower.includes("nature") || lower.includes("earth") || lower.includes("environ")) {
+    return {
+      icon: "🌿",
+      gradient: "from-emerald-600/10 via-teal-500/5 to-transparent",
+      border: "border-emerald-600/25",
+      badge: "text-emerald-950 bg-emerald-50",
+    }
   }
-  return { icon: "📜", gradient: "from-stone-500/10 via-amber-500/5 to-transparent", border: "border-stone-300", badge: "text-stone-800 bg-stone-100" }
+  if (lower.includes("art") || lower.includes("creativ") || lower.includes("design")) {
+    return {
+      icon: "🎨",
+      gradient: "from-fuchsia-500/10 via-purple-500/5 to-transparent",
+      border: "border-fuchsia-500/25",
+      badge: "text-fuchsia-900 bg-fuchsia-50",
+    }
+  }
+  if (lower.includes("music") || lower.includes("song") || lower.includes("poet")) {
+    return {
+      icon: "🎵",
+      gradient: "from-purple-500/10 via-pink-500/5 to-transparent",
+      border: "border-purple-500/25",
+      badge: "text-purple-900 bg-purple-50",
+    }
+  }
+  if (lower.includes("scien") || lower.includes("logic") || lower.includes("reason")) {
+    return {
+      icon: "🔬",
+      gradient: "from-cyan-500/10 via-blue-500/5 to-transparent",
+      border: "border-cyan-500/25",
+      badge: "text-cyan-900 bg-cyan-50",
+    }
+  }
+  if (lower.includes("courag") || lower.includes("brave") || lower.includes("valor")) {
+    return {
+      icon: "🛡️",
+      gradient: "from-red-600/10 via-amber-600/5 to-transparent",
+      border: "border-red-600/25",
+      badge: "text-red-950 bg-red-50",
+    }
+  }
+  if (lower.includes("peace") || lower.includes("still") || lower.includes("calm")) {
+    return {
+      icon: "🌊",
+      gradient: "from-teal-500/10 via-sky-500/5 to-transparent",
+      border: "border-teal-500/25",
+      badge: "text-teal-900 bg-teal-50",
+    }
+  }
+  if (lower.includes("truth") || lower.includes("honest") || lower.includes("integrit")) {
+    return {
+      icon: "💎",
+      gradient: "from-sky-400/10 via-blue-500/5 to-transparent",
+      border: "border-sky-400/25",
+      badge: "text-sky-900 bg-sky-50",
+    }
+  }
+  if (lower.includes("death") || lower.includes("mortal")) {
+    return {
+      icon: "🍂",
+      gradient: "from-stone-600/10 via-amber-900/5 to-transparent",
+      border: "border-stone-500/25",
+      badge: "text-stone-900 bg-stone-100",
+    }
+  }
+
+  // Default manuscript folio
+  return {
+    icon: "📜",
+    gradient: "from-stone-500/10 via-amber-500/5 to-transparent",
+    border: "border-stone-300",
+    badge: "text-stone-800 bg-stone-100",
+  }
 }
 
 export { slugify }

@@ -12,6 +12,22 @@ interface QuoteContentSectionProps {
   categoryName?: string
   sourceTitle?: string
   tags?: string[]
+  quoteId?: string
+}
+
+type DuplicateStatus = {
+  isChecking: boolean
+  isDuplicate: boolean
+  matchType?: "exact" | "near"
+  similarity?: number
+  quote?: {
+    id: string
+    content: string
+    status: string
+    slug: string
+    authorName?: string | null
+    categoryName?: string | null
+  }
 }
 
 function IconPen({ className = "w-3.5 h-3.5" }: { className?: string }) {
@@ -40,9 +56,71 @@ export function QuoteContentSection({
   categoryName,
   sourceTitle,
   tags = [],
+  quoteId,
 }: QuoteContentSectionProps) {
   const [viewMode, setViewMode] = React.useState<"edit" | "preview">("edit")
   const [previewTheme, setPreviewTheme] = React.useState<"paper" | "dark">("paper")
+  const [duplicateStatus, setDuplicateStatus] = React.useState<DuplicateStatus>({
+    isChecking: false,
+    isDuplicate: false,
+  })
+  const [dismissedForContent, setDismissedForContent] = React.useState<string | null>(null)
+
+  const trimmedContent = form.content.trim()
+  const isTooShort = trimmedContent.length < 12
+  const activeDuplicateStatus = isTooShort
+    ? { isChecking: false, isDuplicate: false }
+    : duplicateStatus
+  const isDismissed =
+    dismissedForContent !== null && dismissedForContent === trimmedContent
+
+  React.useEffect(() => {
+    if (trimmedContent.length < 12) {
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      setDuplicateStatus((prev) => ({ ...prev, isChecking: true }))
+
+      try {
+        const res = await fetch("/api/admin/quotes/check-duplicate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: trimmedContent,
+            excludeId: quoteId,
+            authorId: form.authorId || undefined,
+          }),
+          signal: controller.signal,
+        })
+
+        if (!res.ok) {
+          setDuplicateStatus({ isChecking: false, isDuplicate: false })
+          return
+        }
+
+        const data = await res.json()
+        setDuplicateStatus({
+          isChecking: false,
+          isDuplicate: Boolean(data.isDuplicate),
+          matchType: data.matchType,
+          similarity: data.similarity,
+          quote: data.quote,
+        })
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return
+        }
+        setDuplicateStatus({ isChecking: false, isDuplicate: false })
+      }
+    }, 400)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [trimmedContent, form.authorId, quoteId])
 
   // Editorial metrics
   const readingTimeSec = Math.max(1, Math.round((wordCount / 200) * 60))
@@ -121,6 +199,18 @@ export function QuoteContentSection({
           </div>
 
           <div className="flex items-center gap-2">
+            {activeDuplicateStatus.isChecking ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[11px] font-mono animate-pulse border border-stone-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+                checking duplicate...
+              </span>
+            ) : !activeDuplicateStatus.isDuplicate && trimmedContent.length >= 20 ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Unique quote
+              </span>
+            ) : null}
+
             <span
               className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
                 fitsTwitter
@@ -141,7 +231,7 @@ export function QuoteContentSection({
 
         {/* Main Editor View */}
         {viewMode === "edit" ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <textarea
               className="w-full min-h-[160px] rounded-xl border border-stone-300 bg-stone-50/30 p-4 font-serif text-base text-stone-900 leading-relaxed placeholder:font-sans placeholder:text-sm placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
               value={form.content}
@@ -150,6 +240,111 @@ export function QuoteContentSection({
               required
               aria-label="Quote Content"
             />
+
+            {/* Duplicate Warning Callout */}
+            {!isDismissed && activeDuplicateStatus.isDuplicate && activeDuplicateStatus.quote ? (
+              <div
+                className={`rounded-xl border p-4 text-xs transition-all animate-in fade-in duration-200 ${
+                  activeDuplicateStatus.matchType === "exact"
+                    ? "bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs"
+                    : "bg-amber-50/90 border-amber-300 text-amber-950 shadow-2xs"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`mt-0.5 rounded-full p-1.5 shrink-0 ${
+                        activeDuplicateStatus.matchType === "exact"
+                          ? "bg-rose-200/80 text-rose-800"
+                          : "bg-amber-200/80 text-amber-800"
+                      }`}
+                    >
+                      {activeDuplicateStatus.matchType === "exact" ? (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold tracking-tight text-sm">
+                          {activeDuplicateStatus.matchType === "exact"
+                            ? "Exact Duplicate Detected"
+                            : `Potential Duplicate Found (${activeDuplicateStatus.similarity}% match)`}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase ${
+                            activeDuplicateStatus.matchType === "exact"
+                              ? "bg-rose-200 text-rose-900"
+                              : "bg-amber-200 text-amber-900"
+                          }`}
+                        >
+                          {activeDuplicateStatus.matchType === "exact" ? "100% Match" : `${activeDuplicateStatus.similarity}% Similarity`}
+                        </span>
+                        {activeDuplicateStatus.quote.status ? (
+                          <span className="px-1.5 py-0.5 rounded bg-white/80 border border-stone-200 text-[10px] text-stone-600 font-mono">
+                            {activeDuplicateStatus.quote.status}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <p className="font-serif italic text-stone-800 bg-white/80 rounded-lg p-3 border border-stone-200/70 leading-relaxed text-[13px]">
+                        &ldquo;{activeDuplicateStatus.quote.content}&rdquo;
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-stone-600 pt-0.5 text-xs">
+                        {activeDuplicateStatus.quote.authorName ? (
+                          <span>
+                            Author: <strong className="font-medium text-stone-900">{activeDuplicateStatus.quote.authorName}</strong>
+                          </span>
+                        ) : null}
+                        {activeDuplicateStatus.quote.categoryName ? (
+                          <span>
+                            Category: <strong className="font-medium text-stone-900">{activeDuplicateStatus.quote.categoryName}</strong>
+                          </span>
+                        ) : null}
+                        {activeDuplicateStatus.matchType === "exact" ? (
+                          <span className="text-rose-700 font-medium">
+                            Submitting will fail due to database unique constraint.
+                          </span>
+                        ) : (
+                          <span className="text-amber-800">
+                            Please check if this quote is already in Quotzen under another phrasing or author.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+                    <a
+                      href={`/admin/quotes/${activeDuplicateStatus.quote.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-900 text-white font-medium hover:bg-stone-800 transition cursor-pointer text-xs shadow-2xs"
+                    >
+                      <span>View Quote</span>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    {activeDuplicateStatus.matchType === "near" ? (
+                      <button
+                        type="button"
+                        onClick={() => setDismissedForContent(trimmedContent)}
+                        className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-stone-50 text-stone-600 hover:text-stone-900 border border-stone-200 transition cursor-pointer text-xs"
+                      >
+                        Dismiss
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : (
           /* Live Typography Card Preview View */

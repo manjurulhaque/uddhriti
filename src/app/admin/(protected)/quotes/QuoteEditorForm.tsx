@@ -477,6 +477,7 @@ export default function QuoteEditorForm({
             categoryName={selectedCategoryName}
             sourceTitle={sourceById.get(form.sourceId)?.title || form.sourceTitle}
             tags={selectedTags.map((t) => t.name)}
+            quoteId={quoteId}
           />
 
           <QuoteMetadataSection

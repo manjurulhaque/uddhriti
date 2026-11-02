@@ -6,7 +6,16 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout, QuoteCard } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
-import { formatCountWithNoun, formatEpoch, formatLifespan } from "@/lib/formatters"
+import {
+  cleanProfession,
+  formatCountWithNoun,
+  formatDateOfRecord,
+  formatEpoch,
+  formatLifespan,
+  formatWorkType,
+  getAuthorInitials,
+  getCategoryMeta,
+} from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
 
@@ -41,7 +50,7 @@ export async function generateMetadata({
   const slug = sanitizeSlug(rawSlug, 150)
   const author = await prisma.author.findUnique({
     where: { slug },
-    select: { name: true, profession: true, bio: true, quoteCount: true },
+    select: { name: true, profession: true, bio: true, quoteCount: true, imageUrl: true },
   })
 
   if (!author) {
@@ -63,6 +72,13 @@ export async function generateMetadata({
     openGraph: {
       title: `${author.name} Quotes - Quotzen`,
       description: desc,
+      images: author.imageUrl ? [{ url: author.imageUrl, alt: author.name }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${author.name} Quotes - Quotzen`,
+      description: desc,
+      images: author.imageUrl ? [author.imageUrl] : undefined,
     },
   }
 }
@@ -80,8 +96,18 @@ export default async function AuthorDetailPage({
     where: { slug },
     include: {
       sources: {
-        select: { id: true, title: true, type: true, year: true, quoteCount: true },
-        take: 5,
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          type: true,
+          year: true,
+          yearLabel: true,
+          publisher: true,
+          quoteCount: true,
+          externalUrl: true,
+        },
+        take: 6,
         orderBy: { quoteCount: "desc" },
       },
     },
@@ -91,7 +117,7 @@ export default async function AuthorDetailPage({
     notFound()
   }
 
-  const [totalQuotes, quotes, relatedAuthors] = await Promise.all([
+  const [totalQuotes, quotes, relatedAuthors, categoryGroups] = await Promise.all([
     prisma.quote.count({
       where: {
         authorId: author.id,
@@ -113,7 +139,7 @@ export default async function AuthorDetailPage({
         source: { select: { title: true, year: true } },
         tags: {
           select: {
-            tag: { select: { name: true } },
+            tag: { select: { name: true, slug: true } },
           },
         },
       },
@@ -127,19 +153,71 @@ export default async function AuthorDetailPage({
           author.nationality ? { nationality: author.nationality } : {},
         ],
       },
-      select: { id: true, name: true, slug: true, profession: true, quoteCount: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        profession: true,
+        nationality: true,
+        birthYear: true,
+        deathYear: true,
+        imageUrl: true,
+        quoteCount: true,
+      },
       take: 4,
       orderBy: { quoteCount: "desc" },
     }),
+    prisma.quote.groupBy({
+      by: ["categoryId"],
+      where: {
+        authorId: author.id,
+        status: "PUBLISHED",
+        deletedAt: null,
+      },
+      _count: { categoryId: true },
+      orderBy: { _count: { categoryId: "desc" } },
+      take: 6,
+    }),
   ])
+
+  const categoryIds = categoryGroups.map((g) => g.categoryId)
+  const categories =
+    categoryIds.length > 0
+      ? await prisma.category.findMany({
+          where: { id: { in: categoryIds } },
+          select: { id: true, name: true, slug: true },
+        })
+      : []
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c]))
+  const topCategories = categoryGroups
+    .map((g) => {
+      const cat = categoryMap.get(g.categoryId)
+      if (!cat) return null
+      return {
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        quoteCount: g._count.categoryId,
+      }
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null)
 
   const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
 
   const lifespan = formatLifespan(author)
   const epoch = formatEpoch(author.birthYear)
+  const initials = getAuthorInitials(author.name)
+  const cleanedProfession = cleanProfession(author.profession)
+  const dateOfBirthFormatted = formatDateOfRecord(author.dateOfBirth)
+  const dateOfDeathFormatted = formatDateOfRecord(author.dateOfDeath)
 
   const siteUrl = getSiteUrl()
   const authorUrl = `${siteUrl}/authors/${author.slug}`
+
+  const sameAsList: string[] = []
+  if (author.wikipediaUrl) sameAsList.push(author.wikipediaUrl)
+  if (author.wikidataId) sameAsList.push(`https://www.wikidata.org/wiki/${author.wikidataId}`)
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -151,9 +229,17 @@ export default async function AuthorDetailPage({
     ...(author.bio ? { description: author.bio } : {}),
     ...(author.profession ? { jobTitle: author.profession } : {}),
     ...(author.nationality ? { nationality: author.nationality } : {}),
-    ...(author.birthYear ? { birthDate: String(author.birthYear) } : {}),
-    ...(author.deathYear ? { deathDate: String(author.deathYear) } : {}),
-    ...(author.wikipediaUrl ? { sameAs: [author.wikipediaUrl] } : {}),
+    ...(author.dateOfBirth
+      ? { birthDate: author.dateOfBirth.toISOString().split("T")[0] }
+      : author.birthYear
+        ? { birthDate: String(author.birthYear) }
+        : {}),
+    ...(author.dateOfDeath
+      ? { deathDate: author.dateOfDeath.toISOString().split("T")[0] }
+      : author.deathYear
+        ? { deathDate: String(author.deathYear) }
+        : {}),
+    ...(sameAsList.length > 0 ? { sameAs: sameAsList } : {}),
   }
 
   function buildHref(newPage: number) {
@@ -184,22 +270,33 @@ export default async function AuthorDetailPage({
 
         {/* Author Profile Hero Card */}
         <div className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-8 lg:p-10 shadow-xs relative overflow-hidden">
-          <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-            {/* Portrait or Monogram */}
-            <div className="relative h-28 w-28 sm:h-36 sm:w-36 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border border-stone-200 shadow-sm">
+          {/* Subtle Ambient Decorative Tint */}
+          <div
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-gradient-to-br from-amber-500/10 via-[var(--accent-rust)]/5 to-transparent blur-3xl"
+            aria-hidden="true"
+          />
+
+          <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start relative z-10">
+            {/* Portrait Frame or Regal Monogram Seal */}
+            <div className="relative h-32 w-32 sm:h-40 sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border-2 border-stone-200/90 shadow-md group">
               {author.imageUrl ? (
                 <Image
                   src={author.imageUrl}
                   alt={author.name}
                   fill
-                  sizes="(max-width: 640px) 112px, 144px"
+                  sizes="(max-width: 640px) 128px, 160px"
                   unoptimized
-                  className="object-cover"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                   priority
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center font-serif text-4xl sm:text-5xl font-bold italic text-stone-400 bg-[var(--page-cream)]">
-                  {author.name.charAt(0)}
+                <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-amber-50 via-[#faf6f0] to-[#f4ebe1] text-[var(--ink-900)] relative">
+                  <span className="font-serif text-4xl sm:text-5xl font-bold italic text-[var(--accent-rust)]">
+                    {initials}
+                  </span>
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 mt-1">
+                    Thinker
+                  </span>
                 </div>
               )}
             </div>
@@ -207,20 +304,24 @@ export default async function AuthorDetailPage({
             {/* Author Information */}
             <div className="space-y-4 flex-1">
               <div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1.5">
-                  {author.profession && (
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                  {cleanedProfession && (
                     <span className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)]">
-                      {author.profession}
+                      {cleanedProfession}
                     </span>
                   )}
                   {author.nationality && (
-                    <span className="text-xs text-stone-400">• {author.nationality}</span>
+                    <span className="text-xs font-medium text-stone-500">
+                      {cleanedProfession ? "• " : ""}{author.nationality}
+                    </span>
                   )}
                   {lifespan && (
-                    <span className="text-xs font-mono text-stone-500">• {lifespan}</span>
+                    <span className="text-xs font-mono font-medium text-stone-500">
+                      • {lifespan}
+                    </span>
                   )}
                   {epoch && (
-                    <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
+                    <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
                       {epoch}
                     </span>
                   )}
@@ -229,28 +330,74 @@ export default async function AuthorDetailPage({
                 <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
                   {author.name}
                 </h1>
+
+                {/* Exact Birth & Death Dates Chronology if Recorded */}
+                {(dateOfBirthFormatted || dateOfDeathFormatted) && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-600 font-mono mt-2 pt-1 border-t border-stone-100">
+                    {dateOfBirthFormatted && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-stone-400 font-sans font-medium uppercase tracking-wider text-[10px]">Born:</span>
+                        <span className="font-medium text-stone-800">{dateOfBirthFormatted}</span>
+                      </span>
+                    )}
+                    {dateOfBirthFormatted && dateOfDeathFormatted && (
+                      <span className="text-stone-300">•</span>
+                    )}
+                    {dateOfDeathFormatted && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-stone-400 font-sans font-medium uppercase tracking-wider text-[10px]">Died:</span>
+                        <span className="font-medium text-stone-800">{dateOfDeathFormatted}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
+              {/* Biography */}
               {author.bio && (
-                <p className="text-sm sm:text-base text-stone-700 leading-relaxed font-serif max-w-3xl border-l-2 border-[var(--accent-rust)]/40 pl-4 py-0.5">
-                  {author.bio}
-                </p>
+                <div className="text-sm sm:text-base text-stone-700 leading-relaxed font-serif max-w-3xl border-l-2 border-[var(--accent-rust)]/40 pl-4 py-1 space-y-2">
+                  {author.bio.split("\n\n").map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  ))}
+                </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-800">
-                  <span>Quotes:</span>
+              {/* Authority & External Catalog Links */}
+              <div className="flex flex-wrap items-center gap-2.5 pt-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3.5 py-1 text-xs font-semibold text-stone-800">
+                  <span className="text-stone-500">Quotes:</span>
                   <span className="font-bold">{totalQuotes}</span>
                 </span>
+
+                {author.sources.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-3 py-1 text-xs font-semibold text-amber-900">
+                    <span className="text-amber-700">Works:</span>
+                    <span className="font-bold">{author.sources.length}</span>
+                  </span>
+                )}
 
                 {author.wikipediaUrl && (
                   <a
                     href={author.wikipediaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/80 bg-white px-3.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition-all shadow-2xs"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition-all shadow-2xs"
                   >
-                    <span>Wikipedia Biography</span>
+                    <span>Wikipedia</span>
+                    <svg className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                )}
+
+                {author.wikidataId && (
+                  <a
+                    href={`https://www.wikidata.org/wiki/${author.wikidataId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition-all shadow-2xs"
+                  >
+                    <span>Wikidata ({author.wikidataId})</span>
                     <svg className="h-3 w-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
@@ -260,6 +407,112 @@ export default async function AuthorDetailPage({
             </div>
           </div>
         </div>
+
+        {/* Thematic Focus & Philosophical Domains */}
+        {topCategories.length > 0 && (
+          <section className="space-y-3" aria-labelledby="thematic-focus-heading">
+            <div className="flex items-center justify-between border-b border-stone-900/10 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-base" aria-hidden="true">🧭</span>
+                <h2 id="thematic-focus-heading" className="font-serif text-lg sm:text-xl font-bold tracking-tight text-[var(--ink-900)]">
+                  Thematic Focus &amp; Philosophical Domains
+                </h2>
+              </div>
+              <span className="text-xs text-stone-500 font-mono">
+                Explore by category
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {topCategories.map((cat) => {
+                const meta = getCategoryMeta(cat.name)
+                return (
+                  <Link
+                    key={cat.id}
+                    href={`/categories/${cat.slug}`}
+                    className={`inline-flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-medium transition-all shadow-2xs hover:shadow-xs hover:-translate-y-0.5 active:translate-y-0 ${meta.border} bg-white hover:bg-stone-50/80 text-stone-800`}
+                  >
+                    <span className="text-base leading-none" aria-hidden="true">{meta.icon}</span>
+                    <span className="font-semibold text-stone-900">{cat.name}</span>
+                    <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-mono font-bold text-stone-600">
+                      {cat.quoteCount}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Notable Works & Citations Shelf */}
+        {author.sources.length > 0 && (
+          <section className="space-y-4" aria-labelledby="notable-works-heading">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-stone-900/10 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg" aria-hidden="true">📖</span>
+                <h2 id="notable-works-heading" className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink-900)]">
+                  Notable Works &amp; Cited Sources
+                </h2>
+              </div>
+              <span className="text-xs font-mono text-stone-500">
+                {formatCountWithNoun(author.sources.length, "work")} in library
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {author.sources.map((source) => (
+                <div
+                  key={source.id}
+                  className="group relative flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs hover:border-[var(--accent-rust)]/40 hover:shadow-sm transition-all"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-500/20">
+                        {formatWorkType(source.type)}
+                      </span>
+                      {(source.year || source.yearLabel) && (
+                        <span className="font-mono text-xs text-stone-500">
+                          {source.yearLabel || (source.year && source.year < 0 ? `${Math.abs(source.year)} BC` : String(source.year))}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="font-serif text-base sm:text-lg font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors leading-snug">
+                      <em>{source.title}</em>
+                    </h3>
+
+                    {source.publisher && (
+                      <p className="text-xs text-stone-500 line-clamp-1">
+                        Pub: {source.publisher}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
+                    <span className="font-mono text-stone-600 font-medium">
+                      {formatCountWithNoun(source.quoteCount, "quote")}
+                    </span>
+
+                    {source.externalUrl && (
+                      <a
+                        href={source.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-[var(--accent-rust)] hover:underline"
+                        aria-label={`External reference for ${source.title}`}
+                      >
+                        <span>Reference</span>
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Quotes Section */}
         <div className="space-y-6">
@@ -309,30 +562,83 @@ export default async function AuthorDetailPage({
           />
         </div>
 
-        {/* Related Thinkers */}
+        {/* Related Thinkers & Contemporary Voices */}
         {relatedAuthors.length > 0 && (
-          <div className="pt-6 border-t border-stone-200/80 space-y-4">
-            <h3 className="font-serif text-xl font-bold text-stone-900">
-              Related Thinkers &amp; Contemporary Voices
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {relatedAuthors.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/authors/${item.slug}`}
-                  className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs hover:border-stone-400 hover:shadow-xs transition-all space-y-1 block"
-                >
-                  <p className="font-serif font-bold text-stone-900 text-sm hover:text-[var(--accent-rust)] transition-colors">
-                    {item.name}
-                  </p>
-                  <p className="text-xs text-stone-500 truncate">{item.profession ?? "Thinker"}</p>
-                  <p className="text-[11px] font-mono text-stone-400 pt-1">
-                    {formatCountWithNoun(item.quoteCount, "quote")}
-                  </p>
-                </Link>
-              ))}
+          <section className="pt-6 border-t border-stone-200/80 space-y-4" aria-labelledby="related-thinkers-heading">
+            <div className="flex items-center justify-between">
+              <h3 id="related-thinkers-heading" className="font-serif text-xl font-bold text-stone-900">
+                Related Thinkers &amp; Contemporary Voices
+              </h3>
+              <Link
+                href="/authors"
+                className="text-xs font-semibold text-[var(--accent-rust)] hover:underline"
+              >
+                Browse All Authors →
+              </Link>
             </div>
-          </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedAuthors.map((item) => {
+                const itemLifespan = formatLifespan(item)
+                const itemInitials = getAuthorInitials(item.name)
+                const itemCleanProf = cleanProfession(item.profession)
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/authors/${item.slug}`}
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/90 bg-white p-4 shadow-2xs hover:border-[var(--accent-rust)]/40 hover:shadow-xs transition-all space-y-3"
+                  >
+                    <div className="space-y-3">
+                      {/* Portrait Thumbnail / Monogram */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-100 shadow-2xs">
+                          {item.imageUrl ? (
+                            <Image
+                              src={item.imageUrl}
+                              alt={item.name}
+                              fill
+                              sizes="48px"
+                              unoptimized
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center font-serif text-sm font-bold text-[var(--accent-rust)] bg-gradient-to-br from-amber-50 to-[#faf3e8]">
+                              {itemInitials}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="font-serif font-bold text-stone-900 text-sm group-hover:text-[var(--accent-rust)] transition-colors truncate">
+                            {item.name}
+                          </p>
+                          {itemLifespan && (
+                            <p className="text-[11px] font-mono text-stone-500 truncate">
+                              {itemLifespan}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Profession & Nationality */}
+                      {(item.nationality || itemCleanProf) && (
+                        <p className="text-xs text-stone-600 truncate border-t border-stone-100 pt-2">
+                          <span className="font-medium">{itemCleanProf ?? "Thinker"}</span>
+                          {item.nationality && <span className="text-stone-400"> • {item.nationality}</span>}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-stone-100 pt-2 flex items-center justify-between text-[11px] font-mono text-stone-500">
+                      <span>{formatCountWithNoun(item.quoteCount, "quote")}</span>
+                      <span className="text-[var(--accent-rust)] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
         )}
       </div>
     </PublicLayout>

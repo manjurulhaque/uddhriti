@@ -105,6 +105,41 @@ export function getAuthorInitials(name?: string | null): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+export function formatDateOfRecord(date?: Date | string | null): string | null {
+  if (!date) return null
+  try {
+    const d = typeof date === "string" ? new Date(date) : date
+    if (isNaN(d.getTime())) return null
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(d)
+  } catch {
+    return null
+  }
+}
+
+export function formatWorkType(type: string): string {
+  switch (type.toUpperCase()) {
+    case "BOOK":
+      return "Book"
+    case "SPEECH":
+      return "Speech / Address"
+    case "ARTICLE":
+      return "Essay / Article"
+    case "INTERVIEW":
+      return "Interview"
+    case "SCRIPTURE":
+      return "Sacred Text"
+    case "LETTER":
+      return "Letter / Epistle"
+    default:
+      return "Literary Work"
+  }
+}
+
 export interface CategoryMeta {
   icon: string
   gradient: string

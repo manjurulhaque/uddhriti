@@ -152,6 +152,15 @@ export function QuoteEditorSidebar({
               </div>
             </>
           )}
+
+          <div className="flex items-center justify-center gap-3 text-[11px] text-stone-400 pt-2 border-t border-stone-100">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 font-mono text-[10px]">⌘S</kbd> Save
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 font-mono text-[10px]">⌘⏎</kbd> {mode === "create" ? "Save & New" : "Save & Close"}
+            </span>
+          </div>
         </div>
       </div>
 

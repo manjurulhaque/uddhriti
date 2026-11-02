@@ -1,6 +1,6 @@
 "use client"
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 import { suggestTags } from "@/lib/tagSuggestions"
@@ -130,6 +130,27 @@ export default function QuoteEditorForm({
 
     window.localStorage.setItem(FORM_DEFAULTS_STORAGE_KEY, JSON.stringify(payload))
   }, [form.authorId, form.categoryId, form.language, form.sourceId, form.sourceType, form.status, form.tagIds, mode])
+
+  const handleSubmitRef = useRef(handleSubmit)
+
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit
+  })
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault()
+        void handleSubmitRef.current(mode === "create" ? "stay" : "stay")
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault()
+        void handleSubmitRef.current(mode === "create" ? "another" : "list")
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [mode])
 
   const authorById = useMemo(() => new Map(authors.map((author) => [author.id, author])), [authors])
   const categoryById = useMemo(

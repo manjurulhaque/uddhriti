@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
+import { Prisma, QuoteStatus } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import {
   recalculateAuthorQuoteCounts,
+  recalculateCategoryQuoteCounts,
   recalculateSourceQuoteCounts,
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 type BulkActionPayload = {
   quoteIds?: unknown
@@ -16,6 +18,7 @@ type BulkActionPayload = {
   authorId?: unknown
   sourceId?: unknown
   tagIds?: unknown
+  status?: unknown
 }
 
 function uniqueStringList(value: unknown) {
@@ -53,11 +56,74 @@ export async function POST(req: Request) {
   }
 
   const action = body.action
-  if (action !== "setAuthor" && action !== "setSource" && action !== "clearSource" && action !== "addTags" && action !== "removeTags") {
+  if (
+    action !== "setAuthor" &&
+    action !== "setSource" &&
+    action !== "clearSource" &&
+    action !== "addTags" &&
+    action !== "removeTags" &&
+    action !== "setStatus"
+  ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
 
   try {
+    if (action === "setStatus") {
+      const status = typeof body.status === "string" ? body.status.trim() : ""
+      if (status !== "PUBLISHED" && status !== "DRAFT" && status !== "ARCHIVED" && status !== "REVIEW") {
+        return NextResponse.json({ error: "Valid status value (PUBLISHED, DRAFT, REVIEW, ARCHIVED) is required" }, { status: 400 })
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const targetQuotes = await tx.quote.findMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          select: {
+            id: true,
+            status: true,
+            authorId: true,
+            sourceId: true,
+            categoryId: true,
+            publishedAt: true,
+            tags: { select: { tagId: true } },
+          },
+        })
+
+        if (targetQuotes.length === 0) {
+          return { updatedCount: 0, hadPublished: false }
+        }
+
+        const hadPublished = targetQuotes.some((q) => q.status === "PUBLISHED")
+        const isPublishing = status === "PUBLISHED"
+        const now = new Date()
+
+        await tx.quote.updateMany({
+          where: { id: { in: targetQuotes.map((q) => q.id) }, deletedAt: null },
+          data: {
+            status: status as QuoteStatus,
+            publishedAt: isPublishing ? now : undefined,
+            publishedById: isPublishing ? admin.id : null,
+          },
+        })
+
+        const authorIds = compactIds(targetQuotes.map((q) => q.authorId))
+        const sourceIds = compactIds(targetQuotes.map((q) => q.sourceId))
+        const categoryIds = compactIds(targetQuotes.map((q) => q.categoryId))
+        const tagIds = compactIds(targetQuotes.flatMap((q) => q.tags.map((t) => t.tagId)))
+
+        await recalculateAuthorQuoteCounts(tx, authorIds)
+        await recalculateSourceQuoteCounts(tx, sourceIds)
+        await recalculateCategoryQuoteCounts(tx, categoryIds)
+        await recalculateTagQuoteCounts(tx, tagIds)
+
+        return { updatedCount: targetQuotes.length, hadPublished: hadPublished || isPublishing }
+      })
+
+      if (result.hadPublished) {
+        revalidatePublicSurfaces()
+      }
+
+      return NextResponse.json({ success: true, updatedCount: result.updatedCount })
+    }
     if (action === "setAuthor") {
       const authorId = typeof body.authorId === "string" ? body.authorId.trim() : ""
       if (!authorId || !isValidUuid(authorId)) {

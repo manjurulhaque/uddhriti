@@ -30,7 +30,7 @@ type TagOption = {
   name: string
 }
 
-type BulkActionType = "setAuthor" | "setSource" | "clearSource" | "addTags" | "removeTags"
+type BulkActionType = "setAuthor" | "setSource" | "clearSource" | "addTags" | "removeTags" | "setStatus"
 type SortOption =
   | "newest"
   | "oldest"
@@ -82,7 +82,10 @@ export function QuotesListManager({
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [action, setAction] = useState<BulkActionType>("setAuthor")
+  const [action, setAction] = useState<BulkActionType>("setStatus")
+  const [statusValue, setStatusValue] = useState<"PUBLISHED" | "DRAFT" | "ARCHIVED">("PUBLISHED")
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
   const [authors, setAuthors] = useState<Option[]>([])
   const [sources, setSources] = useState<Option[]>([])
   const [tags, setTags] = useState<TagOption[]>([])
@@ -105,11 +108,11 @@ export function QuotesListManager({
     const needle = search.trim().toLowerCase()
     const filtered = needle
       ? quotes.filter((quote) =>
-          [quote.content, quote.authorName ?? "", quote.sourceTitle ?? "", quote.status]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle)
-        )
+        [quote.content, quote.authorName ?? "", quote.sourceTitle ?? "", quote.status]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle)
+      )
       : quotes
 
     return [...filtered].sort((a, b) => {
@@ -215,12 +218,23 @@ export function QuotesListManager({
           authorId: action === "setAuthor" ? authorId : undefined,
           sourceId: action === "setSource" ? sourceId : undefined,
           tagIds: action === "addTags" || action === "removeTags" ? tagIds : undefined,
+          status: action === "setStatus" ? statusValue : undefined,
         }),
       })
 
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         throw new Error(data?.error || "Bulk update failed")
+      }
+
+      if (action === "setStatus") {
+        setStatusOverrides((prev) => {
+          const next = { ...prev }
+          for (const id of selectedIds) {
+            next[id] = statusValue
+          }
+          return next
+        })
       }
 
       setSelectedIds([])
@@ -232,6 +246,41 @@ export function QuotesListManager({
       setError(e instanceof Error ? e.message : "Bulk update failed")
     } finally {
       setIsApplying(false)
+    }
+  }
+
+  async function toggleQuoteStatus(quoteId: string, currentStatus: string) {
+    const nextStatus = currentStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
+    setError("")
+    setTogglingStatusId(quoteId)
+    setStatusOverrides((prev) => ({ ...prev, [quoteId]: nextStatus }))
+
+    try {
+      const res = await fetch("/api/admin/quotes/bulk-actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteIds: [quoteId],
+          action: "setStatus",
+          status: nextStatus,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to update quote status")
+      }
+
+      router.refresh()
+    } catch (err: unknown) {
+      setStatusOverrides((prev) => {
+        const copy = { ...prev }
+        delete copy[quoteId]
+        return copy
+      })
+      setError(err instanceof Error ? err.message : "Failed to toggle status")
+    } finally {
+      setTogglingStatusId(null)
     }
   }
 
@@ -281,11 +330,20 @@ export function QuotesListManager({
       />
 
       {selectedCount > 0 ? (
-        <div className="border rounded p-3 bg-gray-50 space-y-3">
-          <div className="text-sm font-medium">{selectedCount} selected</div>
-          <div className="flex flex-wrap gap-2 items-center">
+        <div className="sticky top-2 z-20 rounded-2xl border border-stone-200/90 bg-white/95 p-4 shadow-md backdrop-blur-md space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-stone-900">{selectedCount} quotes selected</span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="text-xs text-stone-500 hover:text-stone-900 cursor-pointer"
+            >
+              Clear selection
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2.5 items-center">
             <select
-              className="border rounded px-2 py-1 text-sm"
+              className="border border-stone-300 rounded-xl px-3 py-1.5 text-sm bg-white font-medium"
               value={action}
               onChange={(event) => {
                 const next = event.target.value as BulkActionType
@@ -294,12 +352,25 @@ export function QuotesListManager({
                 ensureOptions(next)
               }}
             >
+              <option value="setStatus">Set Status</option>
               <option value="setAuthor">Set Author</option>
               <option value="setSource">Set Source</option>
               <option value="clearSource">Clear Source</option>
               <option value="addTags">Add Tags</option>
               <option value="removeTags">Remove Tags</option>
             </select>
+
+            {action === "setStatus" ? (
+              <select
+                className="border border-stone-300 rounded-xl px-3 py-1.5 text-sm bg-white min-w-[200px]"
+                value={statusValue}
+                onChange={(event) => setStatusValue(event.target.value as "PUBLISHED" | "DRAFT" | "ARCHIVED")}
+              >
+                <option value="PUBLISHED">Status: Published</option>
+                <option value="DRAFT">Status: Draft</option>
+                <option value="ARCHIVED">Status: Archived</option>
+              </select>
+            ) : null}
 
             {action === "setAuthor" ? (
               <select
@@ -396,90 +467,111 @@ export function QuotesListManager({
           />
         ) : null}
 
-        {visibleQuotes.map((quote) => (
-          <AdminEntityCard
-            key={quote.id}
-            href={`/admin/quotes/${quote.id}`}
-            selected={selectedIds.includes(quote.id)}
-            onSelect={() => onToggleSelect(quote.id)}
-            title={
-              <span className="font-serif italic font-normal text-stone-900 group-hover:text-black line-clamp-2 text-base leading-snug">
-                “{quote.content}”
-              </span>
-            }
-            subtitle={
-              <span className="flex items-center gap-1.5 text-xs text-stone-600 mt-1">
-                <span className="font-medium text-stone-800">{quote.authorName ?? "Unknown Author"}</span>
-                {quote.sourceTitle ? (
-                  <>
-                    <span className="text-stone-300">•</span>
-                    <span className="italic text-stone-500">{quote.sourceTitle}</span>
-                  </>
-                ) : null}
-              </span>
-            }
-            badge={
-              <Badge
-                variant={
-                  quote.status === "PUBLISHED"
-                    ? "success"
-                    : quote.status === "ARCHIVED"
-                    ? "dark"
-                    : "warm"
-                }
-                size="xs"
-                dot
-              >
-                {quote.status}
-              </Badge>
-            }
-            meta={
-              <>
-                {!quote.hasAuthor && (
-                  <Badge variant="danger" size="xs">
-                    Missing author
-                  </Badge>
-                )}
-                {!quote.hasSource && (
-                  <Badge variant="warning" size="xs">
-                    Missing source
-                  </Badge>
-                )}
-                {!quote.hasTags && (
-                  <Badge variant="neutral" size="xs">
-                    Missing tags
-                  </Badge>
-                )}
-                <span className="text-[11px] text-stone-400">
-                  {quote.publishedAt
-                    ? `Published ${formatDateTimeInAppTimeZone(quote.publishedAt)}`
-                    : `Created ${formatDateTimeInAppTimeZone(quote.createdAt)}`}
+        {visibleQuotes.map((quote) => {
+          const effectiveStatus = statusOverrides[quote.id] ?? quote.status
+          const isTogglingStatus = togglingStatusId === quote.id
+          const isPublished = effectiveStatus === "PUBLISHED"
+
+          return (
+            <AdminEntityCard
+              key={quote.id}
+              href={`/admin/quotes/${quote.id}`}
+              selected={selectedIds.includes(quote.id)}
+              onSelect={() => onToggleSelect(quote.id)}
+              title={
+                <span className="font-serif italic font-normal text-stone-900 group-hover:text-black line-clamp-2 text-base leading-snug">
+                  “{quote.content}”
                 </span>
-              </>
-            }
-            actions={
-              <div className="flex items-center gap-1.5">
-                <Button
-                  href={`/admin/quotes/${quote.id}`}
-                  variant="ghost"
+              }
+              subtitle={
+                <span className="flex items-center gap-1.5 text-xs text-stone-600 mt-1">
+                  <span className="font-medium text-stone-800">{quote.authorName ?? "Unknown Author"}</span>
+                  {quote.sourceTitle ? (
+                    <>
+                      <span className="text-stone-300">•</span>
+                      <span className="italic text-stone-500">{quote.sourceTitle}</span>
+                    </>
+                  ) : null}
+                </span>
+              }
+              badge={
+                <Badge
+                  variant={
+                    isPublished
+                      ? "success"
+                      : effectiveStatus === "ARCHIVED"
+                        ? "dark"
+                        : "warm"
+                  }
                   size="xs"
+                  dot
                 >
-                  Edit
-                </Button>
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="xs"
-                  disabled={deletingId === quote.id}
-                  isLoading={deletingId === quote.id}
-                  onClick={() => setPendingDeleteId(quote.id)}
-                >
-                  Delete
-                </Button>
-              </div>
-            }
-          />
-        ))}
+                  {effectiveStatus}
+                </Badge>
+              }
+              meta={
+                <>
+                  {!quote.hasAuthor && (
+                    <Badge variant="danger" size="xs">
+                      Missing author
+                    </Badge>
+                  )}
+                  {!quote.hasSource && (
+                    <Badge variant="warning" size="xs">
+                      Missing source
+                    </Badge>
+                  )}
+                  {!quote.hasTags && (
+                    <Badge variant="neutral" size="xs">
+                      Missing tags
+                    </Badge>
+                  )}
+                  <span className="text-[11px] text-stone-400">
+                    {quote.publishedAt
+                      ? `Published ${formatDateTimeInAppTimeZone(quote.publishedAt)}`
+                      : `Created ${formatDateTimeInAppTimeZone(quote.createdAt)}`}
+                  </span>
+                </>
+              }
+              actions={
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    type="button"
+                    variant={isPublished ? "outline" : "primary"}
+                    size="xs"
+                    disabled={isTogglingStatus}
+                    isLoading={isTogglingStatus}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggleQuoteStatus(quote.id, effectiveStatus)
+                    }}
+                    title={isPublished ? "Click to unpublish and move to Draft" : "Click to publish quote immediately"}
+                  >
+                    {isPublished ? "Unpublish" : "Publish"}
+                  </Button>
+                  <Button
+                    href={`/admin/quotes/${quote.id}`}
+                    variant="ghost"
+                    size="xs"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="xs"
+                    disabled={deletingId === quote.id}
+                    isLoading={deletingId === quote.id}
+                    onClick={() => setPendingDeleteId(quote.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              }
+            />
+          )
+        })}
       </div>
 
       {totalPages > 1 ? (

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma"
-import { APP_TIME_ZONE } from "@/lib/datetime"
+import { APP_TIME_ZONE, subtractDays } from "@/lib/datetime"
+import { unstable_cache } from "next/cache"
+import { ADMIN_DASHBOARD_CACHE_TAG } from "@/lib/revalidation"
 
 type DashboardDateRange = {
   sevenDaysAgo: Date
@@ -210,7 +212,13 @@ async function fetchQuoteCountMetrics({
     FROM "Quote"
   `
 
-  return row
+  if (!row) return null
+
+  return {
+    ...row,
+    avgVerificationConfidence:
+      row.avgVerificationConfidence !== null ? Number(row.avgVerificationConfidence) : null,
+  }
 }
 
 async function fetchEntityCountMetrics({
@@ -292,9 +300,9 @@ async function fetchEngagementMetrics({
 }
 
 async function fetchPublishedDailySeries() {
-  return prisma.$queryRaw<
+  const rows = await prisma.$queryRaw<
     {
-      day: Date
+      day: Date | string
       count: number
     }[]
   >`
@@ -314,6 +322,11 @@ async function fetchPublishedDailySeries() {
     GROUP BY series.day
     ORDER BY series.day ASC;
   `
+
+  return rows.map((r) => ({
+    day: r.day instanceof Date ? r.day.toISOString() : String(r.day),
+    count: Number(r.count),
+  }))
 }
 
 async function fetchSourceTypeBreakdown() {
@@ -341,7 +354,7 @@ async function fetchOrphanedSourceCount() {
 }
 
 async function fetchRecentQuotes() {
-  return prisma.quote.findMany({
+  const rows = await prisma.quote.findMany({
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: 5,
@@ -352,22 +365,37 @@ async function fetchRecentQuotes() {
       createdBy: { select: { email: true } },
     },
   })
+
+  return rows.map((r) => ({
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+  }))
 }
 
 async function fetchRecentAuthors() {
-  return prisma.author.findMany({
+  const rows = await prisma.author.findMany({
     orderBy: { createdAt: "desc" },
     take: 5,
     select: { id: true, name: true, createdAt: true },
   })
+
+  return rows.map((r) => ({
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+  }))
 }
 
 async function fetchRecentSources() {
-  return prisma.source.findMany({
+  const rows = await prisma.source.findMany({
     orderBy: { createdAt: "desc" },
     take: 5,
     select: { id: true, title: true, type: true, createdAt: true },
   })
+
+  return rows.map((r) => ({
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+  }))
 }
 
 async function fetchTopCategories() {
@@ -404,7 +432,7 @@ async function fetchMostViewedQuotes() {
 }
 
 async function fetchTrendingQuotes() {
-  return prisma.$queryRaw<
+  const rows = await prisma.$queryRaw<
     {
       id: string
       content: string
@@ -418,10 +446,10 @@ async function fetchTrendingQuotes() {
       q.content,
       q.views,
       q."authorName",
-      q.views / POWER(
+      (q.views / POWER(
         EXTRACT(EPOCH FROM (NOW() - q."publishedAt")) / 3600 + 2,
         1.8
-      ) AS score
+      ))::float AS score
     FROM "Quote" q
     WHERE q."status" = 'PUBLISHED'
       AND q."deletedAt" IS NULL
@@ -429,6 +457,12 @@ async function fetchTrendingQuotes() {
     ORDER BY score DESC
     LIMIT 5;
   `
+
+  return rows.map((r) => ({
+    ...r,
+    views: Number(r.views),
+    score: Number(r.score),
+  }))
 }
 
 export async function getDashboardMetrics(range: DashboardDateRange): Promise<DashboardMetrics> {
@@ -501,3 +535,23 @@ export async function getDashboardMetrics(range: DashboardDateRange): Promise<Da
     },
   }
 }
+
+export const getCachedDashboardMetrics = unstable_cache(
+  async () => {
+    const now = new Date()
+    const sevenDaysAgo = subtractDays(now, 7)
+    const fourteenDaysAgo = subtractDays(now, 14)
+    const thirtyDaysAgo = subtractDays(now, 30)
+
+    return getDashboardMetrics({
+      sevenDaysAgo,
+      fourteenDaysAgo,
+      thirtyDaysAgo,
+    })
+  },
+  ["admin-dashboard-metrics-summary"],
+  {
+    revalidate: 60,
+    tags: [ADMIN_DASHBOARD_CACHE_TAG],
+  }
+)

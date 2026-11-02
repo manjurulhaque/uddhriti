@@ -1,9 +1,10 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { getDashboardMetrics } from "@/lib/dashboard/metrics"
-import { formatDateInAppTimeZone, formatShortDateInAppTimeZone, subtractDays } from "@/lib/datetime"
+import { getCachedDashboardMetrics } from "@/lib/dashboard/metrics"
+import { formatDateInAppTimeZone, formatShortDateInAppTimeZone } from "@/lib/datetime"
 import { formatNumber } from "@/lib/formatters"
+import { RefreshMetricsButton } from "./RefreshMetricsButton"
 import {
   StatCard,
   KpiCard,
@@ -26,11 +27,6 @@ export default async function DashboardPage() {
   if (admin.role !== "SUPER_ADMIN") {
     redirect("/")
   }
-
-  const now = new Date()
-  const sevenDaysAgo = subtractDays(now, 7)
-  const fourteenDaysAgo = subtractDays(now, 14)
-  const thirtyDaysAgo = subtractDays(now, 30)
 
   const {
     totalQuotes,
@@ -88,11 +84,7 @@ export default async function DashboardPage() {
     activeCategories,
     activeTags,
     featuredPublishedQuotes,
-  } = await getDashboardMetrics({
-    sevenDaysAgo,
-    fourteenDaysAgo,
-    thirtyDaysAgo,
-  })
+  } = await getCachedDashboardMetrics()
 
   const publishRate = totalQuotes === 0 ? 0 : Math.round((publishedQuotes / totalQuotes) * 100)
   const attributedQuotes = Math.max(0, totalQuotes - unattributedQuotes)
@@ -154,7 +146,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <RefreshMetricsButton />
           <Link href="/admin/quotes/new" className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800">
             + New Quote
           </Link>
@@ -475,7 +468,7 @@ function formatPeriodDelta(current: number, previous: number, actionLabel: strin
   return `${formatNumber(current)} ${actionLabel} in 7d | ${direction}${formatNumber(delta)} vs prev 7d`
 }
 
-function formatShortDate(value: Date) {
+function formatShortDate(value: Date | string) {
   return formatShortDateInAppTimeZone(value)
 }
 

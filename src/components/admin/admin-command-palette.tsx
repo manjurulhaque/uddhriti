@@ -402,6 +402,15 @@ const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
 
   // System
   {
+    id: "nav-system-tools",
+    title: "System Health & Diagnostics",
+    description: "Database integrity audits, counter sync, and automated maintenance",
+    href: "/admin/tools",
+    section: "System",
+    badge: "Maintenance",
+    keywords: ["tools", "health", "diagnostics", "maintenance", "repair", "sync", "counters", "integrity"],
+  },
+  {
     id: "nav-dashboard",
     title: "Admin Dashboard",
     description: "Overview metrics, KPIs, and attention queues",

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { PageHeader, AdminEntityCard } from "@/components/admin"
-import { Badge, EmptyState } from "@/components/ui"
+import { PageHeader } from "@/components/admin"
+import { CollectionsListManager } from "./CollectionsListManager"
 
 export default async function CollectionsPage() {
   const admin = await getAdmin()
@@ -10,7 +10,26 @@ export default async function CollectionsPage() {
 
   const collections = await prisma.collection.findMany({
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      description: true,
+      visibility: true,
+      quoteCount: true,
+      createdAt: true,
+    },
   })
+
+  const normalizedCollections = collections.map((c) => ({
+    id: c.id,
+    title: c.title,
+    slug: c.slug,
+    description: c.description,
+    visibility: c.visibility,
+    quoteCount: c.quoteCount,
+    createdAt: c.createdAt.toISOString(),
+  }))
 
   return (
     <div className="p-8 space-y-6">
@@ -23,36 +42,7 @@ export default async function CollectionsPage() {
         }}
       />
 
-      {collections.length === 0 ? (
-        <EmptyState
-          title="No collections found"
-          description="Create your first curated collection or anthology of quotations."
-          action={{
-            label: "+ New Collection",
-            href: "/admin/collections/new",
-          }}
-        />
-      ) : (
-        <div className="space-y-2.5">
-          {collections.map((collection) => (
-            <AdminEntityCard
-              key={collection.id}
-              href={`/admin/collections/${collection.id}`}
-              title={collection.title}
-              subtitle={collection.slug ? `/${collection.slug}` : undefined}
-              badge={
-                <Badge
-                  variant={collection.visibility === "PUBLIC" ? "success" : "neutral"}
-                  size="sm"
-                  dot
-                >
-                  {collection.visibility}
-                </Badge>
-              }
-            />
-          ))}
-        </div>
-      )}
+      <CollectionsListManager collections={normalizedCollections} />
     </div>
   )
 }

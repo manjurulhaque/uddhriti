@@ -20,6 +20,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   href?: string
   target?: string
   rel?: string
+  download?: boolean | string
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -55,6 +56,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       href,
       target,
       rel,
+      download,
       children,
       className = "",
       disabled,
@@ -100,6 +102,20 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     )
 
     if (href) {
+      if (download) {
+        return (
+          <a
+            href={href}
+            target={target}
+            rel={rel}
+            download={typeof download === "string" ? download : true}
+            className={combinedClasses}
+          >
+            {content}
+          </a>
+        )
+      }
+
       return (
         <Link href={href} target={target} rel={rel} className={combinedClasses}>
           {content}

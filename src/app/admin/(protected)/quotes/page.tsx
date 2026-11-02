@@ -119,6 +119,11 @@ export default async function QuotesPage({
     hasTags: quote.tags.length > 0,
   }))
 
+  const exportUrl =
+    activeFilter === "all"
+      ? "/api/admin/quotes/export?format=csv"
+      : `/api/admin/quotes/export?format=csv&filter=${activeFilter}`
+
   return (
     <div className="p-8 space-y-6">
       <PageHeader
@@ -126,6 +131,15 @@ export default async function QuotesPage({
         description="Review, publish, and curate quotations archive entries."
         actions={
           <>
+            <Button
+              href={exportUrl}
+              variant="outline"
+              size="sm"
+              download
+              title={`Export ${filterLabels[activeFilter]} to CSV`}
+            >
+              Export CSV
+            </Button>
             <Button href="/admin/quotes/deleted" variant="outline" size="sm">
               Trash
             </Button>

@@ -10,7 +10,6 @@ export interface AdminCommandItem {
   title: string
   description?: string
   href?: string
-  action?: () => void | Promise<void>
   section: "Actions" | "Content" | "Taxonomies" | "System"
   badge?: string
   keywords?: string[]
@@ -50,6 +49,14 @@ function IconUpload({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+  )
+}
+
+function IconDownload({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
   )
 }
@@ -150,6 +157,269 @@ function IconFilter({ className = "w-4 h-4" }: { className?: string }) {
   )
 }
 
+// Complete static catalog of admin commands, actions, and routes
+const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
+  // Actions
+  {
+    id: "action-new-quote",
+    title: "Submit New Quote",
+    description: "Open the single quote editor form",
+    href: "/admin/quotes/new",
+    section: "Actions",
+    badge: "Create",
+    keywords: ["new", "create", "add", "quote", "compose", "write"],
+  },
+  {
+    id: "action-bulk-quotes",
+    title: "Bulk Upload Quotes",
+    description: "Batch import quotes from JSON/CSV payload",
+    href: "/admin/quotes/bulk",
+    section: "Actions",
+    badge: "Import",
+    keywords: ["bulk", "upload", "import", "batch", "quotes", "json", "csv"],
+  },
+  {
+    id: "action-export-quotes-csv",
+    title: "Export All Quotes (CSV)",
+    description: "Download entire quotes database as RFC 4180 CSV",
+    href: "/api/admin/quotes/export?format=csv",
+    section: "Actions",
+    badge: "Export",
+    keywords: ["export", "download", "csv", "quotes", "spreadsheet", "excel", "backup"],
+  },
+  {
+    id: "action-export-quotes-json",
+    title: "Export All Quotes (JSON)",
+    description: "Download structured JSON archive of all quotations",
+    href: "/api/admin/quotes/export?format=json",
+    section: "Actions",
+    badge: "Export",
+    keywords: ["export", "download", "json", "quotes", "archive", "backup"],
+  },
+  {
+    id: "action-new-author",
+    title: "Create New Author",
+    description: "Add a new thinker, writer, or historical figure",
+    href: "/admin/authors/new",
+    section: "Actions",
+    badge: "Create",
+    keywords: ["new", "author", "thinker", "philosopher", "writer", "person"],
+  },
+  {
+    id: "action-new-category",
+    title: "Create New Category",
+    description: "Add a new thematic category",
+    href: "/admin/categories/new",
+    section: "Actions",
+    badge: "Create",
+    keywords: ["new", "category", "theme", "subject", "topic"],
+  },
+  {
+    id: "action-bulk-categories",
+    title: "Bulk Create Categories",
+    description: "Batch create categories",
+    href: "/admin/categories/bulk",
+    section: "Actions",
+    badge: "Import",
+    keywords: ["bulk", "category", "import", "batch"],
+  },
+  {
+    id: "action-new-tag",
+    title: "Create New Tag",
+    description: "Add a new taxonomy tag with faceted type",
+    href: "/admin/tags/new",
+    section: "Actions",
+    badge: "Create",
+    keywords: ["new", "tag", "taxonomy", "facet", "mood"],
+  },
+  {
+    id: "action-bulk-tags",
+    title: "Bulk Create Tags",
+    description: "Batch create taxonomy tags",
+    href: "/admin/tags/bulk",
+    section: "Actions",
+    badge: "Import",
+    keywords: ["bulk", "tag", "import", "batch"],
+  },
+  {
+    id: "action-new-collection",
+    title: "Create New Collection",
+    description: "Curate a thematic quote anthology",
+    href: "/admin/collections/new",
+    section: "Actions",
+    badge: "Create",
+    keywords: ["new", "collection", "anthology", "curated", "list"],
+  },
+  {
+    id: "action-import-sources",
+    title: "Import Sources",
+    description: "Batch create works, books, and references",
+    href: "/admin/sources/bulk",
+    section: "Actions",
+    badge: "Import",
+    keywords: ["import", "sources", "books", "citations", "works", "bulk"],
+  },
+  {
+    id: "action-import-faqs",
+    title: "Import FAQs",
+    description: "Batch create frequently asked questions",
+    href: "/admin/faqs/bulk",
+    section: "Actions",
+    badge: "Import",
+    keywords: ["import", "faqs", "questions", "bulk"],
+  },
+  {
+    id: "action-refresh-metrics",
+    title: "Refresh Dashboard Metrics Cache",
+    description: "Purge and recompute cached aggregation numbers",
+    section: "Actions",
+    badge: "Revalidate",
+    keywords: ["refresh", "cache", "dashboard", "metrics", "stats", "revalidate", "purge"],
+  },
+
+  // Content
+  {
+    id: "nav-quotes-all",
+    title: "All Quotes",
+    description: "Manage and curate all quotations",
+    href: "/admin/quotes",
+    section: "Content",
+    keywords: ["quotes", "list", "all", "table", "browse"],
+  },
+  {
+    id: "nav-quotes-draft",
+    title: "Draft & Review Quotes",
+    description: "Filter quotes in DRAFT or REVIEW status",
+    href: "/admin/quotes?filter=draft",
+    section: "Content",
+    badge: "Filter",
+    keywords: ["draft", "review", "pending", "unpublished", "quotes"],
+  },
+  {
+    id: "nav-quotes-archived",
+    title: "Archived Quotes",
+    description: "Filter quotes in ARCHIVED status",
+    href: "/admin/quotes?filter=archived",
+    section: "Content",
+    badge: "Filter",
+    keywords: ["archived", "hidden", "quotes"],
+  },
+  {
+    id: "nav-quotes-unattributed",
+    title: "Unattributed Quotes",
+    description: "Quotes without an author assigned",
+    href: "/admin/quotes?filter=unattributed",
+    section: "Content",
+    badge: "Audit",
+    keywords: ["unattributed", "anonymous", "no author", "quotes"],
+  },
+  {
+    id: "nav-quotes-missing-source",
+    title: "Missing Source Quotes",
+    description: "Quotes without a work/book citation",
+    href: "/admin/quotes?filter=missing-source",
+    section: "Content",
+    badge: "Audit",
+    keywords: ["missing source", "citation", "source", "quotes"],
+  },
+  {
+    id: "nav-quotes-no-tags",
+    title: "Untagged Quotes",
+    description: "Quotes with no taxonomy tags attached",
+    href: "/admin/quotes?filter=no-tags",
+    section: "Content",
+    badge: "Audit",
+    keywords: ["no tags", "untagged", "tags", "quotes"],
+  },
+  {
+    id: "nav-quotes-orphaned",
+    title: "Orphaned Quotes",
+    description: "Quotes missing author, source, or tags",
+    href: "/admin/quotes?filter=orphaned",
+    section: "Content",
+    badge: "Audit",
+    keywords: ["orphaned", "incomplete", "quotes"],
+  },
+  {
+    id: "nav-quotes-deleted",
+    title: "Deleted Quotes (Trash)",
+    description: "Soft-deleted quotes awaiting restoration or purge",
+    href: "/admin/quotes/deleted",
+    section: "Content",
+    badge: "Trash",
+    keywords: ["trash", "deleted", "restore", "bin", "recovery", "quotes"],
+  },
+
+  // Taxonomies
+  {
+    id: "nav-authors",
+    title: "Authors Catalog",
+    description: "Manage thinkers, philosophers, and writers",
+    href: "/admin/authors",
+    section: "Taxonomies",
+    keywords: ["authors", "thinkers", "people", "writers"],
+  },
+  {
+    id: "nav-categories",
+    title: "Categories Catalog",
+    description: "Thematic quote categories and subjects",
+    href: "/admin/categories",
+    section: "Taxonomies",
+    keywords: ["categories", "topics", "themes", "subjects"],
+  },
+  {
+    id: "nav-tags",
+    title: "Tags Catalog",
+    description: "Faceted taxonomies for mood, topic, and virtue",
+    href: "/admin/tags",
+    section: "Taxonomies",
+    keywords: ["tags", "taxonomy", "moods", "virtues", "facets"],
+  },
+  {
+    id: "nav-collections",
+    title: "Collections Catalog",
+    description: "Curated anthologies and editorial selections",
+    href: "/admin/collections",
+    section: "Taxonomies",
+    keywords: ["collections", "anthologies", "curated", "lists"],
+  },
+  {
+    id: "nav-sources",
+    title: "Sources Catalog",
+    description: "Books, speeches, letters, and works",
+    href: "/admin/sources",
+    section: "Taxonomies",
+    keywords: ["sources", "books", "citations", "works", "literature"],
+  },
+  {
+    id: "nav-faqs",
+    title: "FAQs Catalog",
+    description: "Frequently asked questions repository",
+    href: "/admin/faqs",
+    section: "Taxonomies",
+    keywords: ["faqs", "questions", "answers", "help"],
+  },
+
+  // System
+  {
+    id: "nav-dashboard",
+    title: "Admin Dashboard",
+    description: "Overview metrics, KPIs, and attention queues",
+    href: "/admin/dashboard",
+    section: "System",
+    keywords: ["dashboard", "overview", "analytics", "stats", "kpi", "home"],
+  },
+  {
+    id: "nav-public-site",
+    title: "View Public Site",
+    description: "Open the public Quotzen storefront in current tab",
+    href: "/",
+    section: "System",
+    badge: "Public",
+    keywords: ["public", "home", "site", "view", "storefront"],
+  },
+]
+
 export function AdminCommandPalette() {
   const router = useRouter()
   const isMounted = React.useSyncExternalStore(
@@ -173,277 +443,12 @@ export function AdminCommandPalette() {
   const inputRef = React.useRef<HTMLInputElement | null>(null)
   const itemRefs = React.useRef<(HTMLButtonElement | null)[]>([])
 
-  // Complete catalog of admin commands, actions, and routes
-  const catalog: AdminCommandItem[] = React.useMemo(
-    () => [
-      // Actions
-      {
-        id: "action-new-quote",
-        title: "Submit New Quote",
-        description: "Open the single quote editor form",
-        href: "/admin/quotes/new",
-        section: "Actions",
-        badge: "Create",
-        keywords: ["new", "create", "add", "quote", "compose", "write"],
-      },
-      {
-        id: "action-bulk-quotes",
-        title: "Bulk Upload Quotes",
-        description: "Batch import quotes from JSON/CSV payload",
-        href: "/admin/quotes/bulk",
-        section: "Actions",
-        badge: "Import",
-        keywords: ["bulk", "upload", "import", "batch", "quotes", "json", "csv"],
-      },
-      {
-        id: "action-new-author",
-        title: "Create New Author",
-        description: "Add a new thinker, writer, or historical figure",
-        href: "/admin/authors/new",
-        section: "Actions",
-        badge: "Create",
-        keywords: ["new", "author", "thinker", "philosopher", "writer", "person"],
-      },
-      {
-        id: "action-new-category",
-        title: "Create New Category",
-        description: "Add a new thematic category",
-        href: "/admin/categories/new",
-        section: "Actions",
-        badge: "Create",
-        keywords: ["new", "category", "theme", "subject", "topic"],
-      },
-      {
-        id: "action-bulk-categories",
-        title: "Bulk Create Categories",
-        description: "Batch create categories",
-        href: "/admin/categories/bulk",
-        section: "Actions",
-        badge: "Import",
-        keywords: ["bulk", "category", "import", "batch"],
-      },
-      {
-        id: "action-new-tag",
-        title: "Create New Tag",
-        description: "Add a new taxonomy tag with faceted type",
-        href: "/admin/tags/new",
-        section: "Actions",
-        badge: "Create",
-        keywords: ["new", "tag", "taxonomy", "facet", "mood"],
-      },
-      {
-        id: "action-bulk-tags",
-        title: "Bulk Create Tags",
-        description: "Batch create taxonomy tags",
-        href: "/admin/tags/bulk",
-        section: "Actions",
-        badge: "Import",
-        keywords: ["bulk", "tag", "import", "batch"],
-      },
-      {
-        id: "action-new-collection",
-        title: "Create New Collection",
-        description: "Curate a thematic quote anthology",
-        href: "/admin/collections/new",
-        section: "Actions",
-        badge: "Create",
-        keywords: ["new", "collection", "anthology", "curated", "list"],
-      },
-      {
-        id: "action-import-sources",
-        title: "Import Sources",
-        description: "Batch create works, books, and references",
-        href: "/admin/sources/bulk",
-        section: "Actions",
-        badge: "Import",
-        keywords: ["import", "sources", "books", "citations", "works", "bulk"],
-      },
-      {
-        id: "action-import-faqs",
-        title: "Import FAQs",
-        description: "Batch create frequently asked questions",
-        href: "/admin/faqs/bulk",
-        section: "Actions",
-        badge: "Import",
-        keywords: ["import", "faqs", "questions", "bulk"],
-      },
-      {
-        id: "action-refresh-metrics",
-        title: "Refresh Dashboard Metrics Cache",
-        description: "Purge and recompute cached aggregation numbers",
-        section: "Actions",
-        badge: "Revalidate",
-        keywords: ["refresh", "cache", "dashboard", "metrics", "stats", "revalidate", "purge"],
-        action: async () => {
-          setIsRefreshing(true)
-          setStatusMessage("Refreshing dashboard metrics cache...")
-          try {
-            await refreshDashboardAction()
-            setStatusMessage("Dashboard cache refreshed successfully!")
-            setTimeout(() => {
-              setIsOpen(false)
-              setStatusMessage(null)
-              router.refresh()
-            }, 800)
-          } catch {
-            setStatusMessage("Failed to refresh metrics cache.")
-          } finally {
-            setIsRefreshing(false)
-          }
-        },
-      },
-
-      // Content
-      {
-        id: "nav-quotes-all",
-        title: "All Quotes",
-        description: "Manage and curate all quotations",
-        href: "/admin/quotes",
-        section: "Content",
-        keywords: ["quotes", "list", "all", "table", "browse"],
-      },
-      {
-        id: "nav-quotes-draft",
-        title: "Draft & Review Quotes",
-        description: "Filter quotes in DRAFT or REVIEW status",
-        href: "/admin/quotes?filter=draft",
-        section: "Content",
-        badge: "Filter",
-        keywords: ["draft", "review", "pending", "unpublished", "quotes"],
-      },
-      {
-        id: "nav-quotes-archived",
-        title: "Archived Quotes",
-        description: "Filter quotes in ARCHIVED status",
-        href: "/admin/quotes?filter=archived",
-        section: "Content",
-        badge: "Filter",
-        keywords: ["archived", "hidden", "quotes"],
-      },
-      {
-        id: "nav-quotes-unattributed",
-        title: "Unattributed Quotes",
-        description: "Quotes without an author assigned",
-        href: "/admin/quotes?filter=unattributed",
-        section: "Content",
-        badge: "Audit",
-        keywords: ["unattributed", "anonymous", "no author", "quotes"],
-      },
-      {
-        id: "nav-quotes-missing-source",
-        title: "Missing Source Quotes",
-        description: "Quotes without a work/book citation",
-        href: "/admin/quotes?filter=missing-source",
-        section: "Content",
-        badge: "Audit",
-        keywords: ["missing source", "citation", "source", "quotes"],
-      },
-      {
-        id: "nav-quotes-no-tags",
-        title: "Untagged Quotes",
-        description: "Quotes with no taxonomy tags attached",
-        href: "/admin/quotes?filter=no-tags",
-        section: "Content",
-        badge: "Audit",
-        keywords: ["no tags", "untagged", "tags", "quotes"],
-      },
-      {
-        id: "nav-quotes-orphaned",
-        title: "Orphaned Quotes",
-        description: "Quotes missing author, source, or tags",
-        href: "/admin/quotes?filter=orphaned",
-        section: "Content",
-        badge: "Audit",
-        keywords: ["orphaned", "incomplete", "quotes"],
-      },
-      {
-        id: "nav-quotes-deleted",
-        title: "Deleted Quotes (Trash)",
-        description: "Soft-deleted quotes awaiting restoration or purge",
-        href: "/admin/quotes/deleted",
-        section: "Content",
-        badge: "Trash",
-        keywords: ["trash", "deleted", "restore", "bin", "recovery", "quotes"],
-      },
-
-      // Taxonomies
-      {
-        id: "nav-authors",
-        title: "Authors Catalog",
-        description: "Manage thinkers, philosophers, and writers",
-        href: "/admin/authors",
-        section: "Taxonomies",
-        keywords: ["authors", "thinkers", "people", "writers"],
-      },
-      {
-        id: "nav-categories",
-        title: "Categories Catalog",
-        description: "Thematic quote categories and subjects",
-        href: "/admin/categories",
-        section: "Taxonomies",
-        keywords: ["categories", "topics", "themes", "subjects"],
-      },
-      {
-        id: "nav-tags",
-        title: "Tags Catalog",
-        description: "Faceted taxonomies for mood, topic, and virtue",
-        href: "/admin/tags",
-        section: "Taxonomies",
-        keywords: ["tags", "taxonomy", "moods", "virtues", "facets"],
-      },
-      {
-        id: "nav-collections",
-        title: "Collections Catalog",
-        description: "Curated anthologies and editorial selections",
-        href: "/admin/collections",
-        section: "Taxonomies",
-        keywords: ["collections", "anthologies", "curated", "lists"],
-      },
-      {
-        id: "nav-sources",
-        title: "Sources Catalog",
-        description: "Books, speeches, letters, and works",
-        href: "/admin/sources",
-        section: "Taxonomies",
-        keywords: ["sources", "books", "citations", "works", "literature"],
-      },
-      {
-        id: "nav-faqs",
-        title: "FAQs Catalog",
-        description: "Frequently asked questions repository",
-        href: "/admin/faqs",
-        section: "Taxonomies",
-        keywords: ["faqs", "questions", "answers", "help"],
-      },
-
-      // System
-      {
-        id: "nav-dashboard",
-        title: "Admin Dashboard",
-        description: "Overview metrics, KPIs, and attention queues",
-        href: "/admin/dashboard",
-        section: "System",
-        keywords: ["dashboard", "overview", "analytics", "stats", "kpi", "home"],
-      },
-      {
-        id: "nav-public-site",
-        title: "View Public Site",
-        description: "Open the public Quotzen storefront in current tab",
-        href: "/",
-        section: "System",
-        badge: "Public",
-        keywords: ["public", "home", "site", "view", "storefront"],
-      },
-    ],
-    [router]
-  )
-
   // Filter items matching current search query
   const filteredItems = React.useMemo(() => {
     const needle = query.trim().toLowerCase()
-    if (!needle) return catalog
+    if (!needle) return ADMIN_COMMAND_CATALOG
 
-    return catalog.filter((item) => {
+    return ADMIN_COMMAND_CATALOG.filter((item) => {
       const titleMatch = item.title.toLowerCase().includes(needle)
       const descMatch = item.description?.toLowerCase().includes(needle)
       const keywordMatch = item.keywords?.some((kw) => kw.toLowerCase().includes(needle))
@@ -452,7 +457,7 @@ export function AdminCommandPalette() {
 
       return titleMatch || descMatch || keywordMatch || sectionMatch || badgeMatch
     })
-  }, [catalog, query])
+  }, [query])
 
   // Adjust selected index during render when query changes (avoids cascading effect renders)
   const [prevQuery, setPrevQuery] = React.useState(query)
@@ -466,6 +471,23 @@ export function AdminCommandPalette() {
     setQuery("")
     setStatusMessage(null)
   }, [])
+
+  const handleRefreshMetrics = React.useCallback(async () => {
+    setIsRefreshing(true)
+    setStatusMessage("Refreshing dashboard metrics cache...")
+    try {
+      await refreshDashboardAction()
+      setStatusMessage("Dashboard cache refreshed successfully!")
+      setTimeout(() => {
+        closePalette()
+        router.refresh()
+      }, 800)
+    } catch {
+      setStatusMessage("Failed to refresh metrics cache.")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [closePalette, router])
 
   // Global keyboard shortcuts (Cmd+K / Ctrl+K and custom trigger event)
   React.useEffect(() => {
@@ -522,17 +544,26 @@ export function AdminCommandPalette() {
 
   const executeItem = React.useCallback(
     (item: AdminCommandItem) => {
-      if (item.action) {
-        item.action()
+      if (item.id === "action-refresh-metrics") {
+        handleRefreshMetrics()
         return
       }
 
       if (item.href) {
         closePalette()
-        router.push(item.href)
+        if (item.href.startsWith("/api/")) {
+          const a = document.createElement("a")
+          a.href = item.href
+          a.download = ""
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        } else {
+          router.push(item.href)
+        }
       }
     },
-    [closePalette, router]
+    [closePalette, handleRefreshMetrics, router]
   )
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -557,6 +588,7 @@ export function AdminCommandPalette() {
   }
 
   function getItemIcon(item: AdminCommandItem) {
+    if (item.id.includes("export")) return <IconDownload />
     if (item.id.includes("new-quote") || item.id.includes("new-")) return <IconPlus />
     if (item.id.includes("bulk") || item.id.includes("import")) return <IconUpload />
     if (item.id.includes("refresh")) return <IconRefresh className={isRefreshing ? "animate-spin" : ""} />
@@ -682,7 +714,7 @@ export function AdminCommandPalette() {
           ) : (
             <div className="py-12 text-center text-stone-400 text-xs">
               <p className="font-medium text-stone-600 mb-1">No admin actions or pages found</p>
-              <p>No results match &quot;{query}&quot;. Try searching for &quot;quotes&quot;, &quot;new&quot;, or &quot;authors&quot;.</p>
+              <p>No results match &quot;{query}&quot;. Try searching for &quot;quotes&quot;, &quot;export&quot;, or &quot;authors&quot;.</p>
             </div>
           )}
         </div>

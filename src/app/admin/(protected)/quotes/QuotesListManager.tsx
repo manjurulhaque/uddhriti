@@ -333,13 +333,31 @@ export function QuotesListManager({
         <div className="sticky top-2 z-20 rounded-2xl border border-stone-200/90 bg-white/95 p-4 shadow-md backdrop-blur-md space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-stone-900">{selectedCount} quotes selected</span>
-            <button
-              type="button"
-              onClick={() => setSelectedIds([])}
-              className="text-xs text-stone-500 hover:text-stone-900 cursor-pointer"
-            >
-              Clear selection
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href={`/api/admin/quotes/export?format=csv&ids=${selectedIds.join(",")}`}
+                download
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg transition"
+                title="Download selected quotes as CSV"
+              >
+                Export CSV ({selectedCount})
+              </a>
+              <a
+                href={`/api/admin/quotes/export?format=json&ids=${selectedIds.join(",")}`}
+                download
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg transition"
+                title="Download selected quotes as JSON"
+              >
+                Export JSON
+              </a>
+              <button
+                type="button"
+                onClick={() => setSelectedIds([])}
+                className="text-xs text-stone-500 hover:text-stone-900 cursor-pointer ml-1"
+              >
+                Clear selection
+              </button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2.5 items-center">
             <select

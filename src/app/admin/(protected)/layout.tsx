@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { isPrivateOrLocalIp } from "@/lib/ip"
-import { AdminSidebar } from "@/components/admin"
+import { AdminSidebar, AdminCommandPalette } from "@/components/admin"
 import { CurrentIpDisplay } from "./CurrentIpDisplay"
 
 export default async function ProtectedAdminLayout({
@@ -29,6 +29,7 @@ export default async function ProtectedAdminLayout({
       />
 
       <main className="flex-1 min-w-0 bg-gray-50">{children}</main>
+      <AdminCommandPalette />
     </div>
   )
 }

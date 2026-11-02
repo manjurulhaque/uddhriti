@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
 
 export interface SearchResultQuote {
@@ -138,6 +138,7 @@ export function openCommandPalette(initialQuery?: string) {
 
 export function CommandPalette() {
   const router = useRouter()
+  const pathname = usePathname()
   const isMounted = React.useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -167,6 +168,7 @@ export function CommandPalette() {
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        if (pathname?.startsWith("/admin")) return
         e.preventDefault()
         setIsOpen((prev) => !prev)
       }
@@ -187,7 +189,7 @@ export function CommandPalette() {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("open-command-palette", handleCustomOpen)
     }
-  }, [])
+  }, [pathname])
 
   // Auto-focus input when opened
   React.useEffect(() => {
@@ -372,7 +374,7 @@ export function CommandPalette() {
     }
   }, [selectedIndex])
 
-  if (!isOpen || !isMounted) return null
+  if (!isOpen || !isMounted || pathname?.startsWith("/admin")) return null
 
   const isSearchActive = query.trim().length >= 2
   const hasResults = flattenedItems.length > 0

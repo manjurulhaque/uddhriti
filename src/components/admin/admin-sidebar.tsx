@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { openAdminCommandPalette } from "./admin-command-palette"
 
 export interface AdminNavItem {
   href: string
@@ -29,6 +30,18 @@ export interface AdminSidebarProps {
   ipDisplay?: React.ReactNode
   className?: string
   sections?: AdminNavSection[]
+}
+
+function emptySubscribe() {
+  return () => {}
+}
+
+function IconSearch({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  )
 }
 
 // Built-in minimalist SVG icons
@@ -282,6 +295,12 @@ export function AdminSidebar({
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = React.useState(false)
 
+  const isMac = React.useSyncExternalStore(
+    emptySubscribe,
+    () => /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent),
+    () => false
+  )
+
   // Flatten all items for accurate longest-prefix active route matching
   const allItems = React.useMemo(() => {
     return sections.flatMap((section) => section.items)
@@ -351,6 +370,22 @@ export function AdminSidebar({
             ) : null}
           </div>
         </div>
+
+        {/* Command Palette Launcher Button */}
+        <button
+          type="button"
+          onClick={() => openAdminCommandPalette()}
+          className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-gray-500 bg-white hover:bg-gray-100 hover:text-gray-900 border border-gray-200/90 rounded-lg shadow-2xs transition cursor-pointer group"
+          title={`Open Admin Command Palette (${isMac ? "⌘K" : "Ctrl+K"})`}
+        >
+          <span className="flex items-center gap-2">
+            <IconSearch className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-700 transition" />
+            <span>Search or jump to...</span>
+          </span>
+          <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-gray-100 text-gray-500 rounded border border-gray-200 group-hover:border-gray-300">
+            {isMac ? "⌘K" : "Ctrl+K"}
+          </kbd>
+        </button>
       </div>
 
       {/* Navigation Sections */}

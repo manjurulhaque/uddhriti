@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { QuoteEditorFormState } from "./types"
+import { QuoteSocialCardPreview } from "./quote-social-card-preview"
 
 interface QuoteContentSectionProps {
   form: QuoteEditorFormState
@@ -47,6 +48,14 @@ function IconEye({ className = "w-3.5 h-3.5" }: { className?: string }) {
   )
 }
 
+function IconShareCard({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )
+}
+
 export function QuoteContentSection({
   form,
   updateForm,
@@ -58,7 +67,7 @@ export function QuoteContentSection({
   tags = [],
   quoteId,
 }: QuoteContentSectionProps) {
-  const [viewMode, setViewMode] = React.useState<"edit" | "preview">("edit")
+  const [viewMode, setViewMode] = React.useState<"edit" | "preview" | "social">("edit")
   const [previewTheme, setPreviewTheme] = React.useState<"paper" | "dark">("paper")
   const [duplicateStatus, setDuplicateStatus] = React.useState<DuplicateStatus>({
     isChecking: false,
@@ -178,7 +187,19 @@ export function QuoteContentSection({
                 }`}
               >
                 <IconEye className="w-3.5 h-3.5" />
-                <span>Live Card Preview</span>
+                <span>Card Mockup</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("social")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  viewMode === "social"
+                    ? "bg-white text-stone-900 shadow-2xs font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <IconShareCard className="w-3.5 h-3.5" />
+                <span>Social Card (1200×630)</span>
               </button>
             </div>
           </div>
@@ -346,7 +367,7 @@ export function QuoteContentSection({
               </div>
             ) : null}
           </div>
-        ) : (
+        ) : viewMode === "preview" ? (
           /* Live Typography Card Preview View */
           <div className="space-y-3">
             {/* Card Theme Switcher */}
@@ -440,6 +461,17 @@ export function QuoteContentSection({
               </div>
             </div>
           </div>
+        ) : (
+          /* Social Sharing Card (1200×630) Live Generator & Preview */
+          <QuoteSocialCardPreview
+            content={form.content}
+            authorName={resolvedAuthor}
+            categoryName={resolvedCategory}
+            sourceTitle={resolvedSource}
+            isVerified={form.isVerified}
+            tags={tags}
+            quoteId={quoteId}
+          />
         )}
       </section>
 

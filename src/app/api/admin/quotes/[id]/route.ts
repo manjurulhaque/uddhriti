@@ -14,6 +14,7 @@ import {
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { isValidUuid } from "@/lib/api/route-helpers"
+import { recordAuditLog } from "@/lib/audit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -280,6 +281,21 @@ export async function PATCH(
       revalidatePublicSurfaces()
     }
 
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      entityId: id,
+      entityName: updated.quote.content?.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        status: updated.quote.status,
+        previousStatus: updated.previousStatus,
+      },
+      req,
+    })
+
     return NextResponse.json(updated.quote)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to update quote"
@@ -354,6 +370,16 @@ export async function DELETE(
     revalidatePublicSurfaces()
   }
 
+  await recordAuditLog({
+    action: "DELETE",
+    entityType: "QUOTE",
+    entityId: id,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
+
   return NextResponse.json({ success: true })
 }
 
@@ -413,6 +439,16 @@ export async function POST(
   if (shouldRevalidateHomepage) {
     revalidatePublicSurfaces()
   }
+
+  await recordAuditLog({
+    action: "RESTORE",
+    entityType: "QUOTE",
+    entityId: id,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
 
   return NextResponse.json({ success: true })
 }

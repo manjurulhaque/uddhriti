@@ -77,6 +77,28 @@ enum CollectionVisibility {
   EDITORIAL
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  BULK_UPDATE
+  BULK_DELETE
+  IMPORT
+  REPAIR
+}
+
+enum AuditEntityType {
+  QUOTE
+  AUTHOR
+  SOURCE
+  CATEGORY
+  TAG
+  COLLECTION
+  FAQ
+  SYSTEM
+}
+
 //////////////////////////////////////////////////////
 // ADMIN
 //////////////////////////////////////////////////////
@@ -96,9 +118,7 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  @@index([authorId])
-  @@index([quoteCount])
-  @@index([type])
+  @@index([role])
 }
 
 //////////////////////////////////////////////////////
@@ -250,10 +270,6 @@ model Collection {
 
   @@index([visibility])
   @@index([quoteCount])
-
-  @@index([authorId])
-  @@index([quoteCount])
-  @@index([type])
 }
 
 //////////////////////////////////////////////////////
@@ -462,4 +478,32 @@ model FAQ {
 
   @@index([pageType, pageSlug])
   @@index([pageType, pageSlug, position])
+}
+
+//////////////////////////////////////////////////////
+// AUDIT LOG
+//////////////////////////////////////////////////////
+
+model AdminAuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  action     AuditAction
+  entityType AuditEntityType
+  entityId   String?
+  entityName String?
+
+  adminId    String?         @db.Uuid
+  adminEmail String?
+  adminName  String?
+
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt  DateTime        @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([adminId])
+  @@index([createdAt(sort: Desc)])
 }

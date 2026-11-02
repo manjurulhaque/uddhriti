@@ -402,6 +402,15 @@ const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
 
   // System
   {
+    id: "nav-system-activity",
+    title: "Activity & Audit Trail",
+    description: "Immutable administrative ledger tracking entity modifications and system operations",
+    href: "/admin/activity",
+    section: "System",
+    badge: "Audit",
+    keywords: ["activity", "audit", "logs", "history", "trail", "operations", "changes"],
+  },
+  {
     id: "nav-system-tools",
     title: "System Health & Diagnostics",
     description: "Database integrity audits, counter sync, and automated maintenance",

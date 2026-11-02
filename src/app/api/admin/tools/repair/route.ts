@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 export async function POST() {
   const admin = await getAdmin()
@@ -183,6 +184,21 @@ export async function POST() {
 
     // 4. Trigger public cache tag revalidations
     revalidatePublicSurfaces()
+
+    // 5. Record administrative audit log
+    await recordAuditLog({
+      action: "REPAIR",
+      entityType: "SYSTEM",
+      entityName: "Database Integrity Repair",
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        countersSynchronized: true,
+        orphanedRecordsPurged: true,
+        backfilledHashes: backfilledCount,
+      },
+    })
 
     return NextResponse.json({
       success: true,

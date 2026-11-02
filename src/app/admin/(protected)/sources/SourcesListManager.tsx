@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
-import { Select, EmptyState } from "@/components/ui"
+import { Select, EmptyState, Pagination } from "@/components/ui"
+
+const PAGE_SIZE = 25
 
 type SourceItem = {
   id: string
@@ -47,6 +49,7 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
   const [typeFilter, setTypeFilter] = useState("all")
   const [quoteFilter, setQuoteFilter] = useState<QuoteFilter>("all")
   const [authorFilter, setAuthorFilter] = useState<AuthorFilter>("all")
+  const [page, setPage] = useState(1)
 
   const typeOptions = useMemo(
     () => Array.from(new Set(sources.map((source) => source.type))).sort((a, b) => a.localeCompare(b)),
@@ -105,6 +108,12 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
     })
   }, [authorFilter, quoteFilter, search, sortBy, sources, typeFilter])
 
+  const totalPages = Math.max(1, Math.ceil(visibleSources.length / PAGE_SIZE))
+  const paginatedSources = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return visibleSources.slice(start, start + PAGE_SIZE)
+  }, [visibleSources, page])
+
   const hasActiveFilters =
     search.trim().length > 0 ||
     sortBy !== "newest" ||
@@ -118,16 +127,23 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
     setTypeFilter("all")
     setQuoteFilter("all")
     setAuthorFilter("all")
+    setPage(1)
   }
 
   return (
     <div className="space-y-4">
       <FilterToolbar
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
         searchPlaceholder="Search sources by title, type, author, or year"
         sortValue={sortBy}
-        onSortChange={(value) => setSortBy(value as SortOption)}
+        onSortChange={(value) => {
+          setSortBy(value as SortOption)
+          setPage(1)
+        }}
         sortOptions={sortOptions}
         visibleCount={visibleSources.length}
         totalCount={sources.length}
@@ -138,7 +154,10 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
           <>
             <Select
               value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value)}
+              onChange={(event) => {
+                setTypeFilter(event.target.value)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Type: All" },
                 ...typeOptions.map((type) => ({ value: type, label: `Type: ${type}` })),
@@ -147,7 +166,10 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
 
             <Select
               value={quoteFilter}
-              onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
+              onChange={(event) => {
+                setQuoteFilter(event.target.value as QuoteFilter)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Quotes: All sources" },
                 { value: "with-quotes", label: "Quotes: Has quotes" },
@@ -157,7 +179,10 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
 
             <Select
               value={authorFilter}
-              onChange={(event) => setAuthorFilter(event.target.value as AuthorFilter)}
+              onChange={(event) => {
+                setAuthorFilter(event.target.value as AuthorFilter)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Author: All" },
                 { value: "with-author", label: "Author: Has author" },
@@ -169,11 +194,25 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
       />
 
       {visibleSources.length > 0 ? (
-        <div className="space-y-2">
-          {visibleSources.map((source) => (
-            <SourceListRow key={source.id} source={source} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {paginatedSources.map((source) => (
+              <SourceListRow key={source.id} source={source} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pt-2">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={visibleSources.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </>
       ) : (
         <EmptyState
           title="No sources match your filters"

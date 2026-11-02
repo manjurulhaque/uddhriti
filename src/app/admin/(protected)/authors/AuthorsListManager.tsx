@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
-import { Select, EmptyState } from "@/components/ui"
+import { Select, EmptyState, Pagination } from "@/components/ui"
+
+const PAGE_SIZE = 24
 
 type AuthorItem = {
   id: string
@@ -37,6 +39,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
   const [lifeStatusFilter, setLifeStatusFilter] = useState<LifeStatusFilter>("all")
   const [nationalityFilter, setNationalityFilter] = useState("all")
   const [professionFilter, setProfessionFilter] = useState("all")
+  const [page, setPage] = useState(1)
 
   const nationalityOptions = useMemo(
     () =>
@@ -141,6 +144,12 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     })
   }, [authors, lifeStatusFilter, nationalityFilter, professionFilter, quoteFilter, search, sortBy])
 
+  const totalPages = Math.max(1, Math.ceil(visibleAuthors.length / PAGE_SIZE))
+  const paginatedAuthors = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return visibleAuthors.slice(start, start + PAGE_SIZE)
+  }, [visibleAuthors, page])
+
   function clearFilters() {
     setSearch("")
     setQuoteFilter("all")
@@ -148,6 +157,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     setNationalityFilter("all")
     setProfessionFilter("all")
     setSortBy("newest")
+    setPage(1)
   }
 
   const sortOptions = [
@@ -165,10 +175,16 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     <div className="space-y-4">
       <FilterToolbar
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
         searchPlaceholder="Search authors by name, slug, profession, nationality, or years"
         sortValue={sortBy}
-        onSortChange={(value) => setSortBy(value as SortOption)}
+        onSortChange={(value) => {
+          setSortBy(value as SortOption)
+          setPage(1)
+        }}
         sortOptions={sortOptions}
         visibleCount={visibleAuthors.length}
         totalCount={authors.length}
@@ -179,7 +195,10 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
           <>
             <Select
               value={quoteFilter}
-              onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
+              onChange={(event) => {
+                setQuoteFilter(event.target.value as QuoteFilter)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Quotes: All authors" },
                 { value: "with-quotes", label: "Quotes: Has quotes" },
@@ -189,7 +208,10 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
 
             <Select
               value={lifeStatusFilter}
-              onChange={(event) => setLifeStatusFilter(event.target.value as LifeStatusFilter)}
+              onChange={(event) => {
+                setLifeStatusFilter(event.target.value as LifeStatusFilter)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Life status: All" },
                 { value: "living", label: "Life status: Living" },
@@ -200,7 +222,10 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
 
             <Select
               value={nationalityFilter}
-              onChange={(event) => setNationalityFilter(event.target.value)}
+              onChange={(event) => {
+                setNationalityFilter(event.target.value)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Nationality: All" },
                 ...nationalityOptions.map((nat) => ({ value: nat, label: nat })),
@@ -209,7 +234,10 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
 
             <Select
               value={professionFilter}
-              onChange={(event) => setProfessionFilter(event.target.value)}
+              onChange={(event) => {
+                setProfessionFilter(event.target.value)
+                setPage(1)
+              }}
               options={[
                 { value: "all", label: "Profession: All" },
                 ...professionOptions.map((prof) => ({ value: prof, label: prof })),
@@ -220,37 +248,51 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
       />
 
       {visibleAuthors.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visibleAuthors.map((author) => {
-            const lifespan =
-              author.birthYear || author.deathYear
-                ? `${author.birthYear ?? "?"} - ${author.deathYear ?? "Present"}`
-                : undefined
-            const subtitle = [
-              author.profession,
-              author.nationality,
-              lifespan,
-            ]
-              .filter(Boolean)
-              .join(" • ")
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {paginatedAuthors.map((author) => {
+              const lifespan =
+                author.birthYear || author.deathYear
+                  ? `${author.birthYear ?? "?"} - ${author.deathYear ?? "Present"}`
+                  : undefined
+              const subtitle = [
+                author.profession,
+                author.nationality,
+                lifespan,
+              ]
+                .filter(Boolean)
+                .join(" • ")
 
-            return (
-              <AdminEntityCard
-                key={author.id}
-                href={`/admin/authors/${author.id}`}
-                variant="grid"
-                title={author.name}
-                subtitle={subtitle || undefined}
-                badge={<AdminEntityCountBadge count={author.quoteCount} />}
-                meta={
-                  <span className="text-[11px] text-stone-400">
-                    Added {formatDateInAppTimeZone(author.createdAt)}
-                  </span>
-                }
+              return (
+                <AdminEntityCard
+                  key={author.id}
+                  href={`/admin/authors/${author.id}`}
+                  variant="grid"
+                  title={author.name}
+                  subtitle={subtitle || undefined}
+                  badge={<AdminEntityCountBadge count={author.quoteCount} />}
+                  meta={
+                    <span className="text-[11px] text-stone-400">
+                      Added {formatDateInAppTimeZone(author.createdAt)}
+                    </span>
+                  }
+                />
+              )
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pt-2">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={visibleAuthors.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
               />
-            )
-          })}
-        </div>
+            </div>
+          )}
+        </>
       ) : (
         <EmptyState
           title="No authors match your search"

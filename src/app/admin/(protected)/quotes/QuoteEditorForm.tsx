@@ -21,6 +21,7 @@ import {
   QuoteAttributionSection,
   QuoteTagsSection,
   QuoteEditorSidebar,
+  QuoteDiffModal,
 } from "./editor"
 
 export type { QuoteEditorFormState }
@@ -60,6 +61,7 @@ export default function QuoteEditorForm({
     contentSnippet: string
   } | null>(null)
   const [lastSavedDraftAt, setLastSavedDraftAt] = useState<string | null>(null)
+  const [isReviewingDiff, setIsReviewingDiff] = useState(false)
 
   const draftStorageKey = useMemo(
     () => (mode === "create" ? "admin:quote-editor:draft:create" : `admin:quote-editor:draft:${quoteId || "unknown"}`),
@@ -633,11 +635,21 @@ export default function QuoteEditorForm({
       ) : null}
 
       {mode === "edit" && isDirty ? (
-        <div className="mb-5 rounded-2xl border border-amber-200/90 bg-amber-50/50 p-4 text-xs font-medium text-amber-900 shadow-2xs flex items-center justify-between">
+        <div className="mb-5 rounded-2xl border border-amber-200/90 bg-amber-50/60 p-4 text-xs font-medium text-amber-900 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>You have unsaved changes in this quotation. Remember to save before navigating away.</span>
+            <span>You have unsaved modifications in this quotation.</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsReviewingDiff(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-200/80 hover:bg-amber-200 text-amber-950 font-semibold transition cursor-pointer text-xs shrink-0 self-start sm:self-auto border border-amber-300/60"
+          >
+            <svg className="w-3.5 h-3.5 text-amber-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span>Review Changes Diff</span>
+          </button>
         </div>
       ) : null}
 
@@ -710,8 +722,25 @@ export default function QuoteEditorForm({
           setIsConfirmingDelete={setIsConfirmingDelete}
           lastSavedDraftAt={lastSavedDraftAt}
           onClearDraft={handleClearDraft}
+          onReviewDiff={() => setIsReviewingDiff(true)}
         />
       </div>
+
+      <QuoteDiffModal
+        isOpen={isReviewingDiff}
+        onClose={() => setIsReviewingDiff(false)}
+        onConfirmSave={async () => {
+          await handleSubmit("stay")
+          setIsReviewingDiff(false)
+        }}
+        isSaving={loading}
+        initialForm={buildInitialForm(initialForm)}
+        currentForm={form}
+        authors={authors}
+        categories={categories}
+        sources={sources}
+        tags={tags}
+      />
 
       <ConfirmModal
         isOpen={isConfirmingDelete}

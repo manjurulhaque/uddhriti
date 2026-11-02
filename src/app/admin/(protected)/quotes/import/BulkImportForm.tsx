@@ -158,6 +158,79 @@ export default function BulkImportForm({
     [pastedInput]
   )
 
+  const preflightReport = useMemo(() => {
+    let itemsToInspect: unknown[] | null = uploadedItems
+
+    if (!itemsToInspect && payload.trim() && payload !== "[]") {
+      try {
+        const parsed = JSON.parse(payload)
+        itemsToInspect = Array.isArray(parsed)
+          ? parsed
+          : typeof parsed === "object" && parsed !== null && Array.isArray((parsed as { items?: unknown[] }).items)
+          ? (parsed as { items: unknown[] }).items
+          : null
+      } catch {
+        return null
+      }
+    }
+
+    if (!itemsToInspect || itemsToInspect.length === 0) return null
+
+    let validCount = 0
+    let missingContentCount = 0
+    let urlHarvesterCount = 0
+    const warnings: string[] = []
+    const seenContent = new Set<string>()
+    let duplicateInBatchCount = 0
+
+    itemsToInspect.forEach((item, index) => {
+      const rowNum = index + 1
+      if (typeof item !== "object" || item === null) {
+        if (warnings.length < 5) warnings.push(`Row ${rowNum}: Not a valid quote object.`)
+        return
+      }
+
+      const row = item as Record<string, unknown>
+      const content = typeof row.content === "string" ? row.content.trim() : ""
+      const hasUrl = Boolean(row.wikiquoteUrl || row.gutenbergUrl || row.wikisourceUrl)
+
+      if (hasUrl) {
+        urlHarvesterCount++
+        validCount++
+        return
+      }
+
+      if (!content) {
+        missingContentCount++
+        if (warnings.length < 5) {
+          warnings.push(`Row ${rowNum}: Missing quote text/content.`)
+        }
+        return
+      }
+
+      const normalized = content.toLowerCase()
+      if (seenContent.has(normalized)) {
+        duplicateInBatchCount++
+        if (warnings.length < 5) {
+          warnings.push(`Row ${rowNum}: Duplicate quote content in this upload.`)
+        }
+      } else {
+        seenContent.add(normalized)
+      }
+
+      validCount++
+    })
+
+    return {
+      total: itemsToInspect.length,
+      validCount,
+      missingContentCount,
+      urlHarvesterCount,
+      duplicateInBatchCount,
+      warnings,
+    }
+  }, [uploadedItems, payload])
+
   function parseBool(value: string) {
     const normalized = value.trim().toLowerCase()
     return normalized === "1" || normalized === "true" || normalized === "yes"
@@ -841,6 +914,64 @@ export default function BulkImportForm({
           }}
         />
       </section>
+
+      {/* Pre-Flight Validation Summary */}
+      {preflightReport && (
+        <div
+          className={`rounded-2xl border p-4 sm:p-5 space-y-3 transition-all ${
+            preflightReport.missingContentCount > 0
+              ? "border-amber-300 bg-amber-50/40"
+              : "border-stone-200/90 bg-white shadow-2xs"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-200/60 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-900">
+                Pre-Flight Ingest Check
+              </span>
+              <Badge
+                variant={preflightReport.missingContentCount > 0 ? "warning" : "success"}
+                size="xs"
+              >
+                {preflightReport.validCount} of {preflightReport.total} records valid
+              </Badge>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-stone-600">
+              {preflightReport.urlHarvesterCount > 0 && (
+                <span>{preflightReport.urlHarvesterCount} web sources</span>
+              )}
+              {preflightReport.duplicateInBatchCount > 0 && (
+                <span className="text-amber-700 font-medium">
+                  {preflightReport.duplicateInBatchCount} duplicates in batch
+                </span>
+              )}
+              {preflightReport.missingContentCount > 0 && (
+                <span className="text-red-600 font-medium">
+                  {preflightReport.missingContentCount} missing quote text
+                </span>
+              )}
+            </div>
+          </div>
+
+          {preflightReport.warnings.length > 0 ? (
+            <div className="space-y-1 text-xs text-amber-800">
+              <div className="font-semibold text-amber-900">Ingest notes:</div>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-700">
+                {preflightReport.warnings.map((w, idx) => (
+                  <li key={idx}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="text-xs text-emerald-700 flex items-center gap-1.5 font-medium">
+              <svg className="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>All records passed structural checks and are ready for import.</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Error Banners */}
       {error && (

@@ -165,15 +165,41 @@ export default function QuoteEditorForm({
 
   const filteredAuthors = useMemo(() => {
     const needle = deferredAuthorSearch.trim().toLowerCase()
-    if (!needle) return authors
-    return authors.filter((author) => author.name.toLowerCase().includes(needle))
-  }, [authors, deferredAuthorSearch])
+    const selected = form.authorId ? authors.find((a) => a.id === form.authorId) : null
+
+    if (!needle) {
+      const initial = authors.slice(0, 100)
+      if (selected && !initial.some((a) => a.id === selected.id)) {
+        return [selected, ...initial]
+      }
+      return initial
+    }
+
+    const matching = authors.filter((author) => author.name.toLowerCase().includes(needle))
+    if (selected && !matching.some((a) => a.id === selected.id)) {
+      return [selected, ...matching.slice(0, 100)]
+    }
+    return matching.slice(0, 100)
+  }, [authors, deferredAuthorSearch, form.authorId])
 
   const filteredSources = useMemo(() => {
     const needle = deferredSourceSearch.trim().toLowerCase()
-    if (!needle) return sources
-    return sources.filter((source) => source.title.toLowerCase().includes(needle))
-  }, [deferredSourceSearch, sources])
+    const selected = form.sourceId ? sources.find((s) => s.id === form.sourceId) : null
+
+    if (!needle) {
+      const initial = sources.slice(0, 100)
+      if (selected && !initial.some((s) => s.id === selected.id)) {
+        return [selected, ...initial]
+      }
+      return initial
+    }
+
+    const matching = sources.filter((source) => source.title.toLowerCase().includes(needle))
+    if (selected && !matching.some((s) => s.id === selected.id)) {
+      return [selected, ...matching.slice(0, 100)]
+    }
+    return matching.slice(0, 100)
+  }, [deferredSourceSearch, form.sourceId, sources])
 
   const filteredTags = useMemo(() => {
     const needle = deferredTagSearch.trim().toLowerCase()

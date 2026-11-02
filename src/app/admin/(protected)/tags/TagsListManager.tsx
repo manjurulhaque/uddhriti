@@ -17,6 +17,24 @@ type TagItem = {
 
 type QuoteFilter = "all" | "used" | "unused"
 
+const GROUP_INITIAL_LIMIT = 15
+
+function ChevronDownIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
+
+function ChevronUpIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+    </svg>
+  )
+}
+
 export function TagsListManager({ tags }: { tags: TagItem[] }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -31,10 +49,13 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
     () =>
       Object.fromEntries(tags.map((tag) => [tag.id, tag.type]))
   )
+  const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(() => new Set())
+  const [expandedGroupLimits, setExpandedGroupLimits] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState("")
 
   const deletingSet = useMemo(() => new Set(deletingIds), [deletingIds])
   const updatingSet = useMemo(() => new Set(updatingIds), [updatingIds])
+
   const filteredTags = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return tags.filter((tag) => {
@@ -50,11 +71,14 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
       return matchesSearch && matchesType && matchesQuoteFilter
     })
   }, [quoteFilter, search, tags, typeFilter])
+
   const allSelected =
     filteredTags.length > 0 &&
     filteredTags.every((tag) => selectedIds.includes(tag.id))
+
   const hasActiveFilters =
     search.trim().length > 0 || typeFilter !== "all" || quoteFilter !== "all"
+
   const groupedTags = useMemo(
     () =>
       tagTypeOptions
@@ -67,6 +91,14 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
         .filter((group) => group.tags.length > 0),
     [filteredTags]
   )
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const tag of tags) {
+      counts[tag.type] = (counts[tag.type] || 0) + 1
+    }
+    return counts
+  }, [tags])
 
   function clearFilters() {
     setSearch("")
@@ -90,6 +122,50 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
 
       return Array.from(new Set([...prev, ...filteredIds]))
     })
+  }
+
+  function toggleSelectGroup(groupTags: TagItem[]) {
+    const groupIds = groupTags.map((t) => t.id)
+    const allGroupSelected = groupIds.every((id) => selectedIds.includes(id))
+
+    setSelectedIds((prev) => {
+      if (allGroupSelected) {
+        return prev.filter((id) => !groupIds.includes(id))
+      }
+      return Array.from(new Set([...prev, ...groupIds]))
+    })
+  }
+
+  function toggleGroupCollapse(type: string) {
+    setCollapsedTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) {
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
+      return next
+    })
+  }
+
+  function toggleGroupLimit(type: string) {
+    setExpandedGroupLimits((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) {
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
+      return next
+    })
+  }
+
+  function collapseAllGroups() {
+    setCollapsedTypes(new Set(tagTypeOptions))
+  }
+
+  function expandAllGroups() {
+    setCollapsedTypes(new Set())
   }
 
   async function executeDeleteTags(ids: string[]) {
@@ -131,6 +207,15 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
     setUpdatingIds(ids)
     setError("")
 
+    // Optimistic local state update
+    setTagTypesById((prev) => {
+      const next = { ...prev }
+      for (const id of ids) {
+        next[id] = type
+      }
+      return next
+    })
+
     try {
       const res = await fetch("/api/admin/tags/bulk-actions", {
         method: "POST",
@@ -151,22 +236,37 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
       router.refresh()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to update tag category")
+      router.refresh()
     } finally {
       setUpdatingIds([])
     }
   }
 
+  const isActivelySearching = search.trim().length > 0
+
   return (
     <div className="space-y-4">
+      {/* Sticky Bulk Action Bar */}
       {selectedIds.length > 0 ? (
-        <div className="border rounded p-3 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm font-medium">{selectedIds.length} selected</div>
+        <div className="sticky top-2 z-20 backdrop-blur-md bg-stone-900/95 text-white border border-stone-800 shadow-xl rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 transition-all duration-150 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-800 text-stone-200 border border-stone-700">
+              {selectedIds.length} {selectedIds.length === 1 ? "tag" : "tags"} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="text-xs text-stone-400 hover:text-stone-200 underline transition cursor-pointer"
+            >
+              Deselect all
+            </button>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={bulkType}
               onChange={(event) => setBulkType(event.target.value as TagTypeOption)}
               disabled={updatingIds.length > 0}
-              className="border rounded px-3 py-2 text-sm"
+              className="bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-stone-400"
             >
               {tagTypeOptions.map((type) => (
                 <option key={type} value={type}>
@@ -178,7 +278,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
               type="button"
               onClick={() => updateTagType(selectedIds, bulkType)}
               disabled={updatingIds.length > 0 || deletingIds.length > 0}
-              className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+              className="bg-white text-stone-900 font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-stone-100 disabled:opacity-50 transition cursor-pointer"
             >
               {updatingIds.length > 0 ? "Updating..." : "Change Category"}
             </button>
@@ -186,7 +286,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
               type="button"
               onClick={() => setPendingDeleteIds(selectedIds)}
               disabled={deletingIds.length > 0 || updatingIds.length > 0}
-              className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              className="bg-red-600/90 text-white font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50 transition cursor-pointer"
             >
               {deletingIds.length > 0 ? "Deleting..." : "Delete Selected"}
             </button>
@@ -194,12 +294,13 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{error}</p> : null}
 
+      {/* Main Filter Toolbar */}
       <FilterToolbar
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search tags by name, slug, or category"
+        searchPlaceholder="Search tags by name, slug, or category..."
         visibleCount={filteredTags.length}
         totalCount={tags.length}
         itemLabel="tags"
@@ -228,92 +329,235 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
         }
       />
 
-      <div className="space-y-2">
+      {/* Horizontal Category Quick Filter Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-thin">
+        <button
+          type="button"
+          onClick={() => setTypeFilter("all")}
+          className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
+            typeFilter === "all"
+              ? "bg-neutral-900 text-white shadow-2xs"
+              : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
+          }`}
+        >
+          All ({tags.length})
+        </button>
+        {tagTypeOptions.map((type) => {
+          const count = typeCounts[type] || 0
+          if (count === 0) return null
+          const isActive = typeFilter === type
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setTypeFilter(isActive ? "all" : type)}
+              className={`px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
+                isActive
+                  ? "bg-neutral-900 text-white shadow-2xs"
+                  : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <span>{type}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  isActive ? "bg-neutral-800 text-neutral-200" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
+      {/* Global Controls & Count */}
+      <div className="flex items-center justify-between border-b border-gray-200 pb-2 text-sm text-gray-600">
         {filteredTags.length > 0 ? (
-          <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
-            Select all on page
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleSelectAll}
+              className="rounded border-gray-300 text-black focus:ring-black"
+            />
+            <span>Select all {filteredTags.length} visible tags</span>
           </label>
+        ) : <div />}
+
+        {groupedTags.length > 1 && !isActivelySearching ? (
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={expandAllGroups}
+              className="text-gray-500 hover:text-gray-900 underline cursor-pointer"
+            >
+              Expand All
+            </button>
+            <span className="text-gray-300">•</span>
+            <button
+              type="button"
+              onClick={collapseAllGroups}
+              className="text-gray-500 hover:text-gray-900 underline cursor-pointer"
+            >
+              Collapse All
+            </button>
+          </div>
         ) : null}
+      </div>
 
+      {/* Grouped Tag Sections */}
+      <div className="space-y-4">
         {groupedTags.length > 0 ? (
-          groupedTags.map((group) => (
-            <section key={group.type} className="space-y-2">
-              <div className="flex items-center justify-between border-b pb-2">
-                <h2 className="text-lg font-semibold">{group.type}</h2>
-                <span className="text-sm text-gray-500">{formatCountWithNoun(group.tags.length, "tag")}</span>
-              </div>
+          groupedTags.map((group) => {
+            const isCollapsed = !isActivelySearching && collapsedTypes.has(group.type)
+            const isGroupExpanded = isActivelySearching || expandedGroupLimits.has(group.type)
+            const visibleGroupTags = isGroupExpanded
+              ? group.tags
+              : group.tags.slice(0, GROUP_INITIAL_LIMIT)
+            const hasMoreTags = group.tags.length > GROUP_INITIAL_LIMIT && !isGroupExpanded
 
-              {group.tags.map((tag) => {
-                const isDeleting = deletingSet.has(tag.id)
-                const isUpdating = updatingSet.has(tag.id)
+            const groupIds = group.tags.map((t) => t.id)
+            const groupSelectedCount = groupIds.filter((id) => selectedIds.includes(id)).length
+            const isGroupAllSelected = groupIds.length > 0 && groupSelectedCount === groupIds.length
+            const isGroupPartiallySelected = groupSelectedCount > 0 && !isGroupAllSelected
 
-                return (
-                  <AdminEntityCard
-                    key={tag.id}
-                    href={`/admin/tags/${tag.id}`}
-                    title={tag.name}
-                    subtitle={`/${tag.slug}`}
-                    selected={selectedIds.includes(tag.id)}
-                    onSelect={() => toggleSelect(tag.id)}
-                    disabled={isDeleting || isUpdating}
-                    badge={<AdminEntityCountBadge count={tag.quoteCount} />}
-                    actions={
-                      <div className="flex flex-wrap gap-2 items-center justify-end">
-                        <select
-                          value={tagTypesById[tag.id] || tag.type}
-                          onChange={(event) =>
-                            setTagTypesById((prev) => ({
-                              ...prev,
-                              [tag.id]: event.target.value,
-                            }))
-                          }
-                          disabled={isDeleting || isUpdating}
-                          className="border border-stone-200/90 rounded-lg px-2.5 py-1 text-xs bg-white text-stone-800"
-                        >
-                          {tagTypeOptions.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="xs"
-                          onClick={() => updateTagType([tag.id], tagTypesById[tag.id] || tag.type)}
-                          disabled={
-                            isDeleting ||
-                            isUpdating ||
-                            (tagTypesById[tag.id] || tag.type) === tag.type
-                          }
-                        >
-                          {isUpdating ? "Saving..." : "Save Category"}
-                        </Button>
-                        <Button
+            return (
+              <section
+                key={group.type}
+                className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-2xs transition"
+              >
+                {/* Collapsible Group Header */}
+                <div className="p-3.5 bg-gray-50/70 border-b border-gray-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isGroupAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isGroupPartiallySelected
+                      }}
+                      onChange={() => toggleSelectGroup(group.tags)}
+                      className="rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                      title={`Select all in ${group.type}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupCollapse(group.type)}
+                      className="flex items-center gap-2 text-left font-semibold text-gray-900 hover:text-black transition cursor-pointer"
+                    >
+                      <span className="text-base">{group.type}</span>
+                      <span className="text-xs font-normal text-gray-500">
+                        ({formatCountWithNoun(group.tags.length, "tag")})
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {groupSelectedCount > 0 ? (
+                      <span className="text-xs font-medium text-stone-700 bg-stone-100 px-2 py-0.5 rounded-full">
+                        {groupSelectedCount} selected
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupCollapse(group.type)}
+                      className="p-1 text-gray-400 hover:text-gray-700 rounded-md transition cursor-pointer"
+                      aria-label={isCollapsed ? `Expand ${group.type}` : `Collapse ${group.type}`}
+                    >
+                      {isCollapsed ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronUpIcon className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Group Tag Cards */}
+                {!isCollapsed && (
+                  <div className="p-3 space-y-2">
+                    {visibleGroupTags.map((tag) => {
+                      const isDeleting = deletingSet.has(tag.id)
+                      const isUpdating = updatingSet.has(tag.id)
+
+                      return (
+                        <AdminEntityCard
+                          key={tag.id}
                           href={`/admin/tags/${tag.id}`}
-                          variant="outline"
-                          size="xs"
-                        >
-                          Edit
-                        </Button>
-                        <Button
+                          title={tag.name}
+                          subtitle={`/${tag.slug}`}
+                          selected={selectedIds.includes(tag.id)}
+                          onSelect={() => toggleSelect(tag.id)}
+                          disabled={isDeleting || isUpdating}
+                          badge={<AdminEntityCountBadge count={tag.quoteCount} />}
+                          actions={
+                            <div className="flex flex-wrap gap-2 items-center justify-end">
+                              <select
+                                value={tagTypesById[tag.id] || tag.type}
+                                onChange={(event) =>
+                                  setTagTypesById((prev) => ({
+                                    ...prev,
+                                    [tag.id]: event.target.value,
+                                  }))
+                                }
+                                disabled={isDeleting || isUpdating}
+                                className="border border-stone-200/90 rounded-lg px-2.5 py-1 text-xs bg-white text-stone-800 focus:outline-hidden"
+                              >
+                                {tagTypeOptions.map((type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                              </select>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="xs"
+                                onClick={() => updateTagType([tag.id], tagTypesById[tag.id] || tag.type)}
+                                disabled={
+                                  isDeleting ||
+                                  isUpdating ||
+                                  (tagTypesById[tag.id] || tag.type) === tag.type
+                                }
+                              >
+                                {isUpdating ? "Saving..." : "Save Category"}
+                              </Button>
+                              <Button
+                                href={`/admin/tags/${tag.id}`}
+                                variant="outline"
+                                size="xs"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="danger"
+                                size="xs"
+                                onClick={() => setPendingDeleteIds([tag.id])}
+                                disabled={deletingIds.length > 0 || updatingIds.length > 0}
+                              >
+                                {isDeleting ? "..." : "Delete"}
+                              </Button>
+                            </div>
+                          }
+                        />
+                      )
+                    })}
+
+                    {/* Show More / Show Less Toggle for Group */}
+                    {group.tags.length > GROUP_INITIAL_LIMIT && !isActivelySearching ? (
+                      <div className="pt-2 text-center border-t border-gray-100">
+                        <button
                           type="button"
-                          variant="danger"
-                          size="xs"
-                          onClick={() => setPendingDeleteIds([tag.id])}
-                          disabled={deletingIds.length > 0 || updatingIds.length > 0}
+                          onClick={() => toggleGroupLimit(group.type)}
+                          className="text-xs font-medium text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition cursor-pointer"
                         >
-                          {isDeleting ? "..." : "Delete"}
-                        </Button>
+                          {hasMoreTags
+                            ? `Show all ${group.tags.length} ${group.type} tags (${group.tags.length - GROUP_INITIAL_LIMIT} more)`
+                            : `Show fewer (limit to ${GROUP_INITIAL_LIMIT})`}
+                        </button>
                       </div>
-                    }
-                  />
-                )
-              })}
-            </section>
-          ))
+                    ) : null}
+                  </div>
+                )}
+              </section>
+            )
+          })
         ) : (
           <EmptyState
             title="No tags match your search"
@@ -327,6 +571,7 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
         )}
       </div>
 
+      {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={pendingDeleteIds !== null}
         onClose={() => setPendingDeleteIds(null)}

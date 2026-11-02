@@ -13,6 +13,8 @@ interface QuoteEditorSidebarProps {
   submitMode: "list" | "another" | "stay"
   handleSubmit: (nextMode: "list" | "another" | "stay") => Promise<void>
   setIsConfirmingDelete: (val: boolean) => void
+  lastSavedDraftAt?: string | null
+  onClearDraft?: () => void
 }
 
 export function QuoteEditorSidebar({
@@ -27,6 +29,8 @@ export function QuoteEditorSidebar({
   submitMode,
   handleSubmit,
   setIsConfirmingDelete,
+  lastSavedDraftAt,
+  onClearDraft,
 }: QuoteEditorSidebarProps) {
   return (
     <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start font-sans">
@@ -43,11 +47,28 @@ export function QuoteEditorSidebar({
           </p>
         </div>
 
-        {mode === "create" && hasUnsavedDraft && (
+        {lastSavedDraftAt ? (
+          <div className="flex items-center justify-between text-[11px] text-stone-600 bg-stone-50/90 rounded-xl px-3 py-2 border border-stone-200/80 font-mono">
+            <span className="flex items-center gap-1.5 truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+              <span className="truncate">{lastSavedDraftAt}</span>
+            </span>
+            {onClearDraft ? (
+              <button
+                type="button"
+                onClick={onClearDraft}
+                className="text-[10px] text-stone-400 hover:text-stone-700 underline shrink-0 cursor-pointer ml-2"
+                title="Discard browser auto-draft backup"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+        ) : mode === "create" && hasUnsavedDraft ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800">
             You have an unsaved quote draft in progress.
           </div>
-        )}
+        ) : null}
 
         {/* Metadata summary */}
         <div className="rounded-xl border border-stone-200/80 bg-stone-50/60 p-3.5 text-xs text-stone-600 space-y-1.5 font-mono">

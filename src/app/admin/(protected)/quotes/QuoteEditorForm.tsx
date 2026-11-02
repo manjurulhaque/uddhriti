@@ -53,6 +53,18 @@ export default function QuoteEditorForm({
   const [initialSnapshot, setInitialSnapshot] = useState(() =>
     serializeFormState(buildInitialForm(initialForm))
   )
+  const [recoveredDraft, setRecoveredDraft] = useState<{
+    form: QuoteEditorFormState
+    savedAt: string
+    formattedTime: string
+    contentSnippet: string
+  } | null>(null)
+  const [lastSavedDraftAt, setLastSavedDraftAt] = useState<string | null>(null)
+
+  const draftStorageKey = useMemo(
+    () => (mode === "create" ? "admin:quote-editor:draft:create" : `admin:quote-editor:draft:${quoteId || "unknown"}`),
+    [mode, quoteId]
+  )
 
   const deferredAuthorSearch = useDeferredValue(authorSearch)
   const deferredSourceSearch = useDeferredValue(sourceSearch)
@@ -67,6 +79,43 @@ export default function QuoteEditorForm({
 
     return () => window.cancelAnimationFrame(frameId)
   }, [initialForm])
+
+  // Check for any uncommitted local draft saved in localStorage from a previous session
+  useEffect(() => {
+    try {
+      const rawDraft = window.localStorage.getItem(draftStorageKey)
+      if (!rawDraft) return
+
+      const parsed = JSON.parse(rawDraft)
+      if (!parsed || !parsed.form) return
+
+      const currentInitial = serializeFormState(buildInitialForm(initialForm))
+      const draftSerialized = serializeFormState(parsed.form)
+
+      if (draftSerialized === currentInitial || !parsed.form.content?.trim()) {
+        window.localStorage.removeItem(draftStorageKey)
+        return
+      }
+
+      const savedDate = new Date(parsed.savedAt)
+      const formattedTime = Number.isNaN(savedDate.getTime())
+        ? "recently"
+        : savedDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+
+      const frameId = window.requestAnimationFrame(() => {
+        setRecoveredDraft({
+          form: parsed.form,
+          savedAt: parsed.savedAt,
+          formattedTime,
+          contentSnippet: parsed.contentSnippet || parsed.form.content?.slice(0, 100) || "",
+        })
+      })
+
+      return () => window.cancelAnimationFrame(frameId)
+    } catch {
+      window.localStorage.removeItem(draftStorageKey)
+    }
+  }, [draftStorageKey, initialForm])
 
   useEffect(() => {
     if (mode !== "create") return
@@ -258,6 +307,65 @@ export default function QuoteEditorForm({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [shouldWarnBeforeUnload])
 
+  // Debounced auto-save to browser localStorage for crash recovery
+  useEffect(() => {
+    const hasContent = Boolean(
+      form.content.trim() ||
+      form.meaning.trim() ||
+      form.historicalContext.trim() ||
+      form.modernRelevance.trim()
+    )
+
+    if (!isDirty || !hasContent) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      try {
+        const now = new Date()
+        const draftPayload = {
+          form,
+          savedAt: now.toISOString(),
+          contentSnippet: form.content.trim().slice(0, 100),
+        }
+        window.localStorage.setItem(draftStorageKey, JSON.stringify(draftPayload))
+        setLastSavedDraftAt(
+          `Saved locally at ${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        )
+      } catch {
+        // Ignore storage write quota exceptions
+      }
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [form, isDirty, draftStorageKey])
+
+  function handleRestoreDraft() {
+    if (!recoveredDraft) return
+    setForm(recoveredDraft.form)
+    setRecoveredDraft(null)
+    setLastSavedDraftAt(`Draft restored from ${recoveredDraft.formattedTime}`)
+  }
+
+  function handleDiscardDraft() {
+    try {
+      window.localStorage.removeItem(draftStorageKey)
+    } catch {
+      // Ignore
+    }
+    setRecoveredDraft(null)
+    setLastSavedDraftAt(null)
+  }
+
+  function handleClearDraft() {
+    try {
+      window.localStorage.removeItem(draftStorageKey)
+    } catch {
+      // Ignore
+    }
+    setLastSavedDraftAt(null)
+  }
+
   const derivedVerificationConfidence = useMemo(() => {
     if (form.isVerified) {
       if (form.attributionStatus === "DISPUTED") return "0.65"
@@ -339,6 +447,14 @@ export default function QuoteEditorForm({
   }
 
   function resetForNextQuote() {
+    try {
+      window.localStorage.removeItem(draftStorageKey)
+    } catch {
+      // Ignore
+    }
+    setLastSavedDraftAt(null)
+    setRecoveredDraft(null)
+
     setForm((prev) => ({
       ...prev,
       content: "",
@@ -402,6 +518,14 @@ export default function QuoteEditorForm({
 
     const savedQuote = await res.json().catch(() => null)
 
+    try {
+      window.localStorage.removeItem(draftStorageKey)
+    } catch {
+      // Ignore
+    }
+    setLastSavedDraftAt(null)
+    setRecoveredDraft(null)
+
     if (mode === "create" && nextMode === "another") {
       resetForNextQuote()
       setLoading(false)
@@ -446,6 +570,12 @@ export default function QuoteEditorForm({
         return
       }
 
+      try {
+        window.localStorage.removeItem(draftStorageKey)
+      } catch {
+        // Ignore
+      }
+
       router.push("/admin/quotes")
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to delete quote")
@@ -457,6 +587,51 @@ export default function QuoteEditorForm({
 
   return (
     <>
+      {/* Recovered Draft Banner */}
+      {recoveredDraft ? (
+        <div className="mb-5 rounded-2xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/90 via-sky-50/60 to-white p-4 shadow-2xs text-xs text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-indigo-100 p-1.5 text-indigo-700 shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-sm tracking-tight text-indigo-950">
+                  Unsaved Draft Recovered
+                </span>
+                <span className="rounded-full bg-indigo-200/80 px-2 py-0.5 text-[10px] font-mono font-medium text-indigo-900 border border-indigo-300/60">
+                  Saved {recoveredDraft.formattedTime}
+                </span>
+              </div>
+              <p className="text-indigo-900/90 line-clamp-1 italic font-serif text-[13px]">
+                &ldquo;{recoveredDraft.contentSnippet || "Untitled quote draft"}&rdquo;
+              </p>
+              <p className="text-[11px] text-indigo-700">
+                Found an unsaved draft backed up in this browser from a previous editing session. Would you like to restore it?
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+            <button
+              type="button"
+              onClick={handleRestoreDraft}
+              className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-2xs transition cursor-pointer text-xs"
+            >
+              Restore Draft
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-50 text-stone-600 hover:text-stone-900 border border-stone-200 transition cursor-pointer text-xs"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {mode === "edit" && isDirty ? (
         <div className="mb-5 rounded-2xl border border-amber-200/90 bg-amber-50/50 p-4 text-xs font-medium text-amber-900 shadow-2xs flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -533,6 +708,8 @@ export default function QuoteEditorForm({
           submitMode={submitMode}
           handleSubmit={handleSubmit}
           setIsConfirmingDelete={setIsConfirmingDelete}
+          lastSavedDraftAt={lastSavedDraftAt}
+          onClearDraft={handleClearDraft}
         />
       </div>
 

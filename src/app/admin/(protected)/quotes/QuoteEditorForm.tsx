@@ -473,6 +473,10 @@ export default function QuoteEditorForm({
             updateForm={updateForm}
             wordCount={wordCount}
             charCount={charCount}
+            authorName={selectedAuthorName}
+            categoryName={selectedCategoryName}
+            sourceTitle={sourceById.get(form.sourceId)?.title || form.sourceTitle}
+            tags={selectedTags.map((t) => t.name)}
           />
 
           <QuoteMetadataSection

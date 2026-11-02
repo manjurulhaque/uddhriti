@@ -1,9 +1,9 @@
 "use client"
 
-import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { PageHeader } from "@/components/admin"
+import { AuthorWikipediaQuickSync, AuthorRichMediaStudio } from "@/components/admin/authors"
 import {
   Input,
   Textarea,
@@ -67,6 +67,7 @@ export default function EditAuthorPage() {
   const [error, setError] = useState("")
   const [importError, setImportError] = useState("")
   const [form, setForm] = useState<AuthorForm>(emptyForm)
+  const [authorStats, setAuthorStats] = useState<{ quoteCount: number; sourceCount: number } | null>(null)
   const lastAutoImportedWikidataId = useRef<string | null>(null)
 
   useEffect(() => {
@@ -105,6 +106,18 @@ export default function EditAuthorPage() {
           wikidataId: data.wikidataId || "",
           wikiquoteUrl: "",
         })
+
+        if (data._count) {
+          setAuthorStats({
+            quoteCount: data._count.quotes || 0,
+            sourceCount: data._count.sources || 0,
+          })
+        } else if (typeof data.quoteCount === "number") {
+          setAuthorStats({
+            quoteCount: data.quoteCount,
+            sourceCount: 0,
+          })
+        }
       } catch (err: unknown) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load author")
@@ -281,6 +294,73 @@ export default function EditAuthorPage() {
         description="Update author biography, chronology, portrait, and authority citations."
       />
 
+      {/* Author Footprint & Quick-Sync Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-50/90 rounded-2xl p-4 border border-stone-200/90 text-xs shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-bold text-stone-700 mr-1 uppercase text-[10px] tracking-wider">
+            Footprint:
+          </span>
+          <a
+            href={`/admin/quotes?authorId=${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-700 hover:text-stone-900 font-mono shadow-2xs hover:border-stone-300 transition"
+          >
+            <span>{authorStats?.quoteCount ?? 0} Quotes</span>
+            <svg className="w-3 h-3 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+
+          <a
+            href={`/admin/sources?authorId=${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-700 hover:text-stone-900 font-mono shadow-2xs hover:border-stone-300 transition"
+          >
+            <span>{authorStats?.sourceCount ?? 0} Works</span>
+            <svg className="w-3 h-3 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+
+          {form.slug && (
+            <a
+              href={`/authors/${form.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-900 text-white font-medium hover:bg-stone-800 shadow-2xs transition"
+            >
+              <span>Public Page</span>
+              <svg className="w-3 h-3 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
+        </div>
+
+        <AuthorWikipediaQuickSync
+          currentName={form.name}
+          onApplyProfile={(imported) => {
+            setForm((prev) => ({
+              ...prev,
+              name: imported.name || prev.name,
+              slug: prev.slug || (imported.name ? slugify(imported.name) : prev.slug),
+              bio: imported.bio ?? prev.bio,
+              birthYear: imported.birthYear?.toString() || prev.birthYear,
+              deathYear: imported.deathYear?.toString() || prev.deathYear,
+              dateOfBirth: imported.dateOfBirth || prev.dateOfBirth,
+              dateOfDeath: imported.dateOfDeath || prev.dateOfDeath,
+              profession: imported.profession || prev.profession,
+              nationality: imported.nationality || prev.nationality,
+              imageUrl: imported.imageUrl || prev.imageUrl,
+              wikipediaUrl: imported.wikipediaUrl || prev.wikipediaUrl,
+              wikidataId: imported.wikidataId || prev.wikidataId,
+            }))
+          }}
+        />
+      </div>
+
       <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -376,30 +456,14 @@ export default function EditAuthorPage() {
           </div>
         </FormSection>
 
-        <FormSection title="Portrait & Visuals" description="Public avatar or historical portrait">
-          <Input
-            name="imageUrl"
-            label="Image URL"
-            value={form.imageUrl}
-            onChange={handleChange}
-            placeholder="https://..."
+        <FormSection title="Portrait & Visuals" description="Public avatar, catalog photo, and multi-surface rendering">
+          <AuthorRichMediaStudio
+            imageUrl={form.imageUrl}
+            authorName={form.name}
+            profession={form.profession}
+            nationality={form.nationality}
+            onChange={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))}
           />
-
-          {form.imageUrl && (
-            <div className="flex items-center gap-3 pt-1">
-              <div className="relative h-16 w-16 overflow-hidden rounded-full border border-stone-200 bg-stone-100 shadow-2xs shrink-0">
-                <Image
-                  src={form.imageUrl}
-                  alt={`${form.name || "Author"} portrait`}
-                  fill
-                  sizes="64px"
-                  unoptimized
-                  className="object-cover"
-                />
-              </div>
-              <p className="text-xs text-stone-500">Portrait preview</p>
-            </div>
-          )}
         </FormSection>
 
         <FormSection

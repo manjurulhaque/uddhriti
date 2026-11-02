@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, isValidUuid, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { authorSchema } from "@/lib/validation/author"
 import { slugify } from "@/lib/slug"
+import { recordAuditLog } from "@/lib/audit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -36,11 +37,19 @@ export async function GET(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const author = await prisma.author.findUnique({
     where: { id },
+    include: {
+      _count: {
+        select: {
+          quotes: true,
+          sources: true,
+        },
+      },
+    },
   })
 
   if (!author) {
@@ -58,7 +67,7 @@ export async function PATCH(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const raw = await parseJsonObjectBody(req)
@@ -123,6 +132,23 @@ export async function PATCH(
       },
     })
 
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "AUTHOR",
+      entityId: id,
+      entityName: updated.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        slug: updated.slug,
+        profession: updated.profession,
+        nationality: updated.nationality,
+        hasImage: Boolean(updated.imageUrl),
+        hasBio: Boolean(updated.bio),
+      },
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -144,7 +170,7 @@ export async function DELETE(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   try {
@@ -162,5 +188,14 @@ export async function DELETE(
     throw error
   }
 
-  return NextResponse.json({ success: true })
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "AUTHOR",
+      entityId: id,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+    })
+
+    return NextResponse.json({ success: true })
 }

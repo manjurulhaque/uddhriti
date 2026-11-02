@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
-import Image from "next/image"
 import { PageHeader } from "@/components/admin"
+import { AuthorWikipediaQuickSync, AuthorRichMediaStudio } from "@/components/admin/authors"
 import {
   Input,
   Textarea,
@@ -178,6 +178,39 @@ export default function NewAuthorPage() {
         description="Add a philosopher, author, leader, or historical figure."
       />
 
+      {/* Quick-Sync Helper Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-50/90 rounded-2xl p-4 border border-stone-200/90 text-xs shadow-2xs">
+        <div>
+          <span className="font-bold text-stone-800 text-xs block">
+            Speed up author creation
+          </span>
+          <span className="text-[11px] text-stone-500">
+            Search Wikipedia to auto-fill biography, portrait, dates, and authority IDs in one click.
+          </span>
+        </div>
+
+        <AuthorWikipediaQuickSync
+          currentName={form.name}
+          onApplyProfile={(imported) => {
+            setForm((prev) => ({
+              ...prev,
+              name: imported.name || prev.name,
+              slug: prev.slug || (imported.name ? slugify(imported.name) : prev.slug),
+              bio: imported.bio ?? prev.bio,
+              birthYear: imported.birthYear?.toString() || prev.birthYear,
+              deathYear: imported.deathYear?.toString() || prev.deathYear,
+              dateOfBirth: imported.dateOfBirth || prev.dateOfBirth,
+              dateOfDeath: imported.dateOfDeath || prev.dateOfDeath,
+              profession: imported.profession || prev.profession,
+              nationality: imported.nationality || prev.nationality,
+              imageUrl: imported.imageUrl || prev.imageUrl,
+              wikipediaUrl: imported.wikipediaUrl || prev.wikipediaUrl,
+              wikidataId: imported.wikidataId || prev.wikidataId,
+            }))
+          }}
+        />
+      </div>
+
       <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -274,31 +307,14 @@ export default function NewAuthorPage() {
           </div>
         </FormSection>
 
-        <FormSection title="Portrait & Visuals" description="Public avatar or historical portrait">
-          <Input
-            name="imageUrl"
-            label="Image URL"
-            value={form.imageUrl}
-            onChange={handleChange}
-            placeholder="https://..."
-            hint="Direct link to a high-resolution portrait image"
+        <FormSection title="Portrait & Visuals" description="Public avatar, catalog photo, and multi-surface rendering">
+          <AuthorRichMediaStudio
+            imageUrl={form.imageUrl}
+            authorName={form.name}
+            profession={form.profession}
+            nationality={form.nationality}
+            onChange={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))}
           />
-
-          {form.imageUrl && (
-            <div className="flex items-center gap-3 pt-1">
-              <div className="relative h-16 w-16 overflow-hidden rounded-full border border-stone-200 bg-stone-100 shadow-2xs shrink-0">
-                <Image
-                  src={form.imageUrl}
-                  alt={`${form.name || "Author"} portrait`}
-                  fill
-                  sizes="64px"
-                  unoptimized
-                  className="object-cover"
-                />
-              </div>
-              <p className="text-xs text-stone-500">Portrait preview</p>
-            </div>
-          )}
         </FormSection>
 
         <FormSection

@@ -445,4 +445,164 @@ export function getCategoryMeta(name: string): CategoryMeta {
   }
 }
 
+export interface TagTypeMeta {
+  label: string
+  icon: string
+  badgeClass: string
+  gradient: string
+  border: string
+}
+
+export function getTagTypeMeta(type: string): TagTypeMeta {
+  switch (type.toUpperCase()) {
+    case "VIRTUE":
+      return {
+        label: "Moral Virtue",
+        icon: "🕊️",
+        badgeClass: "text-emerald-900 bg-emerald-50 border-emerald-200",
+        gradient: "from-emerald-500/10 via-teal-500/5 to-transparent",
+        border: "border-emerald-300/40",
+      }
+    case "EMOTION":
+      return {
+        label: "Human Emotion",
+        icon: "💓",
+        badgeClass: "text-rose-900 bg-rose-50 border-rose-200",
+        gradient: "from-rose-500/10 via-pink-500/5 to-transparent",
+        border: "border-rose-300/40",
+      }
+    case "VALUE":
+      return {
+        label: "Core Value",
+        icon: "🧭",
+        badgeClass: "text-amber-900 bg-amber-50 border-amber-200",
+        gradient: "from-amber-500/10 via-yellow-500/5 to-transparent",
+        border: "border-amber-300/40",
+      }
+    case "STATE":
+      return {
+        label: "State of Being",
+        icon: "🧘",
+        badgeClass: "text-indigo-900 bg-indigo-50 border-indigo-200",
+        gradient: "from-indigo-500/10 via-purple-500/5 to-transparent",
+        border: "border-indigo-300/40",
+      }
+    case "ERA":
+      return {
+        label: "Historical Era",
+        icon: "📜",
+        badgeClass: "text-stone-900 bg-stone-100 border-stone-200",
+        gradient: "from-stone-500/10 via-amber-900/5 to-transparent",
+        border: "border-stone-300/50",
+      }
+    case "SPIRITUAL":
+    case "FAITH_TRADITION":
+      return {
+        label: "Spiritual Tradition",
+        icon: "✨",
+        badgeClass: "text-violet-900 bg-violet-50 border-violet-200",
+        gradient: "from-violet-500/10 via-fuchsia-500/5 to-transparent",
+        border: "border-violet-300/40",
+      }
+    case "POLITICS":
+    case "SOCIETY":
+      return {
+        label: "Society & Governance",
+        icon: "🏛️",
+        badgeClass: "text-blue-900 bg-blue-50 border-blue-200",
+        gradient: "from-blue-500/10 via-sky-500/5 to-transparent",
+        border: "border-blue-300/40",
+      }
+    case "SCIENCE":
+      return {
+        label: "Scientific Inquiry",
+        icon: "🔬",
+        badgeClass: "text-cyan-900 bg-cyan-50 border-cyan-200",
+        gradient: "from-cyan-500/10 via-teal-500/5 to-transparent",
+        border: "border-cyan-300/40",
+      }
+    case "ART":
+      return {
+        label: "Art & Creation",
+        icon: "🎨",
+        badgeClass: "text-fuchsia-900 bg-fuchsia-50 border-fuchsia-200",
+        gradient: "from-fuchsia-500/10 via-pink-500/5 to-transparent",
+        border: "border-fuchsia-300/40",
+      }
+    case "NATURE":
+      return {
+        label: "Nature & Cosmos",
+        icon: "🌿",
+        badgeClass: "text-emerald-900 bg-emerald-50 border-emerald-200",
+        gradient: "from-emerald-600/10 via-teal-500/5 to-transparent",
+        border: "border-emerald-300/40",
+      }
+    case "ACTION":
+    case "WORK":
+      return {
+        label: "Action & Craft",
+        icon: "⚡",
+        badgeClass: "text-orange-900 bg-orange-50 border-orange-200",
+        gradient: "from-orange-500/10 via-amber-500/5 to-transparent",
+        border: "border-orange-300/40",
+      }
+    case "RELATIONSHIP":
+      return {
+        label: "Fellowship & Kinship",
+        icon: "🤝",
+        badgeClass: "text-amber-800 bg-amber-50 border-amber-200",
+        gradient: "from-amber-500/10 via-orange-500/5 to-transparent",
+        border: "border-amber-300/40",
+      }
+    case "TIME":
+      return {
+        label: "Temporal Motif",
+        icon: "⏳",
+        badgeClass: "text-stone-800 bg-stone-100 border-stone-200",
+        gradient: "from-stone-500/10 via-amber-500/5 to-transparent",
+        border: "border-stone-300/40",
+      }
+    case "VICE":
+      return {
+        label: "Human Foible & Vice",
+        icon: "🎭",
+        badgeClass: "text-red-900 bg-red-50 border-red-200",
+        gradient: "from-red-500/10 via-stone-500/5 to-transparent",
+        border: "border-red-300/40",
+      }
+    case "PERSON":
+      return {
+        label: "Historical Personage",
+        icon: "👤",
+        badgeClass: "text-stone-800 bg-stone-100 border-stone-200",
+        gradient: "from-stone-500/10 via-amber-500/5 to-transparent",
+        border: "border-stone-200/90",
+      }
+    case "EVENT":
+      return {
+        label: "Historic Epoch / Event",
+        icon: "⚔️",
+        badgeClass: "text-amber-900 bg-amber-100 border-amber-300",
+        gradient: "from-amber-600/10 via-stone-500/5 to-transparent",
+        border: "border-amber-300/40",
+      }
+    case "PLACE":
+      return {
+        label: "Geographic Place",
+        icon: "🗺️",
+        badgeClass: "text-teal-900 bg-teal-50 border-teal-200",
+        gradient: "from-teal-500/10 via-emerald-500/5 to-transparent",
+        border: "border-teal-300/40",
+      }
+    default:
+      return {
+        label: type.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()),
+        icon: "🏷️",
+        badgeClass: "text-stone-800 bg-stone-100 border-stone-200",
+        gradient: "from-stone-500/10 via-amber-500/5 to-transparent",
+        border: "border-stone-200/90",
+      }
+  }
+}
+
 export { slugify }

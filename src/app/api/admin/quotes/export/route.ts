@@ -58,6 +58,7 @@ export async function GET(req: Request) {
           { content: { contains: searchQuery, mode: "insensitive" } },
           { authorName: { contains: searchQuery, mode: "insensitive" } },
           { author: { name: { contains: searchQuery, mode: "insensitive" } } },
+          { category: { name: { contains: searchQuery, mode: "insensitive" } } },
           { source: { title: { contains: searchQuery, mode: "insensitive" } } },
         ],
       }

@@ -13,8 +13,11 @@ type QuoteItem = {
   createdAt: string
   publishedAt: string | null
   authorName: string | null
+  categoryName: string | null
+  categorySlug: string | null
   sourceTitle: string | null
   hasAuthor: boolean
+  hasCategory: boolean
   hasSource: boolean
   hasTags: boolean
 }
@@ -36,6 +39,8 @@ type SortOption =
   | "oldest"
   | "author-asc"
   | "author-desc"
+  | "category-asc"
+  | "category-desc"
   | "status"
   | "content"
   | "needs-attention"
@@ -45,6 +50,8 @@ const sortOptions = [
   { value: "oldest", label: "Arrange: Oldest first" },
   { value: "author-asc", label: "Sort: Author A-Z" },
   { value: "author-desc", label: "Sort: Author Z-A" },
+  { value: "category-asc", label: "Sort: Category A-Z" },
+  { value: "category-desc", label: "Sort: Category Z-A" },
   { value: "status", label: "Sort: Status" },
   { value: "content", label: "Sort: Quote text" },
   { value: "needs-attention", label: "Arrange: Needs attention" },
@@ -131,7 +138,7 @@ export function QuotesListManager({
     const needle = !isSearchSynched ? search.trim().toLowerCase() : ""
     const filtered = needle
       ? quotes.filter((quote) =>
-        [quote.content, quote.authorName ?? "", quote.sourceTitle ?? "", quote.status]
+        [quote.content, quote.authorName ?? "", quote.categoryName ?? "", quote.sourceTitle ?? "", quote.status]
           .join(" ")
           .toLowerCase()
           .includes(needle)
@@ -141,10 +148,12 @@ export function QuotesListManager({
     return [...filtered].sort((a, b) => {
       const authorA = (a.authorName ?? "").toLowerCase()
       const authorB = (b.authorName ?? "").toLowerCase()
+      const categoryA = (a.categoryName ?? "").toLowerCase()
+      const categoryB = (b.categoryName ?? "").toLowerCase()
       const contentA = a.content.toLowerCase()
       const contentB = b.content.toLowerCase()
-      const attentionA = Number(!a.hasAuthor) + Number(!a.hasSource) + Number(!a.hasTags)
-      const attentionB = Number(!b.hasAuthor) + Number(!b.hasSource) + Number(!b.hasTags)
+      const attentionA = Number(!a.hasAuthor) + Number(!a.hasCategory) + Number(!a.hasSource) + Number(!a.hasTags)
+      const attentionB = Number(!b.hasAuthor) + Number(!b.hasCategory) + Number(!b.hasSource) + Number(!b.hasTags)
 
       switch (sortBy) {
         case "oldest":
@@ -153,6 +162,10 @@ export function QuotesListManager({
           return authorA.localeCompare(authorB) || contentA.localeCompare(contentB)
         case "author-desc":
           return authorB.localeCompare(authorA) || contentA.localeCompare(contentB)
+        case "category-asc":
+          return categoryA.localeCompare(categoryB) || contentA.localeCompare(contentB)
+        case "category-desc":
+          return categoryB.localeCompare(categoryA) || contentA.localeCompare(contentB)
         case "status":
           return a.status.localeCompare(b.status) || authorA.localeCompare(authorB)
         case "content":
@@ -541,12 +554,20 @@ export function QuotesListManager({
                 </span>
               }
               subtitle={
-                <span className="flex items-center gap-1.5 text-xs text-stone-600 mt-1">
+                <span className="flex items-center flex-wrap gap-1.5 text-xs text-stone-600 mt-1">
                   <span className="font-medium text-stone-800">{quote.authorName ?? "Unknown Author"}</span>
+                  {quote.categoryName ? (
+                    <>
+                      <span className="text-stone-300">•</span>
+                      <span className="text-stone-600 font-medium">{quote.categoryName}</span>
+                    </>
+                  ) : null}
                   {quote.sourceTitle ? (
                     <>
                       <span className="text-stone-300">•</span>
-                      <span className="italic text-stone-500">{quote.sourceTitle}</span>
+                      <span className="italic text-stone-500 truncate max-w-[260px]" title={quote.sourceTitle}>
+                        {quote.sourceTitle}
+                      </span>
                     </>
                   ) : null}
                 </span>
@@ -568,6 +589,15 @@ export function QuotesListManager({
               }
               meta={
                 <>
+                  {quote.categoryName ? (
+                    <Badge variant="outline" size="xs" className="font-sans font-medium text-stone-700 bg-stone-50 border-stone-200/90">
+                      {quote.categoryName}
+                    </Badge>
+                  ) : (
+                    <Badge variant="danger" size="xs">
+                      Missing category
+                    </Badge>
+                  )}
                   {!quote.hasAuthor && (
                     <Badge variant="danger" size="xs">
                       Missing author

@@ -7,7 +7,7 @@ import { PageHeader, FilterTabs } from "@/components/admin"
 import { Button } from "@/components/ui"
 import { parseSafePageNumber } from "@/lib/security/input"
 
-type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
+type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
 const PAGE_SIZE = 50
 
@@ -15,6 +15,7 @@ const filterLabels: Record<QuoteFilter, string> = {
   all: "All Quotes",
   draft: "Draft / Review",
   archived: "Archived",
+  unverified: "Unverified",
   unattributed: "Unattributed",
   "missing-source": "Missing Source",
   "no-tags": "No Tags",
@@ -25,6 +26,7 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
   if (typeof value !== "string") return "all"
   if (value === "draft") return "draft"
   if (value === "archived") return "archived"
+  if (value === "unverified") return "unverified"
   if (value === "unattributed") return "unattributed"
   if (value === "missing-source") return "missing-source"
   if (value === "no-tags") return "no-tags"
@@ -46,6 +48,8 @@ function buildQuoteWhere(activeFilter: QuoteFilter, search?: string): Prisma.Quo
     baseWhere = { deletedAt: null, status: { in: ["DRAFT", "REVIEW"] } }
   } else if (activeFilter === "archived") {
     baseWhere = { deletedAt: null, status: "ARCHIVED" }
+  } else if (activeFilter === "unverified") {
+    baseWhere = { deletedAt: null, isVerified: false }
   } else if (activeFilter === "unattributed") {
     baseWhere = { deletedAt: null, OR: [{ authorId: null }, { authorName: null }] }
   } else if (activeFilter === "missing-source") {
@@ -107,6 +111,7 @@ export default async function QuotesPage({
       id: true,
       content: true,
       status: true,
+      isVerified: true,
       createdAt: true,
       publishedAt: true,
       authorId: true,
@@ -128,6 +133,7 @@ export default async function QuotesPage({
     id: quote.id,
     content: quote.content,
     status: quote.status,
+    isVerified: Boolean(quote.isVerified),
     createdAt: quote.createdAt.toISOString(),
     publishedAt: quote.publishedAt?.toISOString() ?? null,
     authorName: quote.author?.name ?? quote.authorName ?? null,
@@ -189,6 +195,7 @@ export default async function QuotesPage({
           { value: "all", label: filterLabels.all, href: buildFilterHref("all") },
           { value: "draft", label: filterLabels.draft, href: buildFilterHref("draft") },
           { value: "archived", label: filterLabels.archived, href: buildFilterHref("archived") },
+          { value: "unverified", label: filterLabels.unverified, href: buildFilterHref("unverified") },
           { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed") },
           { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source") },
           { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags") },

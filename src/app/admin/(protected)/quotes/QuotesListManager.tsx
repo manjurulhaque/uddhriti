@@ -10,6 +10,7 @@ type QuoteItem = {
   id: string
   content: string
   status: string
+  isVerified: boolean
   createdAt: string
   publishedAt: string | null
   authorName: string | null
@@ -57,7 +58,7 @@ const sortOptions = [
   { value: "needs-attention", label: "Arrange: Needs attention" },
 ]
 
-type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
+type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
 function buildQuotesListHref(filter: QuoteFilter, page: number, search?: string) {
   const params = new URLSearchParams()
@@ -152,8 +153,18 @@ export function QuotesListManager({
       const categoryB = (b.categoryName ?? "").toLowerCase()
       const contentA = a.content.toLowerCase()
       const contentB = b.content.toLowerCase()
-      const attentionA = Number(!a.hasAuthor) + Number(!a.hasCategory) + Number(!a.hasSource) + Number(!a.hasTags)
-      const attentionB = Number(!b.hasAuthor) + Number(!b.hasCategory) + Number(!b.hasSource) + Number(!b.hasTags)
+      const attentionA =
+        Number(!a.hasAuthor) +
+        Number(!a.hasCategory) +
+        Number(!a.hasSource) +
+        Number(!a.hasTags) +
+        Number(!a.isVerified)
+      const attentionB =
+        Number(!b.hasAuthor) +
+        Number(!b.hasCategory) +
+        Number(!b.hasSource) +
+        Number(!b.hasTags) +
+        Number(!b.isVerified)
 
       switch (sortBy) {
         case "oldest":
@@ -589,6 +600,15 @@ export function QuotesListManager({
               }
               meta={
                 <>
+                  {quote.isVerified ? (
+                    <Badge variant="success" size="xs" dot>
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="warning" size="xs">
+                      Unverified
+                    </Badge>
+                  )}
                   {quote.categoryName ? (
                     <Badge variant="outline" size="xs" className="font-sans font-medium text-stone-700 bg-stone-50 border-stone-200/90">
                       {quote.categoryName}

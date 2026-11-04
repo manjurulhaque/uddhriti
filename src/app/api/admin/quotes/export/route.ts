@@ -50,6 +50,19 @@ export async function GET(req: Request) {
     } else if (filter === "orphaned") {
       where.OR = [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }]
     }
+
+    const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()
+    if (searchQuery) {
+      const searchCondition: Prisma.QuoteWhereInput = {
+        OR: [
+          { content: { contains: searchQuery, mode: "insensitive" } },
+          { authorName: { contains: searchQuery, mode: "insensitive" } },
+          { author: { name: { contains: searchQuery, mode: "insensitive" } } },
+          { source: { title: { contains: searchQuery, mode: "insensitive" } } },
+        ],
+      }
+      where.AND = [searchCondition]
+    }
   }
 
   const quotes = await prisma.quote.findMany({

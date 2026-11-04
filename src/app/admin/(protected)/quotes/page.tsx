@@ -37,34 +37,42 @@ function getPageNumber(value: string | string[] | undefined) {
   return parseSafePageNumber(value, 1000)
 }
 
-function buildQuoteWhere(activeFilter: QuoteFilter): Prisma.QuoteWhereInput {
+function buildQuoteWhere(activeFilter: QuoteFilter, search?: string): Prisma.QuoteWhereInput {
+  let baseWhere: Prisma.QuoteWhereInput
+
   if (activeFilter === "all") {
-    return { deletedAt: null }
+    baseWhere = { deletedAt: null }
+  } else if (activeFilter === "draft") {
+    baseWhere = { deletedAt: null, status: { in: ["DRAFT", "REVIEW"] } }
+  } else if (activeFilter === "archived") {
+    baseWhere = { deletedAt: null, status: "ARCHIVED" }
+  } else if (activeFilter === "unattributed") {
+    baseWhere = { deletedAt: null, OR: [{ authorId: null }, { authorName: null }] }
+  } else if (activeFilter === "missing-source") {
+    baseWhere = { deletedAt: null, sourceId: null }
+  } else if (activeFilter === "no-tags") {
+    baseWhere = { deletedAt: null, tags: { none: {} } }
+  } else {
+    baseWhere = {
+      deletedAt: null,
+      OR: [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }],
+    }
   }
 
-  if (activeFilter === "draft") {
-    return { deletedAt: null, status: { in: ["DRAFT", "REVIEW"] } }
-  }
+  const query = search?.trim()
+  if (!query) return baseWhere
 
-  if (activeFilter === "archived") {
-    return { deletedAt: null, status: "ARCHIVED" }
-  }
-
-  if (activeFilter === "unattributed") {
-    return { deletedAt: null, OR: [{ authorId: null }, { authorName: null }] }
-  }
-
-  if (activeFilter === "missing-source") {
-    return { deletedAt: null, sourceId: null }
-  }
-
-  if (activeFilter === "no-tags") {
-    return { deletedAt: null, tags: { none: {} } }
+  const searchCondition: Prisma.QuoteWhereInput = {
+    OR: [
+      { content: { contains: query, mode: "insensitive" } },
+      { authorName: { contains: query, mode: "insensitive" } },
+      { author: { name: { contains: query, mode: "insensitive" } } },
+      { source: { title: { contains: query, mode: "insensitive" } } },
+    ],
   }
 
   return {
-    deletedAt: null,
-    OR: [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }],
+    AND: [baseWhere, searchCondition],
   }
 }
 
@@ -79,7 +87,13 @@ export default async function QuotesPage({
   const resolvedSearchParams = (await searchParams) ?? {}
   const activeFilter = getQuoteFilter(resolvedSearchParams.filter)
   const requestedPage = getPageNumber(resolvedSearchParams.page)
-  const where = buildQuoteWhere(activeFilter)
+  const searchQuery =
+    typeof resolvedSearchParams.search === "string"
+      ? resolvedSearchParams.search.trim()
+      : typeof resolvedSearchParams.q === "string"
+      ? resolvedSearchParams.q.trim()
+      : ""
+  const where = buildQuoteWhere(activeFilter, searchQuery)
 
   const total = await prisma.quote.count({ where })
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -119,10 +133,18 @@ export default async function QuotesPage({
     hasTags: quote.tags.length > 0,
   }))
 
-  const exportUrl =
-    activeFilter === "all"
-      ? "/api/admin/quotes/export?format=csv"
-      : `/api/admin/quotes/export?format=csv&filter=${activeFilter}`
+  const exportParams = new URLSearchParams({ format: "csv" })
+  if (activeFilter !== "all") exportParams.set("filter", activeFilter)
+  if (searchQuery) exportParams.set("search", searchQuery)
+  const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
+
+  const buildFilterHref = (filterValue: QuoteFilter) => {
+    const params = new URLSearchParams()
+    if (filterValue !== "all") params.set("filter", filterValue)
+    if (searchQuery) params.set("search", searchQuery)
+    const qs = params.toString()
+    return qs ? `/admin/quotes?${qs}` : "/admin/quotes"
+  }
 
   return (
     <div className="p-8 space-y-6">
@@ -157,13 +179,13 @@ export default async function QuotesPage({
         label="Filter"
         activeValue={activeFilter}
         items={[
-          { value: "all", label: filterLabels.all, href: "/admin/quotes" },
-          { value: "draft", label: filterLabels.draft, href: "/admin/quotes?filter=draft" },
-          { value: "archived", label: filterLabels.archived, href: "/admin/quotes?filter=archived" },
-          { value: "unattributed", label: filterLabels.unattributed, href: "/admin/quotes?filter=unattributed" },
-          { value: "missing-source", label: filterLabels["missing-source"], href: "/admin/quotes?filter=missing-source" },
-          { value: "no-tags", label: filterLabels["no-tags"], href: "/admin/quotes?filter=no-tags" },
-          { value: "orphaned", label: filterLabels.orphaned, href: "/admin/quotes?filter=orphaned" },
+          { value: "all", label: filterLabels.all, href: buildFilterHref("all") },
+          { value: "draft", label: filterLabels.draft, href: buildFilterHref("draft") },
+          { value: "archived", label: filterLabels.archived, href: buildFilterHref("archived") },
+          { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed") },
+          { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source") },
+          { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags") },
+          { value: "orphaned", label: filterLabels.orphaned, href: buildFilterHref("orphaned") },
         ]}
       />
 
@@ -174,6 +196,7 @@ export default async function QuotesPage({
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
+        initialSearch={searchQuery}
       />
     </div>
   )

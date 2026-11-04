@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar, AdminEntityCard } from "@/components/admin"
@@ -52,13 +52,16 @@ const sortOptions = [
 
 type QuoteFilter = "all" | "draft" | "archived" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
-function buildQuotesListHref(filter: QuoteFilter, page: number) {
+function buildQuotesListHref(filter: QuoteFilter, page: number, search?: string) {
   const params = new URLSearchParams()
   if (filter !== "all") {
     params.set("filter", filter)
   }
   if (page > 1) {
     params.set("page", String(page))
+  }
+  if (search && search.trim()) {
+    params.set("search", search.trim())
   }
 
   const query = params.toString()
@@ -72,6 +75,7 @@ export function QuotesListManager({
   page,
   pageSize,
   total,
+  initialSearch = "",
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -79,6 +83,7 @@ export function QuotesListManager({
   page: number
   pageSize: number
   total: number
+  initialSearch?: string
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -92,7 +97,7 @@ export function QuotesListManager({
   const [authorId, setAuthorId] = useState("")
   const [sourceId, setSourceId] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(initialSearch)
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
@@ -100,12 +105,30 @@ export function QuotesListManager({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [error, setError] = useState("")
 
+  useEffect(() => {
+    setSearch(initialSearch)
+  }, [initialSearch])
+
+  useEffect(() => {
+    if (search.trim() === initialSearch.trim()) return
+
+    const timer = setTimeout(() => {
+      const href = buildQuotesListHref(activeFilter, 1, search.trim())
+      router.push(href)
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [search, activeFilter, initialSearch, router])
+
   const selectedTagNames = useMemo(
     () => tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name),
     [tagIds, tags]
   )
+
+  const isSearchSynched = search.trim().toLowerCase() === initialSearch.trim().toLowerCase()
+
   const visibleQuotes = useMemo(() => {
-    const needle = search.trim().toLowerCase()
+    const needle = !isSearchSynched ? search.trim().toLowerCase() : ""
     const filtered = needle
       ? quotes.filter((quote) =>
         [quote.content, quote.authorName ?? "", quote.sourceTitle ?? "", quote.status]
@@ -141,12 +164,18 @@ export function QuotesListManager({
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
-  }, [quotes, search, sortBy])
+  }, [quotes, search, sortBy, isSearchSynched])
+
   const allSelected =
     visibleQuotes.length > 0 &&
     visibleQuotes.every((quote) => selectedIds.includes(quote.id))
   const selectedCount = selectedIds.length
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const effectiveTotal = isSearchSynched ? total : visibleQuotes.length
+  const effectiveTotalPages = isSearchSynched
+    ? totalPages
+    : Math.max(1, Math.ceil(visibleQuotes.length / pageSize))
 
   async function ensureOptions(nextAction: BulkActionType) {
     if (isLoadingOptions) return
@@ -308,6 +337,14 @@ export function QuotesListManager({
     }
   }
 
+  function handleClearFilters() {
+    setSearch("")
+    setSortBy("newest")
+    if (initialSearch.trim()) {
+      router.push(buildQuotesListHref(activeFilter, 1, ""))
+    }
+  }
+
   const hasActiveFilters = search.trim().length > 0 || sortBy !== "newest"
 
   return (
@@ -320,13 +357,10 @@ export function QuotesListManager({
         onSortChange={(value) => setSortBy(value as SortOption)}
         sortOptions={sortOptions}
         visibleCount={visibleQuotes.length}
-        totalCount={quotes.length}
-        itemLabel={`quotes on page${activeFilterLabel !== "All Quotes" ? ` (${activeFilterLabel})` : ""}`}
+        totalCount={effectiveTotal}
+        itemLabel={`quotes${search.trim() ? " found" : ` on page${activeFilterLabel !== "All Quotes" ? ` (${activeFilterLabel})` : ""}`}`}
         hasActiveFilters={hasActiveFilters}
-        onClearFilters={() => {
-          setSearch("")
-          setSortBy("newest")
-        }}
+        onClearFilters={handleClearFilters}
       />
 
       {selectedCount > 0 ? (
@@ -464,8 +498,13 @@ export function QuotesListManager({
 
       {quotes.length === 0 ? (
         <EmptyState
-          title="No quotes found"
-          description={`No quotes were found for ${activeFilterLabel}.`}
+          title={search.trim() ? "No quotes match your search" : "No quotes found"}
+          description={
+            search.trim()
+              ? `No matching quotes were found for "${search}".`
+              : `No quotes were found for ${activeFilterLabel}.`
+          }
+          action={search.trim() ? { label: "Clear search", onClick: handleClearFilters } : undefined}
         />
       ) : null}
 
@@ -480,8 +519,8 @@ export function QuotesListManager({
         {quotes.length > 0 && visibleQuotes.length === 0 ? (
           <EmptyState
             title="No quotes match your search"
-            description={`No matching quotes were found on this page for ${activeFilterLabel}.`}
-            action={{ label: "Clear search", onClick: () => setSearch("") }}
+            description={`No matching quotes were found on this page for "${search}".`}
+            action={{ label: "Clear search", onClick: handleClearFilters }}
           />
         ) : null}
 
@@ -592,20 +631,15 @@ export function QuotesListManager({
         })}
       </div>
 
-      {totalPages > 1 ? (
+      {effectiveTotalPages > 1 ? (
         <div className="pt-2">
           <Pagination
             currentPage={page}
-            totalPages={totalPages}
-            totalItems={total}
+            totalPages={effectiveTotalPages}
+            totalItems={effectiveTotal}
             pageSize={pageSize}
-            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage)}
+            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch)}
           />
-          {search.trim() ? (
-            <p className="text-xs text-stone-400 mt-2 text-center sm:text-left">
-              Search and sort apply to the current page only.
-            </p>
-          ) : null}
         </div>
       ) : null}
 

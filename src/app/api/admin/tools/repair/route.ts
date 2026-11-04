@@ -182,10 +182,23 @@ export async function POST() {
       backfilledCount++
     }
 
-    // 4. Trigger public cache tag revalidations
+    // 4. Backfill any missing tsvector search vectors
+    const backfilledSearchVectors = await prisma.$executeRaw`
+      UPDATE "Quote"
+      SET "searchVector" = (
+        setweight(to_tsvector('english', COALESCE("content", '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE("authorName", '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE("meaning", '')), 'C') ||
+        setweight(to_tsvector('english', COALESCE("historicalContext", '')), 'D') ||
+        setweight(to_tsvector('english', COALESCE("modernRelevance", '')), 'D')
+      )
+      WHERE "searchVector" IS NULL
+    `
+
+    // 5. Trigger public cache tag revalidations
     revalidatePublicSurfaces()
 
-    // 5. Record administrative audit log
+    // 6. Record administrative audit log
     await recordAuditLog({
       action: "REPAIR",
       entityType: "SYSTEM",
@@ -197,6 +210,7 @@ export async function POST() {
         countersSynchronized: true,
         orphanedRecordsPurged: true,
         backfilledHashes: backfilledCount,
+        backfilledSearchVectors,
       },
     })
 
@@ -207,6 +221,7 @@ export async function POST() {
         countersSynchronized: true,
         orphanedRecordsPurged: true,
         backfilledHashes: backfilledCount,
+        backfilledSearchVectors,
       },
     })
   } catch (error: unknown) {

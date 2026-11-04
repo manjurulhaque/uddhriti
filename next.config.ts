@@ -33,9 +33,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    optimizePackageImports: ["@prisma/client"],
-  },
+  serverExternalPackages: ["@prisma/client"],
   async headers() {
     return [
       {

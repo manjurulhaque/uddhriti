@@ -264,7 +264,7 @@ export async function POST(req: Request) {
         SET "tagSlugs" = tag_data.slugs
         FROM (
           SELECT target.id, COALESCE(array_agg(t.slug ORDER BY t.slug) FILTER (WHERE t.slug IS NOT NULL), ARRAY[]::text[]) AS slugs
-          FROM unnest(ARRAY[${Prisma.join(targetQuoteIds)}]::uuid[]) AS target(id)
+          FROM unnest(${targetQuoteIds}::uuid[]) AS target(id)
           LEFT JOIN "QuoteTag" qt ON qt."quoteId" = target.id
           LEFT JOIN "Tag" t ON t.id = qt."tagId"
           GROUP BY target.id

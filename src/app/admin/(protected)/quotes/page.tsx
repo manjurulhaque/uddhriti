@@ -6,6 +6,7 @@ import { QuotesListManager } from "./QuotesListManager"
 import { PageHeader, FilterTabs } from "@/components/admin"
 import { Button } from "@/components/ui"
 import { parseSafePageNumber } from "@/lib/security/input"
+import { searchQuoteIds } from "@/lib/quotes/search"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
@@ -57,7 +58,11 @@ function getPageNumber(value: string | string[] | undefined) {
   return parseSafePageNumber(value, 1000)
 }
 
-function buildQuoteWhere(activeFilter: QuoteFilter, search?: string): Prisma.QuoteWhereInput {
+function buildQuoteWhere(
+  activeFilter: QuoteFilter,
+  search?: string,
+  searchIds?: string[] | null
+): Prisma.QuoteWhereInput {
   let baseWhere: Prisma.QuoteWhereInput
 
   if (activeFilter === "all") {
@@ -84,6 +89,14 @@ function buildQuoteWhere(activeFilter: QuoteFilter, search?: string): Prisma.Quo
   const query = search?.trim()
   if (!query) return baseWhere
 
+  // If GIN full-text index returned matching quote IDs, filter directly by PK id
+  if (Array.isArray(searchIds)) {
+    return {
+      AND: [baseWhere, { id: { in: searchIds } }],
+    }
+  }
+
+  // Graceful fallback to multi-column ILIKE if FTS was unavailable
   const searchCondition: Prisma.QuoteWhereInput = {
     OR: [
       { content: { contains: query, mode: "insensitive" } },
@@ -116,7 +129,8 @@ export default async function QuotesPage({
       : typeof resolvedSearchParams.q === "string"
       ? resolvedSearchParams.q.trim()
       : ""
-  const where = buildQuoteWhere(activeFilter, searchQuery)
+  const searchMatchingIds = searchQuery ? await searchQuoteIds(searchQuery) : null
+  const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
 
   const [total, initialQuotes] = await Promise.all([

@@ -1,6 +1,7 @@
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { prisma } from "@/lib/prisma"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { searchQuoteIds } from "@/lib/quotes/search"
 import type { Prisma, QuoteStatus } from "@prisma/client"
 
 function escapeCsvCell(value: unknown): string {
@@ -55,16 +56,21 @@ export async function GET(req: Request) {
 
     const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()
     if (searchQuery) {
-      const searchCondition: Prisma.QuoteWhereInput = {
-        OR: [
-          { content: { contains: searchQuery, mode: "insensitive" } },
-          { authorName: { contains: searchQuery, mode: "insensitive" } },
-          { author: { name: { contains: searchQuery, mode: "insensitive" } } },
-          { category: { name: { contains: searchQuery, mode: "insensitive" } } },
-          { source: { title: { contains: searchQuery, mode: "insensitive" } } },
-        ],
+      const searchMatchingIds = await searchQuoteIds(searchQuery, limit)
+      if (Array.isArray(searchMatchingIds)) {
+        where.id = { in: searchMatchingIds }
+      } else {
+        const searchCondition: Prisma.QuoteWhereInput = {
+          OR: [
+            { content: { contains: searchQuery, mode: "insensitive" } },
+            { authorName: { contains: searchQuery, mode: "insensitive" } },
+            { author: { name: { contains: searchQuery, mode: "insensitive" } } },
+            { category: { name: { contains: searchQuery, mode: "insensitive" } } },
+            { source: { title: { contains: searchQuery, mode: "insensitive" } } },
+          ],
+        }
+        where.AND = [searchCondition]
       }
-      where.AND = [searchCondition]
     }
   }
 

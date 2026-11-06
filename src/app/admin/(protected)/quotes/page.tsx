@@ -11,6 +11,24 @@ type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" 
 
 const PAGE_SIZE = 50
 
+const quoteSelect = {
+  id: true,
+  content: true,
+  status: true,
+  isVerified: true,
+  createdAt: true,
+  publishedAt: true,
+  authorId: true,
+  authorName: true,
+  categoryId: true,
+  categorySlug: true,
+  sourceId: true,
+  author: { select: { name: true } },
+  category: { select: { name: true, slug: true } },
+  source: { select: { title: true } },
+  tags: { select: { tagId: true } },
+} satisfies Prisma.QuoteSelect
+
 const filterLabels: Record<QuoteFilter, string> = {
   all: "All Quotes",
   draft: "Draft / Review",
@@ -99,35 +117,32 @@ export default async function QuotesPage({
       ? resolvedSearchParams.q.trim()
       : ""
   const where = buildQuoteWhere(activeFilter, searchQuery)
+  const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
 
-  const total = await prisma.quote.count({ where })
+  const [total, initialQuotes] = await Promise.all([
+    prisma.quote.count({ where }),
+    prisma.quote.findMany({
+      where,
+      select: quoteSelect,
+      orderBy: { createdAt: "desc" },
+      take: PAGE_SIZE,
+      skip: initialSkip,
+    }),
+  ])
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const page = Math.min(requestedPage, totalPages)
-  const skip = (page - 1) * PAGE_SIZE
 
-  const quotes = await prisma.quote.findMany({
-    where,
-    select: {
-      id: true,
-      content: true,
-      status: true,
-      isVerified: true,
-      createdAt: true,
-      publishedAt: true,
-      authorId: true,
-      authorName: true,
-      categoryId: true,
-      categorySlug: true,
-      sourceId: true,
-      author: { select: { name: true } },
-      category: { select: { name: true, slug: true } },
-      source: { select: { title: true } },
-      tags: { select: { tagId: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: PAGE_SIZE,
-    skip,
-  })
+  const quotes =
+    page !== requestedPage
+      ? await prisma.quote.findMany({
+          where,
+          select: quoteSelect,
+          orderBy: { createdAt: "desc" },
+          take: PAGE_SIZE,
+          skip: (page - 1) * PAGE_SIZE,
+        })
+      : initialQuotes
 
   const normalizedQuotes = quotes.map((quote) => ({
     id: quote.id,

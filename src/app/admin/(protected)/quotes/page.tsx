@@ -30,6 +30,64 @@ const quoteSelect = {
   tags: { select: { tagId: true } },
 } satisfies Prisma.QuoteSelect
 
+type QuoteFilterCounts = {
+  all: number
+  draft: number
+  archived: number
+  unverified: number
+  unattributed: number
+  missingSource: number
+  noTags: number
+  orphaned: number
+}
+
+async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
+  try {
+    const rows = await prisma.$queryRaw<QuoteFilterCounts[]>`
+      SELECT
+        COUNT(*)::int AS "all",
+        COUNT(*) FILTER (WHERE status IN ('DRAFT', 'REVIEW'))::int AS "draft",
+        COUNT(*) FILTER (WHERE status = 'ARCHIVED')::int AS "archived",
+        COUNT(*) FILTER (WHERE "isVerified" = false)::int AS "unverified",
+        COUNT(*) FILTER (WHERE "authorId" IS NULL OR "authorName" IS NULL)::int AS "unattributed",
+        COUNT(*) FILTER (WHERE "sourceId" IS NULL)::int AS "missingSource",
+        COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM "QuoteTag" qt WHERE qt."quoteId" = q.id))::int AS "noTags",
+        COUNT(*) FILTER (
+          WHERE "authorId" IS NULL 
+             OR "authorName" IS NULL 
+             OR "sourceId" IS NULL 
+             OR NOT EXISTS (SELECT 1 FROM "QuoteTag" qt WHERE qt."quoteId" = q.id)
+        )::int AS "orphaned"
+      FROM "Quote" q
+      WHERE "deletedAt" IS NULL;
+    `
+    return (
+      rows[0] ?? {
+        all: 0,
+        draft: 0,
+        archived: 0,
+        unverified: 0,
+        unattributed: 0,
+        missingSource: 0,
+        noTags: 0,
+        orphaned: 0,
+      }
+    )
+  } catch (error) {
+    console.error("[Failed to load quote filter counts]", error)
+    return {
+      all: 0,
+      draft: 0,
+      archived: 0,
+      unverified: 0,
+      unattributed: 0,
+      missingSource: 0,
+      noTags: 0,
+      orphaned: 0,
+    }
+  }
+}
+
 const filterLabels: Record<QuoteFilter, string> = {
   all: "All Quotes",
   draft: "Draft / Review",
@@ -133,7 +191,7 @@ export default async function QuotesPage({
   const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
 
-  const [total, initialQuotes] = await Promise.all([
+  const [total, initialQuotes, filterCounts] = await Promise.all([
     prisma.quote.count({ where }),
     prisma.quote.findMany({
       where,
@@ -142,6 +200,7 @@ export default async function QuotesPage({
       take: PAGE_SIZE,
       skip: initialSkip,
     }),
+    getQuoteFilterCounts(),
   ])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -221,14 +280,14 @@ export default async function QuotesPage({
         label="Filter"
         activeValue={activeFilter}
         items={[
-          { value: "all", label: filterLabels.all, href: buildFilterHref("all") },
-          { value: "draft", label: filterLabels.draft, href: buildFilterHref("draft") },
-          { value: "archived", label: filterLabels.archived, href: buildFilterHref("archived") },
-          { value: "unverified", label: filterLabels.unverified, href: buildFilterHref("unverified") },
-          { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed") },
-          { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source") },
-          { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags") },
-          { value: "orphaned", label: filterLabels.orphaned, href: buildFilterHref("orphaned") },
+          { value: "all", label: filterLabels.all, href: buildFilterHref("all"), count: filterCounts.all },
+          { value: "draft", label: filterLabels.draft, href: buildFilterHref("draft"), count: filterCounts.draft },
+          { value: "archived", label: filterLabels.archived, href: buildFilterHref("archived"), count: filterCounts.archived },
+          { value: "unverified", label: filterLabels.unverified, href: buildFilterHref("unverified"), count: filterCounts.unverified },
+          { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed"), count: filterCounts.unattributed },
+          { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source"), count: filterCounts.missingSource },
+          { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags"), count: filterCounts.noTags },
+          { value: "orphaned", label: filterLabels.orphaned, href: buildFilterHref("orphaned"), count: filterCounts.orphaned },
         ]}
       />
 

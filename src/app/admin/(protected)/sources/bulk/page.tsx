@@ -146,7 +146,7 @@ export default function BulkImportSourcesPage() {
   const [locResult, setLocResult] = useState<AutoImportResult | null>(null)
 
   useEffect(() => {
-    fetch("/api/admin/authors")
+    fetch("/api/admin/authors?select=minimal")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setAuthors(Array.isArray(data) ? data : []))
       .catch(() => setAuthors([]))

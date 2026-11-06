@@ -206,20 +206,20 @@ export function QuotesListManager({
 
     if (nextAction === "setAuthor" && authors.length > 0) return
     if (nextAction === "setSource" && sources.length > 0) return
-    if (nextAction === "addTags" && tags.length > 0) return
+    if ((nextAction === "addTags" || nextAction === "removeTags") && tags.length > 0) return
 
     setIsLoadingOptions(true)
     try {
       if (nextAction === "setAuthor") {
-        const res = await fetch("/api/admin/authors")
+        const res = await fetch("/api/admin/authors?select=minimal")
         if (!res.ok) throw new Error("Failed to load authors")
         setAuthors(await res.json())
       } else if (nextAction === "setSource") {
-        const res = await fetch("/api/admin/sources")
+        const res = await fetch("/api/admin/sources?select=minimal")
         if (!res.ok) throw new Error("Failed to load sources")
         setSources(await res.json())
       } else {
-        const res = await fetch("/api/admin/tags")
+        const res = await fetch("/api/admin/tags?select=minimal")
         if (!res.ok) throw new Error("Failed to load tags")
         setTags(await res.json())
       }

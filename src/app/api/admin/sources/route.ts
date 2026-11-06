@@ -8,10 +8,24 @@ function getSourceYearLabel(raw: { year?: unknown; yearLabel?: unknown } | null)
   return normalizeSourceYearInput(raw?.yearLabel) ?? normalizeSourceYearInput(raw?.year)
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const admin = await getAdmin()
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const sources = await prisma.source.findMany({
+      select: {
+        id: true,
+        title: true,
+      },
+      orderBy: { title: "asc" },
+    })
+    return NextResponse.json(sources)
   }
 
   const sources = await prisma.source.findMany({

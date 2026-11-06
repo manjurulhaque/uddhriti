@@ -7,10 +7,24 @@ function normalizeTagName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ")
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const admin = await getAdmin()
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const tags = await prisma.tag.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: "asc" },
+    })
+    return NextResponse.json(tags)
   }
 
   const tags = await prisma.tag.findMany({

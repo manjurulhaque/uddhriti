@@ -4,10 +4,24 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { slugify } from "@/lib/slug"
 
-// ✅ GET ALL AUTHORS
-export async function GET() {
+// ✅ GET ALL AUTHORS (supports ?select=minimal)
+export async function GET(req: Request) {
   const { response } = await requireAdmin()
   if (response) return response
+
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const authors = await prisma.author.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: "asc" },
+    })
+    return NextResponse.json(authors)
+  }
 
   const authors = await prisma.author.findMany({
     orderBy: { createdAt: "desc" },

@@ -4,10 +4,24 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
 
-// GET all categories
-export async function GET() {
+// GET all categories (supports ?select=minimal)
+export async function GET(req: Request) {
   const { response } = await requireAdmin()
   if (response) return response
+
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const categories = await prisma.category.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: "asc" },
+    })
+    return NextResponse.json(categories)
+  }
 
   const categories = await prisma.category.findMany({
     orderBy: { createdAt: "desc" },

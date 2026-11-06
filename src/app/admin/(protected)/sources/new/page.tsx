@@ -50,7 +50,7 @@ export default function NewSourcePage() {
   })
 
   useEffect(() => {
-    fetch("/api/admin/authors")
+    fetch("/api/admin/authors?select=minimal")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setAuthors(data)

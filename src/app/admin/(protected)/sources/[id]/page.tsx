@@ -60,7 +60,7 @@ export default function EditSourcePage() {
       try {
         const [sourceRes, authorsRes] = await Promise.all([
           fetch(`/api/admin/sources/${id}`),
-          fetch("/api/admin/authors"),
+          fetch("/api/admin/authors?select=minimal"),
         ])
 
         if (!sourceRes.ok) {

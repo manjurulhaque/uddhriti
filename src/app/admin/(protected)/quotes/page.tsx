@@ -7,6 +7,7 @@ import { PageHeader, FilterTabs } from "@/components/admin"
 import { Button } from "@/components/ui"
 import { parseSafePageNumber } from "@/lib/security/input"
 import { searchQuoteIds } from "@/lib/quotes/search"
+import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
@@ -180,6 +181,7 @@ export default async function QuotesPage({
 
   const resolvedSearchParams = (await searchParams) ?? {}
   const activeFilter = getQuoteFilter(resolvedSearchParams.filter)
+  const activeSort = getQuoteSort(resolvedSearchParams.sort)
   const requestedPage = getPageNumber(resolvedSearchParams.page)
   const searchQuery =
     typeof resolvedSearchParams.search === "string"
@@ -189,6 +191,7 @@ export default async function QuotesPage({
       : ""
   const searchMatchingIds = searchQuery ? await searchQuoteIds(searchQuery) : null
   const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds)
+  const orderBy = buildQuoteOrderBy(activeSort)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
 
   const [total, initialQuotes, filterCounts] = await Promise.all([
@@ -196,7 +199,7 @@ export default async function QuotesPage({
     prisma.quote.findMany({
       where,
       select: quoteSelect,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       take: PAGE_SIZE,
       skip: initialSkip,
     }),
@@ -211,7 +214,7 @@ export default async function QuotesPage({
       ? await prisma.quote.findMany({
           where,
           select: quoteSelect,
-          orderBy: { createdAt: "desc" },
+          orderBy,
           take: PAGE_SIZE,
           skip: (page - 1) * PAGE_SIZE,
         })
@@ -236,12 +239,14 @@ export default async function QuotesPage({
 
   const exportParams = new URLSearchParams({ format: "csv" })
   if (activeFilter !== "all") exportParams.set("filter", activeFilter)
+  if (activeSort !== "newest") exportParams.set("sort", activeSort)
   if (searchQuery) exportParams.set("search", searchQuery)
   const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
 
   const buildFilterHref = (filterValue: QuoteFilter) => {
     const params = new URLSearchParams()
     if (filterValue !== "all") params.set("filter", filterValue)
+    if (activeSort !== "newest") params.set("sort", activeSort)
     if (searchQuery) params.set("search", searchQuery)
     const qs = params.toString()
     return qs ? `/admin/quotes?${qs}` : "/admin/quotes"
@@ -299,6 +304,7 @@ export default async function QuotesPage({
         pageSize={PAGE_SIZE}
         total={total}
         initialSearch={searchQuery}
+        initialSort={activeSort}
       />
     </div>
   )

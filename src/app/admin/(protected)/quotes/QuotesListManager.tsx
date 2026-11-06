@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar, AdminEntityCard } from "@/components/admin"
 import { Pagination, EmptyState, ConfirmModal, Button, Badge } from "@/components/ui"
+import { quoteSortOptions as sortOptions, type QuoteSortOption as SortOption } from "@/lib/quotes/sort"
 
 type QuoteItem = {
   id: string
@@ -43,35 +44,21 @@ type BulkActionType =
   | "removeTags"
   | "setStatus"
   | "setVerification"
-type SortOption =
-  | "newest"
-  | "oldest"
-  | "author-asc"
-  | "author-desc"
-  | "category-asc"
-  | "category-desc"
-  | "status"
-  | "content"
-  | "needs-attention"
-
-const sortOptions = [
-  { value: "newest", label: "Arrange: Newest first" },
-  { value: "oldest", label: "Arrange: Oldest first" },
-  { value: "author-asc", label: "Sort: Author A-Z" },
-  { value: "author-desc", label: "Sort: Author Z-A" },
-  { value: "category-asc", label: "Sort: Category A-Z" },
-  { value: "category-desc", label: "Sort: Category Z-A" },
-  { value: "status", label: "Sort: Status" },
-  { value: "content", label: "Sort: Quote text" },
-  { value: "needs-attention", label: "Arrange: Needs attention" },
-]
 
 type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
-function buildQuotesListHref(filter: QuoteFilter, page: number, search?: string) {
+function buildQuotesListHref(
+  filter: QuoteFilter,
+  page: number,
+  search?: string,
+  sort?: SortOption
+) {
   const params = new URLSearchParams()
   if (filter !== "all") {
     params.set("filter", filter)
+  }
+  if (sort && sort !== "newest") {
+    params.set("sort", sort)
   }
   if (page > 1) {
     params.set("page", String(page))
@@ -92,6 +79,7 @@ export function QuotesListManager({
   pageSize,
   total,
   initialSearch = "",
+  initialSort = "newest",
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -100,6 +88,7 @@ export function QuotesListManager({
   pageSize: number
   total: number
   initialSearch?: string
+  initialSort?: SortOption
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -119,7 +108,7 @@ export function QuotesListManager({
   const [sourceId, setSourceId] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [search, setSearch] = useState(initialSearch)
-  const [sortBy, setSortBy] = useState<SortOption>("newest")
+  const [sortBy, setSortBy] = useState<SortOption>(initialSort)
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -131,15 +120,19 @@ export function QuotesListManager({
   }, [initialSearch])
 
   useEffect(() => {
+    setSortBy(initialSort)
+  }, [initialSort])
+
+  useEffect(() => {
     if (search.trim() === initialSearch.trim()) return
 
     const timer = setTimeout(() => {
-      const href = buildQuotesListHref(activeFilter, 1, search.trim())
+      const href = buildQuotesListHref(activeFilter, 1, search.trim(), sortBy)
       router.push(href)
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [search, activeFilter, initialSearch, router])
+  }, [search, activeFilter, initialSearch, sortBy, router])
 
   const selectedTagNames = useMemo(
     () => tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name),
@@ -150,58 +143,15 @@ export function QuotesListManager({
 
   const visibleQuotes = useMemo(() => {
     const needle = !isSearchSynched ? search.trim().toLowerCase() : ""
-    const filtered = needle
-      ? quotes.filter((quote) =>
-        [quote.content, quote.authorName ?? "", quote.categoryName ?? "", quote.sourceTitle ?? "", quote.status]
-          .join(" ")
-          .toLowerCase()
-          .includes(needle)
-      )
-      : quotes
+    if (!needle) return quotes
 
-    return [...filtered].sort((a, b) => {
-      const authorA = (a.authorName ?? "").toLowerCase()
-      const authorB = (b.authorName ?? "").toLowerCase()
-      const categoryA = (a.categoryName ?? "").toLowerCase()
-      const categoryB = (b.categoryName ?? "").toLowerCase()
-      const contentA = a.content.toLowerCase()
-      const contentB = b.content.toLowerCase()
-      const attentionA =
-        Number(!a.hasAuthor) +
-        Number(!a.hasCategory) +
-        Number(!a.hasSource) +
-        Number(!a.hasTags) +
-        Number(!a.isVerified)
-      const attentionB =
-        Number(!b.hasAuthor) +
-        Number(!b.hasCategory) +
-        Number(!b.hasSource) +
-        Number(!b.hasTags) +
-        Number(!b.isVerified)
-
-      switch (sortBy) {
-        case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        case "author-asc":
-          return authorA.localeCompare(authorB) || contentA.localeCompare(contentB)
-        case "author-desc":
-          return authorB.localeCompare(authorA) || contentA.localeCompare(contentB)
-        case "category-asc":
-          return categoryA.localeCompare(categoryB) || contentA.localeCompare(contentB)
-        case "category-desc":
-          return categoryB.localeCompare(categoryA) || contentA.localeCompare(contentB)
-        case "status":
-          return a.status.localeCompare(b.status) || authorA.localeCompare(authorB)
-        case "content":
-          return contentA.localeCompare(contentB)
-        case "needs-attention":
-          return attentionB - attentionA || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        case "newest":
-        default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      }
-    })
-  }, [quotes, search, sortBy, isSearchSynched])
+    return quotes.filter((quote) =>
+      [quote.content, quote.authorName ?? "", quote.categoryName ?? "", quote.sourceTitle ?? "", quote.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(needle)
+    )
+  }, [quotes, search, isSearchSynched])
 
   const allSelected =
     visibleQuotes.length > 0 &&
@@ -431,11 +381,16 @@ export function QuotesListManager({
     }
   }
 
+  function handleSortChange(nextSort: SortOption) {
+    setSortBy(nextSort)
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), nextSort))
+  }
+
   function handleClearFilters() {
     setSearch("")
     setSortBy("newest")
-    if (initialSearch.trim()) {
-      router.push(buildQuotesListHref(activeFilter, 1, ""))
+    if (initialSearch.trim() || initialSort !== "newest") {
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest"))
     }
   }
 
@@ -448,7 +403,7 @@ export function QuotesListManager({
         onSearchChange={setSearch}
         searchPlaceholder="Search quotes by text, author, source, or status"
         sortValue={sortBy}
-        onSortChange={(value) => setSortBy(value as SortOption)}
+        onSortChange={(value) => handleSortChange(value as SortOption)}
         sortOptions={sortOptions}
         visibleCount={visibleQuotes.length}
         totalCount={effectiveTotal}
@@ -809,7 +764,7 @@ export function QuotesListManager({
             totalPages={effectiveTotalPages}
             totalItems={effectiveTotal}
             pageSize={pageSize}
-            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch)}
+            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch, sortBy)}
           />
         </div>
       ) : null}

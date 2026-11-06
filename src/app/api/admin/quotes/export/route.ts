@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { prisma } from "@/lib/prisma"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { searchQuoteIds } from "@/lib/quotes/search"
+import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
 import type { Prisma, QuoteStatus } from "@prisma/client"
 
 function escapeCsvCell(value: unknown): string {
@@ -23,6 +24,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const format = searchParams.get("format")?.toLowerCase() === "json" ? "json" : "csv"
   const filter = searchParams.get("filter")
+  const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
   const rawIds = searchParams.get("ids")
   const ids = rawIds ? rawIds.split(",").map((s) => s.trim()).filter(Boolean) : []
@@ -76,7 +78,7 @@ export async function GET(req: Request) {
 
   const quotes = await prisma.quote.findMany({
     where,
-    orderBy: { createdAt: "desc" },
+    orderBy: buildQuoteOrderBy(getQuoteSort(sortParam)),
     take: limit,
     select: {
       id: true,

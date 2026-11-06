@@ -17,6 +17,7 @@ type BulkActionPayload = {
   action?: unknown
   authorId?: unknown
   sourceId?: unknown
+  categoryId?: unknown
   tagIds?: unknown
   status?: unknown
   isVerified?: unknown
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
     action !== "setAuthor" &&
     action !== "setSource" &&
     action !== "clearSource" &&
+    action !== "setCategory" &&
     action !== "addTags" &&
     action !== "removeTags" &&
     action !== "setStatus" &&
@@ -234,6 +236,45 @@ export async function POST(req: Request) {
         await recalculateSourceQuoteCounts(tx, previousSourceIds)
         return updated
       })
+
+      return NextResponse.json({ success: true, updatedCount: result.count })
+    }
+
+    if (action === "setCategory") {
+      const categoryId = typeof body.categoryId === "string" ? body.categoryId.trim() : ""
+      if (!categoryId || !isValidUuid(categoryId)) {
+        return NextResponse.json({ error: "Valid categoryId UUID is required for setCategory" }, { status: 400 })
+      }
+
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { id: true, name: true, slug: true },
+      })
+      if (!category) {
+        return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 })
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const targetQuotes = await tx.quote.findMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          select: { categoryId: true },
+        })
+
+        const previousCategoryIds = compactIds(targetQuotes.map((quote) => quote.categoryId))
+
+        const updated = await tx.quote.updateMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          data: {
+            categoryId: category.id,
+            categorySlug: category.slug,
+          },
+        })
+
+        await recalculateCategoryQuoteCounts(tx, [...previousCategoryIds, category.id])
+        return updated
+      })
+
+      revalidatePublicSurfaces()
 
       return NextResponse.json({ success: true, updatedCount: result.count })
     }

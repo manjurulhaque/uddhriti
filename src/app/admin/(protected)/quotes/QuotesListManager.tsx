@@ -34,7 +34,15 @@ type TagOption = {
   name: string
 }
 
-type BulkActionType = "setAuthor" | "setSource" | "clearSource" | "addTags" | "removeTags" | "setStatus" | "setVerification"
+type BulkActionType =
+  | "setAuthor"
+  | "setCategory"
+  | "setSource"
+  | "clearSource"
+  | "addTags"
+  | "removeTags"
+  | "setStatus"
+  | "setVerification"
 type SortOption =
   | "newest"
   | "oldest"
@@ -103,9 +111,11 @@ export function QuotesListManager({
   const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
   const [verificationValue, setVerificationValue] = useState(true)
   const [authors, setAuthors] = useState<Option[]>([])
+  const [categories, setCategories] = useState<Option[]>([])
   const [sources, setSources] = useState<Option[]>([])
   const [tags, setTags] = useState<TagOption[]>([])
   const [authorId, setAuthorId] = useState("")
+  const [categoryId, setCategoryId] = useState("")
   const [sourceId, setSourceId] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [search, setSearch] = useState(initialSearch)
@@ -208,6 +218,7 @@ export function QuotesListManager({
     if (isLoadingOptions) return
 
     if (nextAction === "setAuthor" && authors.length > 0) return
+    if (nextAction === "setCategory" && categories.length > 0) return
     if (nextAction === "setSource" && sources.length > 0) return
     if ((nextAction === "addTags" || nextAction === "removeTags") && tags.length > 0) return
 
@@ -217,6 +228,10 @@ export function QuotesListManager({
         const res = await fetch("/api/admin/authors?select=minimal")
         if (!res.ok) throw new Error("Failed to load authors")
         setAuthors(await res.json())
+      } else if (nextAction === "setCategory") {
+        const res = await fetch("/api/admin/categories?select=minimal")
+        if (!res.ok) throw new Error("Failed to load categories")
+        setCategories(await res.json())
       } else if (nextAction === "setSource") {
         const res = await fetch("/api/admin/sources?select=minimal")
         if (!res.ok) throw new Error("Failed to load sources")
@@ -254,6 +269,10 @@ export function QuotesListManager({
       setError("Select an author.")
       return
     }
+    if (action === "setCategory" && !categoryId) {
+      setError("Select a category.")
+      return
+    }
     if (action === "setSource" && !sourceId) {
       setError("Select a source.")
       return
@@ -272,6 +291,7 @@ export function QuotesListManager({
           quoteIds: selectedIds,
           action,
           authorId: action === "setAuthor" ? authorId : undefined,
+          categoryId: action === "setCategory" ? categoryId : undefined,
           sourceId: action === "setSource" ? sourceId : undefined,
           tagIds: action === "addTags" || action === "removeTags" ? tagIds : undefined,
           status: action === "setStatus" ? statusValue : undefined,
@@ -306,6 +326,7 @@ export function QuotesListManager({
 
       setSelectedIds([])
       setAuthorId("")
+      setCategoryId("")
       setSourceId("")
       setTagIds([])
       router.refresh()
@@ -479,6 +500,7 @@ export function QuotesListManager({
             >
               <option value="setStatus">Set Status</option>
               <option value="setVerification">Set Verification</option>
+              <option value="setCategory">Set Category</option>
               <option value="setAuthor">Set Author</option>
               <option value="setSource">Set Source</option>
               <option value="clearSource">Clear Source</option>
@@ -506,6 +528,22 @@ export function QuotesListManager({
               >
                 <option value="true">Verification: Mark Verified</option>
                 <option value="false">Verification: Mark Unverified</option>
+              </select>
+            ) : null}
+
+            {action === "setCategory" ? (
+              <select
+                className="border rounded px-2 py-1 text-sm min-w-[220px]"
+                value={categoryId}
+                onFocus={() => ensureOptions("setCategory")}
+                onChange={(event) => setCategoryId(event.target.value)}
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
               </select>
             ) : null}
 

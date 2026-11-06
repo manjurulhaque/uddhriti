@@ -19,6 +19,7 @@ type BulkActionPayload = {
   sourceId?: unknown
   tagIds?: unknown
   status?: unknown
+  isVerified?: unknown
 }
 
 function uniqueStringList(value: unknown) {
@@ -62,7 +63,8 @@ export async function POST(req: Request) {
     action !== "clearSource" &&
     action !== "addTags" &&
     action !== "removeTags" &&
-    action !== "setStatus"
+    action !== "setStatus" &&
+    action !== "setVerification"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
@@ -124,6 +126,26 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ success: true, updatedCount: result.updatedCount })
     }
+
+    if (action === "setVerification") {
+      const isVerified = Boolean(body.isVerified)
+
+      const result = await prisma.$transaction(async (tx) => {
+        const updated = await tx.quote.updateMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          data: {
+            isVerified,
+          },
+        })
+
+        return updated
+      })
+
+      revalidatePublicSurfaces()
+
+      return NextResponse.json({ success: true, updatedCount: result.count })
+    }
+
     if (action === "setAuthor") {
       const authorId = typeof body.authorId === "string" ? body.authorId.trim() : ""
       if (!authorId || !isValidUuid(authorId)) {

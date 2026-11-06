@@ -34,7 +34,7 @@ type TagOption = {
   name: string
 }
 
-type BulkActionType = "setAuthor" | "setSource" | "clearSource" | "addTags" | "removeTags" | "setStatus"
+type BulkActionType = "setAuthor" | "setSource" | "clearSource" | "addTags" | "removeTags" | "setStatus" | "setVerification"
 type SortOption =
   | "newest"
   | "oldest"
@@ -99,6 +99,9 @@ export function QuotesListManager({
   const [statusValue, setStatusValue] = useState<"PUBLISHED" | "DRAFT" | "ARCHIVED">("PUBLISHED")
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
   const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
+  const [verificationOverrides, setVerificationOverrides] = useState<Record<string, boolean>>({})
+  const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
+  const [verificationValue, setVerificationValue] = useState(true)
   const [authors, setAuthors] = useState<Option[]>([])
   const [sources, setSources] = useState<Option[]>([])
   const [tags, setTags] = useState<TagOption[]>([])
@@ -272,6 +275,7 @@ export function QuotesListManager({
           sourceId: action === "setSource" ? sourceId : undefined,
           tagIds: action === "addTags" || action === "removeTags" ? tagIds : undefined,
           status: action === "setStatus" ? statusValue : undefined,
+          isVerified: action === "setVerification" ? verificationValue : undefined,
         }),
       })
 
@@ -285,6 +289,16 @@ export function QuotesListManager({
           const next = { ...prev }
           for (const id of selectedIds) {
             next[id] = statusValue
+          }
+          return next
+        })
+      }
+
+      if (action === "setVerification") {
+        setVerificationOverrides((prev) => {
+          const next = { ...prev }
+          for (const id of selectedIds) {
+            next[id] = verificationValue
           }
           return next
         })
@@ -334,6 +348,41 @@ export function QuotesListManager({
       setError(err instanceof Error ? err.message : "Failed to toggle status")
     } finally {
       setTogglingStatusId(null)
+    }
+  }
+
+  async function toggleQuoteVerification(quoteId: string, currentVerified: boolean) {
+    const nextVerified = !currentVerified
+    setError("")
+    setTogglingVerificationId(quoteId)
+    setVerificationOverrides((prev) => ({ ...prev, [quoteId]: nextVerified }))
+
+    try {
+      const res = await fetch("/api/admin/quotes/bulk-actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteIds: [quoteId],
+          action: "setVerification",
+          isVerified: nextVerified,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to update verification status")
+      }
+
+      router.refresh()
+    } catch (err: unknown) {
+      setVerificationOverrides((prev) => {
+        const copy = { ...prev }
+        delete copy[quoteId]
+        return copy
+      })
+      setError(err instanceof Error ? err.message : "Failed to toggle verification")
+    } finally {
+      setTogglingVerificationId(null)
     }
   }
 
@@ -429,6 +478,7 @@ export function QuotesListManager({
               }}
             >
               <option value="setStatus">Set Status</option>
+              <option value="setVerification">Set Verification</option>
               <option value="setAuthor">Set Author</option>
               <option value="setSource">Set Source</option>
               <option value="clearSource">Clear Source</option>
@@ -445,6 +495,17 @@ export function QuotesListManager({
                 <option value="PUBLISHED">Status: Published</option>
                 <option value="DRAFT">Status: Draft</option>
                 <option value="ARCHIVED">Status: Archived</option>
+              </select>
+            ) : null}
+
+            {action === "setVerification" ? (
+              <select
+                className="border border-stone-300 rounded-xl px-3 py-1.5 text-sm bg-white min-w-[200px]"
+                value={verificationValue ? "true" : "false"}
+                onChange={(event) => setVerificationValue(event.target.value === "true")}
+              >
+                <option value="true">Verification: Mark Verified</option>
+                <option value="false">Verification: Mark Unverified</option>
               </select>
             ) : null}
 
@@ -550,7 +611,9 @@ export function QuotesListManager({
 
         {visibleQuotes.map((quote) => {
           const effectiveStatus = statusOverrides[quote.id] ?? quote.status
+          const effectiveVerified = verificationOverrides[quote.id] ?? quote.isVerified
           const isTogglingStatus = togglingStatusId === quote.id
+          const isTogglingVerification = togglingVerificationId === quote.id
           const isPublished = effectiveStatus === "PUBLISHED"
 
           return (
@@ -600,7 +663,7 @@ export function QuotesListManager({
               }
               meta={
                 <>
-                  {quote.isVerified ? (
+                  {effectiveVerified ? (
                     <Badge variant="success" size="xs" dot>
                       Verified
                     </Badge>
@@ -642,6 +705,26 @@ export function QuotesListManager({
               }
               actions={
                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    type="button"
+                    variant={effectiveVerified ? "ghost" : "outline"}
+                    size="xs"
+                    disabled={isTogglingVerification}
+                    isLoading={isTogglingVerification}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggleQuoteVerification(quote.id, effectiveVerified)
+                    }}
+                    title={effectiveVerified ? "Click to mark as unverified" : "Click to mark as verified immediately"}
+                    className={
+                      effectiveVerified
+                        ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border border-emerald-200/80"
+                        : "text-amber-800 border-amber-300 bg-amber-50/60 hover:bg-amber-100/80"
+                    }
+                  >
+                    {effectiveVerified ? "✓ Verified" : "Verify"}
+                  </Button>
                   <Button
                     type="button"
                     variant={isPublished ? "outline" : "primary"}

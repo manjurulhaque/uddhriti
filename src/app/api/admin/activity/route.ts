@@ -42,18 +42,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+
     const [total, logs, todayCount, topActions, topEntities] = await Promise.all([
       prisma.adminAuditLog.count({ where }),
       prisma.adminAuditLog.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.adminAuditLog.count({
         where: {
           createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: startOfDay,
           },
         },
       }),

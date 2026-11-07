@@ -19,6 +19,7 @@ export interface QuoteCardProps {
   year?: string | null
   tags?: string[]
   views?: number
+  showViews?: boolean
   trendingRank?: number
   trendingScore?: number
   variant?: "paper" | "dark" | "featured"
@@ -40,6 +41,7 @@ export function QuoteCard({
   year,
   tags = [],
   views,
+  showViews = false,
   trendingRank,
   trendingScore,
   variant = "paper",
@@ -140,7 +142,7 @@ export function QuoteCard({
           variant="dark"
         />
 
-        {views !== undefined ? (
+        {showViews && views !== undefined ? (
           <div className="mt-5 flex items-center justify-between border-t border-white/12 pt-4 text-xs uppercase tracking-[0.16em] text-white/60">
             <span>{formatCountWithNoun(views, "view")}</span>
             <span>{formatCountWithNoun(tags.length, "linked tag")}</span>
@@ -257,7 +259,7 @@ export function QuoteCard({
           variant="light"
         />
 
-        {views !== undefined ? (
+        {showViews && views !== undefined ? (
           <div className="relative z-1 mt-4 flex items-center justify-between border-t border-amber-900/10 pt-3 text-[11px] uppercase tracking-[0.16em] text-stone-500">
             <span>{formatCountWithNoun(views, "view")}</span>
             {tags.length > 0 && <span>{formatCountWithNoun(tags.length, "tag")}</span>}

@@ -406,7 +406,7 @@ export default async function IndividualQuotePage({
             )}
           </div>
 
-          {/* Interactive Actions: Copy, Share, Save, Views */}
+          {/* Interactive Actions: Copy, Share, Save */}
           <QuoteActions
             id={quote.id}
             slug={quote.slug}

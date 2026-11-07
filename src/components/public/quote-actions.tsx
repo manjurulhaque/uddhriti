@@ -21,6 +21,7 @@ interface QuoteActionsProps {
   tags?: string[]
   quoteUrl?: string
   views?: number
+  showViews?: boolean
 }
 
 export function QuoteActions({
@@ -36,6 +37,7 @@ export function QuoteActions({
   tags,
   quoteUrl,
   views,
+  showViews = false,
 }: QuoteActionsProps) {
   const { copied, copyQuote } = useCopyToClipboard()
   const [shareModalOpen, setShareModalOpen] = React.useState(false)
@@ -352,7 +354,7 @@ export function QuoteActions({
           </button>
         </div>
 
-        {typeof displayViews === "number" && (
+        {showViews && typeof displayViews === "number" && (
           <div className="flex items-center gap-1.5 text-xs text-stone-400 font-mono">
             <svg className="h-3.5 w-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

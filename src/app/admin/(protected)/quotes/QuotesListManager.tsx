@@ -108,20 +108,24 @@ export function QuotesListManager({
   const [sourceId, setSourceId] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [search, setSearch] = useState(initialSearch)
+  const [prevInitialSearch, setPrevInitialSearch] = useState(initialSearch)
+  if (prevInitialSearch !== initialSearch) {
+    setPrevInitialSearch(initialSearch)
+    setSearch(initialSearch)
+  }
+
   const [sortBy, setSortBy] = useState<SortOption>(initialSort)
+  const [prevInitialSort, setPrevInitialSort] = useState(initialSort)
+  if (prevInitialSort !== initialSort) {
+    setPrevInitialSort(initialSort)
+    setSortBy(initialSort)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    setSearch(initialSearch)
-  }, [initialSearch])
-
-  useEffect(() => {
-    setSortBy(initialSort)
-  }, [initialSort])
 
   useEffect(() => {
     if (search.trim() === initialSearch.trim()) return

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { Prisma, QuoteStatus } from "@prisma/client"
+import { QuoteStatus } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"

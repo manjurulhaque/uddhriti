@@ -43,7 +43,7 @@ export default async function Image({ params }: Props) {
     select: {
       content: true,
       authorName: true,
-      verified: true,
+      isVerified: true,
       category: { select: { name: true } },
       source: { select: { title: true, year: true } },
     },
@@ -243,7 +243,7 @@ export default async function Image({ params }: Props) {
               gap: 12,
             }}
           >
-            {quote.verified ? (
+            {quote.isVerified ? (
               <div
                 style={{
                   display: "flex",

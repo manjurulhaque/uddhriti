@@ -9,7 +9,7 @@ export default async function CollectionsPage() {
   if (!admin) redirect("/admin/login")
 
   const collections = await prisma.collection.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     select: {
       id: true,
       title: true,

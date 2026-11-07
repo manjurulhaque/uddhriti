@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation"
 import { sanitizeSlug } from "@/lib/security/input"
 import { prisma } from "@/lib/prisma"
 import { getSiteUrl } from "@/lib/site"
-import { formatEpoch, formatLifespan } from "@/lib/formatters"
+import { formatEpoch, formatLifespan, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
 import { PublicLayout, QuoteCard, QuoteActions } from "@/components/public"
 import { Badge } from "@/components/ui/badge"
 
@@ -215,6 +215,7 @@ export default async function IndividualQuotePage({
   ])
 
   const authorName = quote.author?.name || quote.authorName || "Unknown Author"
+  const authorImageUrl = normalizeWikimediaThumbnailUrl(quote.author?.imageUrl)
   const authorLifespan = formatLifespan(quote.author)
   const authorEpoch = formatEpoch(quote.author?.birthYear)
   const wordCount = quote.wordCount || quote.content.trim().split(/\s+/).filter(Boolean).length
@@ -343,9 +344,9 @@ export default async function IndividualQuotePage({
             <div className="flex items-center gap-4">
               {/* Author Portrait Thumbnail */}
               <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border border-stone-200 shadow-2xs">
-                {quote.author?.imageUrl ? (
+                {authorImageUrl ? (
                   <Image
-                    src={quote.author.imageUrl}
+                    src={authorImageUrl}
                     alt={authorName}
                     fill
                     sizes="64px"

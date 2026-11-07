@@ -5,7 +5,7 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
-import { formatCountWithNoun } from "@/lib/formatters"
+import { formatCountWithNoun, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
 import { formatEpoch, formatLifespan, cleanProfession } from "@/components/public/home-taxonomies-showcase"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
 import { registerPublicDataInvalidator } from "@/lib/revalidation"
@@ -274,7 +274,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 shadow-2xs group-hover:border-[var(--accent-rust)]/40 transition-colors">
                         {author.imageUrl ? (
                           <Image
-                            src={author.imageUrl}
+                            src={normalizeWikimediaThumbnailUrl(author.imageUrl)!}
                             alt={author.name}
                             fill
                             sizes="56px"

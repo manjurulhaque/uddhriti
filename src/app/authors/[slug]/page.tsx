@@ -15,6 +15,7 @@ import {
   formatWorkType,
   getAuthorInitials,
   getCategoryMeta,
+  normalizeWikimediaThumbnailUrl,
 } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
@@ -96,6 +97,7 @@ export async function generateMetadata({
     `Read timeless quotes and philosophical thoughts by ${author.name}${
       author.profession ? `, ${author.profession}` : ""
     }.`
+  const authorImageUrl = normalizeWikimediaThumbnailUrl(author.imageUrl)
 
   return {
     title: `${author.name} Quotes`,
@@ -106,13 +108,13 @@ export async function generateMetadata({
     openGraph: {
       title: `${author.name} Quotes - Quotzen`,
       description: desc,
-      images: author.imageUrl ? [{ url: author.imageUrl, alt: author.name }] : undefined,
+      images: authorImageUrl ? [{ url: authorImageUrl, alt: author.name }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: `${author.name} Quotes - Quotzen`,
       description: desc,
-      images: author.imageUrl ? [author.imageUrl] : undefined,
+      images: authorImageUrl ? [authorImageUrl] : undefined,
     },
   }
 }
@@ -212,6 +214,7 @@ export default async function AuthorDetailPage({
   const lifespan = formatLifespan(author)
   const epoch = formatEpoch(author.birthYear)
   const initials = getAuthorInitials(author.name)
+  const authorImageUrl = normalizeWikimediaThumbnailUrl(author.imageUrl)
   const cleanedProfession = cleanProfession(author.profession)
   const dateOfBirthFormatted = formatDateOfRecord(author.dateOfBirth)
   const dateOfDeathFormatted = formatDateOfRecord(author.dateOfDeath)
@@ -229,7 +232,7 @@ export default async function AuthorDetailPage({
     "@id": authorUrl,
     url: authorUrl,
     name: author.name,
-    ...(author.imageUrl ? { image: author.imageUrl } : {}),
+    ...(authorImageUrl ? { image: authorImageUrl } : {}),
     ...(author.bio ? { description: author.bio } : {}),
     ...(author.profession ? { jobTitle: author.profession } : {}),
     ...(author.nationality ? { nationality: author.nationality } : {}),
@@ -283,9 +286,9 @@ export default async function AuthorDetailPage({
           <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start relative z-10">
             {/* Portrait Frame or Regal Monogram Seal */}
             <div className="relative h-32 w-32 sm:h-40 sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border-2 border-stone-200/90 shadow-md group">
-              {author.imageUrl ? (
+              {authorImageUrl ? (
                 <Image
-                  src={author.imageUrl}
+                  src={authorImageUrl}
                   alt={author.name}
                   fill
                   sizes="(max-width: 640px) 128px, 160px"

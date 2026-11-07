@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { fetchWithTimeout } from "@/lib/security/fetch"
+import { normalizeWikimediaThumbnailUrl } from "@/lib/wikimedia/authorImport"
 
 export type WikipediaCandidate = {
   title: string
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
       snippet: p.extract ? p.extract.replace(/\n+/g, " ").trim() : "",
       wikipediaUrl: p.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent((p.title || "").replace(/ /g, "_"))}`,
       wikidataId: p.pageprops?.wikibase_item || null,
-      thumbnailUrl: p.thumbnail?.source || null,
+      thumbnailUrl: normalizeWikimediaThumbnailUrl(p.thumbnail?.source || null),
     }))
 
     // Sort by relevance / presence of thumbnail or length of snippet

@@ -182,6 +182,9 @@ function commonsFileUrl(fileName: string) {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`
 }
 
+import { normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
+export { normalizeWikimediaThumbnailUrl }
+
 function mediaWikiHeaders() {
   return {
     Accept: "application/json",
@@ -231,7 +234,7 @@ async function fetchWikipediaSummary(wikipediaUrl: string) {
     return {
       title: typeof title === "string" ? title : null,
       bio: typeof extract === "string" ? extract : null,
-      imageUrl: typeof thumbnail?.source === "string" ? thumbnail.source : null,
+      imageUrl: normalizeWikimediaThumbnailUrl(typeof thumbnail?.source === "string" ? thumbnail.source : null),
       wikidataId: typeof pageprops?.wikibase_item === "string" ? pageprops.wikibase_item : null,
       wikipediaUrl: parsed.normalizedUrl,
     }
@@ -266,8 +269,9 @@ async function fetchWikipediaSummary(wikipediaUrl: string) {
     return {
       title: pageTitle,
       bio: typeof summary?.extract === "string" ? summary.extract : null,
-      imageUrl:
-        typeof summary?.thumbnail?.source === "string" ? summary.thumbnail.source : null,
+      imageUrl: normalizeWikimediaThumbnailUrl(
+        typeof summary?.thumbnail?.source === "string" ? summary.thumbnail.source : null
+      ),
       wikidataId,
       wikipediaUrl: normalizedWikipediaUrl,
     }

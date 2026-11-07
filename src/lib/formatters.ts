@@ -606,3 +606,16 @@ export function getTagTypeMeta(type: string): TagTypeMeta {
 }
 
 export { slugify }
+
+/**
+ * Normalizes Wikimedia Commons thumbnail URLs.
+ * Wikimedia Commons enforces strict bucketed thumbnail sizes for TIFF files (e.g. 960px).
+ * Standard Wikipedia API queries with pithumbsize=600 generate lossy-page1-600px- which returns HTTP 400.
+ */
+export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (/\.tiff?\/lossy-page1-\d+px-/i.test(url)) {
+    return url.replace(/lossy-page1-\d+px-/i, "lossy-page1-960px-")
+  }
+  return url
+}

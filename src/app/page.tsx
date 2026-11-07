@@ -144,8 +144,13 @@ const dailyQuoteSelect = {
   },
 } as const
 
-// Module-level in-memory cache for fast lookups
-let cachedTotalPublishedCount: { count: number; timestamp: number } | null = null
+// Module-level in-memory cache for ultra-fast response in dev and warm instances
+let inMemoryHomePageCache: {
+  date: string
+  data: Awaited<ReturnType<typeof fetchHomePageDataInternal>>
+  timestamp: number
+} | null = null
+
 let cachedTaxonomies: {
   authors: Array<{
     id: string
@@ -176,28 +181,11 @@ let cachedTaxonomies: {
   timestamp: number
 } | null = null
 
-// Invalidate in-memory caches whenever public content mutations occur
+// Invalidate in-memory caches whenever public content mutations occur in admin
 registerPublicDataInvalidator(() => {
-  cachedTotalPublishedCount = null
+  inMemoryHomePageCache = null
   cachedTaxonomies = null
 })
-
-async function getPublishedQuoteCount(): Promise<number> {
-  const now = Date.now()
-  if (cachedTotalPublishedCount && now - cachedTotalPublishedCount.timestamp < 10 * 60 * 1000) {
-    return cachedTotalPublishedCount.count
-  }
-  try {
-    const count = await prisma.quote.count({
-      where: { status: "PUBLISHED", deletedAt: null },
-    })
-    cachedTotalPublishedCount = { count, timestamp: now }
-    return count
-  } catch (err) {
-    console.error("Failed to count published quotes:", err)
-    return cachedTotalPublishedCount?.count ?? 0
-  }
-}
 
 async function getTaxonomiesData() {
   const now = Date.now()
@@ -482,15 +470,30 @@ export default async function HomePage() {
   )
 }
 
-function loadHomePageData(todayStr: string) {
-  return unstable_cache(
-    async () => fetchHomePageDataInternal(todayStr),
-    [`home-page-data-${todayStr}`],
-    {
-      tags: [HOME_PAGE_CACHE_TAG, HOME_TAXONOMIES_CACHE_TAG, "quotes"],
-      revalidate: 3600,
-    }
-  )()
+// Module-level cached handler
+const getCachedHomePageData = unstable_cache(
+  async (todayStr: string) => fetchHomePageDataInternal(todayStr),
+  ["home-page-data"],
+  {
+    tags: [HOME_PAGE_CACHE_TAG, HOME_TAXONOMIES_CACHE_TAG, "quotes"],
+    revalidate: 3600,
+  }
+)
+
+async function loadHomePageData(todayStr: string) {
+  // Ultra-fast in-memory path (1ms response on warm process)
+  const now = Date.now()
+  if (inMemoryHomePageCache && inMemoryHomePageCache.date === todayStr && now - inMemoryHomePageCache.timestamp < 5 * 60 * 1000) {
+    return inMemoryHomePageCache.data
+  }
+
+  const data = await getCachedHomePageData(todayStr)
+  inMemoryHomePageCache = {
+    date: todayStr,
+    data,
+    timestamp: now,
+  }
+  return data
 }
 
 async function fetchHomePageDataInternal(todayStr: string) {
@@ -504,14 +507,12 @@ async function fetchHomePageDataInternal(todayStr: string) {
       hash |= 0
     }
     const dailySeed = Math.abs(hash)
+    const targetKey = (dailySeed % 10000) / 10000
 
-    // Parallel fetch of cached count and cached taxonomies + dynamic quote pools
-    const totalPublishedQuotes = await getPublishedQuoteCount()
-    const dailySkip = totalPublishedQuotes > 0 ? dailySeed % totalPublishedQuotes : 0
-
+    // Single concurrent batch without pre-requisite blocking count query
     const [
       taxonomies,
-      dailyQuote,
+      dailyQuoteRaw,
       featuredQuotesPool,
       companionQuotesPool,
       moodQuotesPool,
@@ -520,9 +521,12 @@ async function fetchHomePageDataInternal(todayStr: string) {
     ] = await Promise.all([
       getTaxonomiesData(),
       prisma.quote.findFirst({
-        where: { status: "PUBLISHED", deletedAt: null },
-        orderBy: [{ id: "asc" }],
-        skip: dailySkip,
+        where: {
+          status: "PUBLISHED",
+          deletedAt: null,
+          randomKey: { gte: targetKey },
+        },
+        orderBy: { randomKey: "asc" },
         select: dailyQuoteSelect,
       }),
       prisma.quote.findMany({
@@ -556,7 +560,7 @@ async function fetchHomePageDataInternal(todayStr: string) {
           },
         },
         orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
-        take: 36,
+        take: 24,
         select: {
           id: true,
           slug: true,
@@ -582,7 +586,7 @@ async function fetchHomePageDataInternal(todayStr: string) {
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }],
-        take: 12,
+        take: 10,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
@@ -595,6 +599,16 @@ async function fetchHomePageDataInternal(todayStr: string) {
         },
       }),
     ])
+
+    // Fallback if targetKey was near 1.0 and wrapped
+    let dailyQuote = dailyQuoteRaw
+    if (!dailyQuote) {
+      dailyQuote = await prisma.quote.findFirst({
+        where: { status: "PUBLISHED", deletedAt: null },
+        orderBy: { randomKey: "asc" },
+        select: dailyQuoteSelect,
+      })
+    }
 
     const featuredQuote =
       featuredQuotesPool.find((q) => q.id !== dailyQuote?.id) ??

@@ -9,7 +9,7 @@ export default async function TagsPage() {
   if (!admin) redirect("/admin/login")
 
   const tags = await prisma.tag.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     select: {
       id: true,
       name: true,

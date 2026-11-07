@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { QuoteCard } from "./quote-card"
 import { Empty } from "../ui/empty-state"
-import { HeroSearch, HeroSavedBadge } from "./hero-search"
+import { HeroSearch } from "./hero-search"
 import { HeroCompanionQuote } from "./hero-companion-quote"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 
@@ -72,8 +72,6 @@ export function HomeHero({
                   <span className="text-sm">🎲</span>
                   <span>Random Quote</span>
                 </Link>
-
-                <HeroSavedBadge />
               </div>
             </div>
 

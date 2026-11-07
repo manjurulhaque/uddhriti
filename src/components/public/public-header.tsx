@@ -138,7 +138,7 @@ export function PublicHeader() {
               </svg>
             </button>
 
-            {/* Saved Quotes Quick Access */}
+            {/* Saved Notebook Quick Access */}
             <Link
               href="/saved"
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
@@ -146,6 +146,7 @@ export function PublicHeader() {
                   ? "border-[var(--accent-rust)] bg-[#c76b3e]/10 text-[var(--accent-rust)] font-semibold"
                   : "border-stone-300/80 bg-white/80 text-stone-700 hover:border-stone-400 hover:bg-white shadow-2xs"
               }`}
+              title="Open your saved quotes notebook"
               aria-label="View saved quotes notebook"
             >
               <BookmarkIcon
@@ -154,7 +155,7 @@ export function PublicHeader() {
                   savedCount > 0 ? "text-[var(--accent-rust)] fill-current" : "text-stone-400"
                 }`}
               />
-              <span className="hidden sm:inline">Saved</span>
+              <span className="hidden sm:inline">Saved Notebook</span>
               {savedCount > 0 && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-rust)] px-1 text-[10px] font-bold text-white">
                   {savedCount}

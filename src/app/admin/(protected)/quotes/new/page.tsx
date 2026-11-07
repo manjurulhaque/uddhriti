@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { prisma } from "@/lib/prisma"
+import { getQuoteEditorOptions } from "@/lib/quotes/editorOptions"
 import  QuoteForm  from "./QuoteForm"
 
 export default async function NewQuotePage() {
@@ -15,24 +15,7 @@ export default async function NewQuotePage() {
     redirect("/")
   }
 
-  const [authors, categories, sources, tags] = await Promise.all([
-    prisma.author.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.category.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, slug: true },
-    }),
-    prisma.source.findMany({
-      orderBy: { title: "asc" },
-      select: { id: true, title: true },
-    }),
-    prisma.tag.findMany({
-      orderBy: [{ type: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, type: true, description: true },
-    }),
-  ])
+  const { authors, categories, sources, tags } = await getQuoteEditorOptions()
 
   return (
     <div className="max-w-6xl mx-auto p-8">

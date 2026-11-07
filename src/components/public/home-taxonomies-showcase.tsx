@@ -98,7 +98,6 @@ export function HomeTaxonomiesShowcase({
                         alt={author.name}
                         fill
                         sizes="56px"
-                        unoptimized
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (

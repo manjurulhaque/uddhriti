@@ -1,7 +1,13 @@
 import type { Metadata } from "next"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getSiteUrl } from "@/lib/site"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+import {
+  HOME_PAGE_CACHE_TAG,
+  HOME_TAXONOMIES_CACHE_TAG,
+  registerPublicDataInvalidator,
+} from "@/lib/revalidation"
 import {
   PublicLayout,
   HomeHero,
@@ -15,7 +21,7 @@ import {
   type DynamicMoodQuote,
 } from "@/components"
 
-export const revalidate = 60
+export const revalidate = 3600
 
 const siteUrl = getSiteUrl()
 
@@ -138,44 +144,154 @@ const dailyQuoteSelect = {
   },
 } as const
 
-const serendipityQuoteSelect = {
-  id: true,
-  slug: true,
-  content: true,
-  meaning: true,
-  historicalContext: true,
-  authorName: true,
-  author: {
-    select: {
-      name: true,
-      slug: true,
-      profession: true,
-      nationality: true,
-      birthYear: true,
-      deathYear: true,
-    },
-  },
-  category: {
-    select: {
-      name: true,
-      slug: true,
-    },
-  },
-  source: {
-    select: {
-      title: true,
-      year: true,
-      yearLabel: true,
-      yearApproximate: true,
-    },
-  },
-} as const
+// Module-level in-memory cache for fast lookups
+let cachedTotalPublishedCount: { count: number; timestamp: number } | null = null
+let cachedTaxonomies: {
+  authors: Array<{
+    id: string
+    name: string
+    slug: string
+    profession: string | null
+    nationality: string | null
+    birthYear: number | null
+    deathYear: number | null
+    imageUrl: string | null
+    quoteCount: number
+    topQuote: { content: string; slug: string | null } | null
+  }>
+  categories: Array<{
+    id: string
+    name: string
+    slug: string
+    description: string | null
+    quoteCount: number
+    topQuote: { content: string; authorName: string | null } | null
+  }>
+  tags: Array<{
+    id: string
+    name: string
+    type: string
+    quoteCount: number
+  }>
+  timestamp: number
+} | null = null
+
+// Invalidate in-memory caches whenever public content mutations occur
+registerPublicDataInvalidator(() => {
+  cachedTotalPublishedCount = null
+  cachedTaxonomies = null
+})
+
+async function getPublishedQuoteCount(): Promise<number> {
+  const now = Date.now()
+  if (cachedTotalPublishedCount && now - cachedTotalPublishedCount.timestamp < 10 * 60 * 1000) {
+    return cachedTotalPublishedCount.count
+  }
+  try {
+    const count = await prisma.quote.count({
+      where: { status: "PUBLISHED", deletedAt: null },
+    })
+    cachedTotalPublishedCount = { count, timestamp: now }
+    return count
+  } catch (err) {
+    console.error("Failed to count published quotes:", err)
+    return cachedTotalPublishedCount?.count ?? 0
+  }
+}
+
+async function getTaxonomiesData() {
+  const now = Date.now()
+  if (cachedTaxonomies && now - cachedTaxonomies.timestamp < 15 * 60 * 1000) {
+    return cachedTaxonomies
+  }
+
+  const [spotlightCategoriesRaw, spotlightAuthorsRaw, topTags] = await Promise.all([
+    prisma.category.findMany({
+      where: { quoteCount: { gt: 0 } },
+      orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+      take: 8,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        quoteCount: true,
+        quotes: {
+          where: { status: "PUBLISHED", deletedAt: null },
+          take: 1,
+          orderBy: { popularityScore: "desc" },
+          select: {
+            content: true,
+            authorName: true,
+          },
+        },
+      },
+    }),
+    prisma.author.findMany({
+      where: { quoteCount: { gt: 0 } },
+      orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+      take: 8,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        birthYear: true,
+        deathYear: true,
+        profession: true,
+        nationality: true,
+        imageUrl: true,
+        quoteCount: true,
+        quotes: {
+          where: { status: "PUBLISHED", deletedAt: null },
+          take: 1,
+          orderBy: { popularityScore: "desc" },
+          select: {
+            content: true,
+            slug: true,
+          },
+        },
+      },
+    }),
+    prisma.tag.findMany({
+      where: { quoteCount: { gt: 0 } },
+      orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+      take: 8,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        quoteCount: true,
+      },
+    }),
+  ])
+
+  const spotlightAuthors = spotlightAuthorsRaw.map((a) => ({
+    ...a,
+    topQuote: a.quotes[0] ?? null,
+  }))
+
+  const spotlightCategories = spotlightCategoriesRaw.map((c) => ({
+    ...c,
+    topQuote: c.quotes[0] ?? null,
+  }))
+
+  const result = {
+    authors: spotlightAuthors,
+    categories: spotlightCategories,
+    tags: topTags,
+    timestamp: now,
+  }
+
+  cachedTaxonomies = result
+  return result
+}
 
 export default async function HomePage() {
+  const todayStr = new Date().toISOString().slice(0, 10)
   const {
     dailyQuote,
     featuredQuote,
-    serendipityPool,
+    companionQuotesPool,
     moodQuotesPool,
     dayIndex,
     latestQuotes,
@@ -184,7 +300,7 @@ export default async function HomePage() {
     spotlightAuthors,
     spotlightCategories,
     errorMessage,
-  } = await loadHomePageData()
+  } = await loadHomePageData(todayStr)
 
   // Strict mutual exclusion registry: guarantees zero quote duplication across all sections
   const usedQuoteIds = new Set<string>()
@@ -218,8 +334,8 @@ export default async function HomePage() {
   for (const [moodId, config] of Object.entries(moodCategoryMap)) {
     const eligibleQuotes = moodQuotesPool.filter(
       (q) =>
-        q.category?.slug &&
-        config.categories.includes(q.category.slug) &&
+        q.categorySlug &&
+        config.categories.includes(q.categorySlug) &&
         !usedQuoteIds.has(q.id)
     )
 
@@ -241,7 +357,7 @@ export default async function HomePage() {
   }
 
   // 4. Companion quotes pool for Hero (distinct from hero, daily, and mood quotes)
-  const eligibleCompanionQuotes = serendipityPool.filter((q) => !usedQuoteIds.has(q.id))
+  const eligibleCompanionQuotes = companionQuotesPool.filter((q) => !usedQuoteIds.has(q.id))
   const companionPool = eligibleCompanionQuotes.length > 0
     ? eligibleCompanionQuotes
     : latestQuotes.filter((q) => !usedQuoteIds.has(q.id))
@@ -366,10 +482,19 @@ export default async function HomePage() {
   )
 }
 
-async function loadHomePageData() {
+function loadHomePageData(todayStr: string) {
+  return unstable_cache(
+    async () => fetchHomePageDataInternal(todayStr),
+    [`home-page-data-${todayStr}`],
+    {
+      tags: [HOME_PAGE_CACHE_TAG, HOME_TAXONOMIES_CACHE_TAG, "quotes"],
+      revalidate: 3600,
+    }
+  )()
+}
+
+async function fetchHomePageDataInternal(todayStr: string) {
   try {
-    // Deterministic calendar-based seeds using UTC date
-    const todayStr = new Date().toISOString().slice(0, 10)
     const [year, month, day] = todayStr.split("-").map(Number)
     const dayIndex = Math.floor(Date.UTC(year, month - 1, day) / 86400000)
 
@@ -380,32 +505,20 @@ async function loadHomePageData() {
     }
     const dailySeed = Math.abs(hash)
 
-    const [totalPublishedQuotes, totalFeaturedQuotes] = await Promise.all([
-      prisma.quote.count({
-        where: { status: "PUBLISHED", deletedAt: null },
-      }),
-      prisma.quote.count({
-        where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
-      }),
-    ])
-
+    // Parallel fetch of cached count and cached taxonomies + dynamic quote pools
+    const totalPublishedQuotes = await getPublishedQuoteCount()
     const dailySkip = totalPublishedQuotes > 0 ? dailySeed % totalPublishedQuotes : 0
-    // Rotate Curator's Choice daily across the featured pool (or top-tier published quotes if none flagged featured)
-    const curatorSkip = totalFeaturedQuotes > 0
-      ? dayIndex % totalFeaturedQuotes
-      : (totalPublishedQuotes > 0 ? (dayIndex + 7) % Math.min(totalPublishedQuotes, 50) : 0)
 
     const [
+      taxonomies,
       dailyQuote,
       featuredQuotesPool,
-      serendipityPool,
+      companionQuotesPool,
       moodQuotesPool,
       latestQuotes,
       trendingQuotes,
-      spotlightCategoriesRaw,
-      topTags,
-      spotlightAuthorsRaw,
     ] = await Promise.all([
+      getTaxonomiesData(),
       prisma.quote.findFirst({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ id: "asc" }],
@@ -413,42 +526,37 @@ async function loadHomePageData() {
         select: dailyQuoteSelect,
       }),
       prisma.quote.findMany({
-        where: totalFeaturedQuotes > 0
-          ? { status: "PUBLISHED", deletedAt: null, isFeatured: true }
-          : { status: "PUBLISHED", deletedAt: null },
+        where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
         orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
-        skip: curatorSkip,
         take: 2,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
-        take: 10,
-        select: serendipityQuoteSelect,
+        take: 6,
+        select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: {
           status: "PUBLISHED",
           deletedAt: null,
-          category: {
-            slug: {
-              in: [
-                "philosophical",
-                "failure",
-                "sad",
-                "success",
-                "attitude",
-                "love",
-                "friendship",
-                "positive",
-                "time",
-              ],
-            },
+          categorySlug: {
+            in: [
+              "philosophical",
+              "failure",
+              "sad",
+              "success",
+              "attitude",
+              "love",
+              "friendship",
+              "positive",
+              "time",
+            ],
           },
         },
         orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
-        take: 120,
+        take: 36,
         select: {
           id: true,
           slug: true,
@@ -460,11 +568,7 @@ async function loadHomePageData() {
               slug: true,
             },
           },
-          category: {
-            select: {
-              slug: true,
-            },
-          },
+          categorySlug: true,
           source: {
             select: {
               title: true,
@@ -478,86 +582,19 @@ async function loadHomePageData() {
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }],
-        take: 16,
+        take: 12,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }],
-        take: 8,
+        take: 6,
         select: {
           ...quoteCardSelect,
           trendingScore: true,
         },
       }),
-      prisma.category.findMany({
-        where: { quoteCount: { gt: 0 } },
-        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
-        take: 8,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          quoteCount: true,
-          quotes: {
-            where: { status: "PUBLISHED", deletedAt: null },
-            take: 1,
-            orderBy: { popularityScore: "desc" },
-            select: {
-              content: true,
-              authorName: true,
-            },
-          },
-        },
-      }),
-      prisma.tag.findMany({
-        where: { quoteCount: { gt: 0 } },
-        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
-        take: 8,
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          quoteCount: true,
-        },
-      }),
-      prisma.author.findMany({
-        where: { quoteCount: { gt: 0 } },
-        orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
-        take: 8,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          birthYear: true,
-          deathYear: true,
-          profession: true,
-          nationality: true,
-          imageUrl: true,
-          quoteCount: true,
-          quotes: {
-            where: { status: "PUBLISHED", deletedAt: null },
-            take: 1,
-            orderBy: { popularityScore: "desc" },
-            select: {
-              content: true,
-              slug: true,
-            },
-          },
-        },
-      }),
     ])
-
-    const spotlightAuthors = spotlightAuthorsRaw.map((a) => ({
-      ...a,
-      topQuote: a.quotes[0] ?? null,
-    }))
-
-    const spotlightCategories = spotlightCategoriesRaw.map((c) => ({
-      ...c,
-      topQuote: c.quotes[0] ?? null,
-    }))
 
     const featuredQuote =
       featuredQuotesPool.find((q) => q.id !== dailyQuote?.id) ??
@@ -567,14 +604,14 @@ async function loadHomePageData() {
     return {
       dailyQuote,
       featuredQuote,
-      serendipityPool,
+      companionQuotesPool,
       moodQuotesPool,
       dayIndex,
       latestQuotes,
       trendingQuotes,
-      topTags,
-      spotlightAuthors,
-      spotlightCategories,
+      topTags: taxonomies.tags,
+      spotlightAuthors: taxonomies.authors,
+      spotlightCategories: taxonomies.categories,
       errorMessage: null,
     }
   } catch (error) {
@@ -583,7 +620,7 @@ async function loadHomePageData() {
     return {
       dailyQuote: null,
       featuredQuote: null,
-      serendipityPool: [],
+      companionQuotesPool: [],
       moodQuotesPool: [],
       dayIndex: 0,
       latestQuotes: [],

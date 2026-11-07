@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { ServiceWorkerRegister, InstallPrompt } from "@/components";
-import { CommandPalette } from "@/components/public/command-palette";
+import { ServiceWorkerRegister } from "@/components";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
+
+const CommandPalette = dynamic(
+  () => import("@/components/public/command-palette").then((mod) => mod.CommandPalette)
+);
+
+const InstallPrompt = dynamic(
+  () => import("@/components/pwa/install-prompt").then((mod) => mod.InstallPrompt)
+);
 
 const siteUrl = getSiteUrl();
 

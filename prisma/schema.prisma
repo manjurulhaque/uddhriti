@@ -158,6 +158,7 @@ model Author {
 
   @@index([nameNormalized])
   @@index([quoteCount])
+  @@index([quoteCount(sort: Desc), name])
 }
 
 //////////////////////////////////////////////////////
@@ -220,6 +221,7 @@ model Category {
   updatedAt DateTime @default(now()) @updatedAt
 
   @@index([quoteCount])
+  @@index([quoteCount(sort: Desc), name])
 }
 
 //////////////////////////////////////////////////////
@@ -245,6 +247,7 @@ model Tag {
   @@index([type])
   @@index([type, name])
   @@index([quoteCount])
+  @@index([quoteCount(sort: Desc), name])
 }
 
 //////////////////////////////////////////////////////
@@ -358,6 +361,10 @@ model Quote {
   @@unique([slug, language])
   @@index([status, publishedAt])
   @@index([status, createdAt(sort: Desc)])
+  @@index([status, deletedAt])
+  @@index([status, deletedAt, isFeatured])
+  @@index([categorySlug, status, deletedAt])
+  @@index([status, deletedAt, trendingScore(sort: Desc)])
   @@index([authorId, status])
   @@index([categoryId, status])
   @@index([sourceId, status])

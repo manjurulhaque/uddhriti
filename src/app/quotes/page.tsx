@@ -6,6 +6,7 @@ import { PublicLayout, QuoteCard } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 export const metadata: Metadata = {
   title: "Browse All Quotations",
@@ -13,34 +14,102 @@ export const metadata: Metadata = {
     "Explore our complete searchable archive of timeless quotations, curated philosophical fragments, and memorable passages.",
 }
 
-export const revalidate = 120
+export const revalidate = 300
 
 const PAGE_SIZE = 18
 
-interface QuotesBrowsePageProps {
-  searchParams: Promise<{
-    q?: string
-    category?: string
-    sort?: string
-    page?: string
-  }>
+const quoteBrowseSelect = {
+  id: true,
+  slug: true,
+  content: true,
+  authorName: true,
+  isVerified: true,
+  views: true,
+  author: { select: { name: true, slug: true } },
+  category: { select: { name: true, slug: true } },
+  source: { select: { title: true, year: true } },
+  tags: {
+    select: {
+      tag: { select: { name: true } },
+    },
+    take: 6,
+  },
+} as const
+
+interface QuoteBrowseItem {
+  id: string
+  slug: string
+  content: string
+  authorName: string | null
+  isVerified: boolean
+  views: number
+  author: { name: string; slug: string } | null
+  category: { name: string; slug: string }
+  source: { title: string; year: number | null } | null
+  tags: Array<{ tag: { name: string } }>
 }
 
-export default async function QuotesBrowsePage({
-  searchParams,
-}: QuotesBrowsePageProps) {
-  const { q, category: rawCategorySlug, sort, page } = await searchParams
-  const currentPage = parseSafePageNumber(page, 500)
-  const searchQuery = sanitizeSearchQuery(q, 100)
-  const categorySlug = rawCategorySlug ? sanitizeSlug(rawCategorySlug, 100) : undefined
-  const selectedSort = sort?.toLowerCase() || "trending"
+interface FilterCategory {
+  id: string
+  name: string
+  slug: string
+  quoteCount: number
+}
 
-  // Fetch all categories for filter pills
+// In-memory cache for category filter pills
+let cachedFilterCategories: {
+  categories: FilterCategory[]
+  timestamp: number
+} | null = null
+
+// In-memory cache for default browse page (no query params, page 1)
+let cachedDefaultQuotesPage: {
+  quotes: QuoteBrowseItem[]
+  totalQuotes: number
+  timestamp: number
+} | null = null
+
+registerPublicDataInvalidator(() => {
+  cachedFilterCategories = null
+  cachedDefaultQuotesPage = null
+})
+
+async function getFilterCategories(): Promise<FilterCategory[]> {
+  const now = Date.now()
+  if (cachedFilterCategories && now - cachedFilterCategories.timestamp < 15 * 60 * 1000) {
+    return cachedFilterCategories.categories
+  }
   const categories = await prisma.category.findMany({
     where: { quoteCount: { gt: 0 } },
     select: { id: true, name: true, slug: true, quoteCount: true },
-    orderBy: { quoteCount: "desc" },
+    orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
   })
+  cachedFilterCategories = { categories, timestamp: now }
+  return categories
+}
+
+async function loadQuotesBrowseData({
+  currentPage,
+  searchQuery,
+  categorySlug,
+  selectedSort,
+}: {
+  currentPage: number
+  searchQuery?: string
+  categorySlug?: string
+  selectedSort: string
+}) {
+  const isDefaultBrowse = !searchQuery && !categorySlug && selectedSort === "trending" && currentPage === 1
+  const now = Date.now()
+
+  if (isDefaultBrowse && cachedDefaultQuotesPage && now - cachedDefaultQuotesPage.timestamp < 5 * 60 * 1000) {
+    const categories = await getFilterCategories()
+    return {
+      totalQuotes: cachedDefaultQuotesPage.totalQuotes,
+      quotes: cachedDefaultQuotesPage.quotes,
+      categories,
+    }
+  }
 
   // Build where filter
   const whereConditions: {
@@ -82,25 +151,53 @@ export default async function QuotesBrowsePage({
     orderBy = { rankScore: "desc" }
   }
 
-  const [totalQuotes, quotes] = await Promise.all([
+  const [categories, totalQuotes, quotes] = await Promise.all([
+    getFilterCategories(),
     prisma.quote.count({ where: whereConditions }),
     prisma.quote.findMany({
       where: whereConditions,
       orderBy,
       skip: (currentPage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: {
-        author: { select: { name: true, slug: true } },
-        category: { select: { name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: {
-          select: {
-            tag: { select: { name: true } },
-          },
-        },
-      },
+      select: quoteBrowseSelect,
     }),
   ])
+
+  if (isDefaultBrowse) {
+    cachedDefaultQuotesPage = {
+      quotes,
+      totalQuotes,
+      timestamp: now,
+    }
+  }
+
+  return { totalQuotes, quotes, categories }
+}
+
+interface QuotesBrowsePageProps {
+  searchParams: Promise<{
+    q?: string
+    category?: string
+    sort?: string
+    page?: string
+  }>
+}
+
+export default async function QuotesBrowsePage({
+  searchParams,
+}: QuotesBrowsePageProps) {
+  const { q, category: rawCategorySlug, sort, page } = await searchParams
+  const currentPage = parseSafePageNumber(page, 500)
+  const searchQuery = sanitizeSearchQuery(q, 100)
+  const categorySlug = rawCategorySlug ? sanitizeSlug(rawCategorySlug, 100) : undefined
+  const selectedSort = sort?.toLowerCase() || "trending"
+
+  const { totalQuotes, quotes, categories } = await loadQuotesBrowseData({
+    currentPage,
+    searchQuery,
+    categorySlug,
+    selectedSort,
+  })
 
   const totalPages = Math.ceil(totalQuotes / PAGE_SIZE)
 

@@ -29,8 +29,9 @@ export function revalidatePublicSurfaces() {
 
   try {
     revalidatePath("/")
+    revalidatePath("/quotes")
   } catch (err) {
-    console.warn("Failed to revalidate public homepage path:", err)
+    console.warn("Failed to revalidate public homepage/quotes paths:", err)
   }
   revalidateDashboardMetrics()
 }

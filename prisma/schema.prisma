@@ -365,6 +365,8 @@ model Quote {
   @@index([status, deletedAt, isFeatured])
   @@index([categorySlug, status, deletedAt])
   @@index([status, deletedAt, trendingScore(sort: Desc)])
+  @@index([status, deletedAt, publishedAt(sort: Desc)])
+  @@index([status, deletedAt, views(sort: Desc)])
   @@index([authorId, status])
   @@index([categoryId, status])
   @@index([sourceId, status])

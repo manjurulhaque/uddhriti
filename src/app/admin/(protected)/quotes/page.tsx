@@ -8,6 +8,7 @@ import { Button } from "@/components/ui"
 import { parseSafePageNumber } from "@/lib/security/input"
 import { searchQuoteIds } from "@/lib/quotes/search"
 import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
 
@@ -42,7 +43,19 @@ type QuoteFilterCounts = {
   orphaned: number
 }
 
+let cachedQuoteFilterCounts: { counts: QuoteFilterCounts; timestamp: number } | null = null
+const FILTER_COUNTS_TTL_MS = 30 * 1000 // 30 seconds
+
+registerPublicDataInvalidator(() => {
+  cachedQuoteFilterCounts = null
+})
+
 async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
+  const now = Date.now()
+  if (cachedQuoteFilterCounts && now - cachedQuoteFilterCounts.timestamp < FILTER_COUNTS_TTL_MS) {
+    return cachedQuoteFilterCounts.counts
+  }
+
   try {
     const rows = await prisma.$queryRaw<QuoteFilterCounts[]>`
       SELECT
@@ -62,18 +75,18 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       FROM "Quote" q
       WHERE "deletedAt" IS NULL;
     `
-    return (
-      rows[0] ?? {
-        all: 0,
-        draft: 0,
-        archived: 0,
-        unverified: 0,
-        unattributed: 0,
-        missingSource: 0,
-        noTags: 0,
-        orphaned: 0,
-      }
-    )
+    const counts = rows[0] ?? {
+      all: 0,
+      draft: 0,
+      archived: 0,
+      unverified: 0,
+      unattributed: 0,
+      missingSource: 0,
+      noTags: 0,
+      orphaned: 0,
+    }
+    cachedQuoteFilterCounts = { counts, timestamp: now }
+    return counts
   } catch (error) {
     console.error("[Failed to load quote filter counts]", error)
     return {

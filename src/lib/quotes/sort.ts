@@ -39,23 +39,23 @@ export function getQuoteSort(value: string | string[] | undefined | null): Quote
 export function buildQuoteOrderBy(sort: QuoteSortOption): Prisma.QuoteOrderByWithRelationInput[] {
   switch (sort) {
     case "oldest":
-      return [{ createdAt: "asc" }]
+      return [{ createdAt: "asc" }, { id: "asc" }]
     case "author-asc":
-      return [{ authorName: "asc" }, { author: { name: "asc" } }, { createdAt: "desc" }]
+      return [{ authorName: "asc" }, { author: { name: "asc" } }, { createdAt: "desc" }, { id: "asc" }]
     case "author-desc":
-      return [{ authorName: "desc" }, { author: { name: "desc" } }, { createdAt: "desc" }]
+      return [{ authorName: "desc" }, { author: { name: "desc" } }, { createdAt: "desc" }, { id: "asc" }]
     case "category-asc":
-      return [{ category: { name: "asc" } }, { createdAt: "desc" }]
+      return [{ category: { name: "asc" } }, { createdAt: "desc" }, { id: "asc" }]
     case "category-desc":
-      return [{ category: { name: "desc" } }, { createdAt: "desc" }]
+      return [{ category: { name: "desc" } }, { createdAt: "desc" }, { id: "asc" }]
     case "status":
-      return [{ status: "asc" }, { createdAt: "desc" }]
+      return [{ status: "asc" }, { createdAt: "desc" }, { id: "asc" }]
     case "content":
-      return [{ content: "asc" }]
+      return [{ content: "asc" }, { id: "asc" }]
     case "needs-attention":
-      return [{ isVerified: "asc" }, { adminSortKey: "asc" }, { createdAt: "desc" }]
+      return [{ isVerified: "asc" }, { adminSortKey: "asc" }, { createdAt: "desc" }, { id: "asc" }]
     case "newest":
     default:
-      return [{ createdAt: "desc" }]
+      return [{ createdAt: "desc" }, { id: "asc" }]
   }
 }

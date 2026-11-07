@@ -31,8 +31,9 @@ export function revalidatePublicSurfaces() {
     revalidatePath("/")
     revalidatePath("/quotes")
     revalidatePath("/authors")
+    revalidatePath("/categories")
   } catch (err) {
-    console.warn("Failed to revalidate public homepage/quotes/authors paths:", err)
+    console.warn("Failed to revalidate public homepage/quotes/authors/categories paths:", err)
   }
   revalidateDashboardMetrics()
 }

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { PublicLayout } from "@/components/public"
 import { formatCountWithNoun, formatNumber, getCategoryMeta } from "@/lib/formatters"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 export const metadata: Metadata = {
   title: "Thematic Categories",
@@ -13,14 +14,52 @@ export const metadata: Metadata = {
 
 export const revalidate = 300
 
-export default async function CategoriesPage() {
+interface CategoryItem {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  quoteCount: number
+  quotes: Array<{
+    content: string
+    authorName: string | null
+  }>
+}
+
+interface CategoriesPageData {
+  categories: CategoryItem[]
+  maxCategoryQuotes: number
+  totalQuotesCount: number
+}
+
+// In-memory cache with 15-minute TTL
+let cachedCategoriesData: {
+  data: CategoriesPageData
+  timestamp: number
+} | null = null
+
+registerPublicDataInvalidator(() => {
+  cachedCategoriesData = null
+})
+
+async function loadCategoriesPageData(): Promise<CategoriesPageData> {
+  const now = Date.now()
+  if (cachedCategoriesData && now - cachedCategoriesData.timestamp < 15 * 60 * 1000) {
+    return cachedCategoriesData.data
+  }
+
   const categories = await prisma.category.findMany({
-    orderBy: { quoteCount: "desc" },
-    include: {
+    orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      quoteCount: true,
       quotes: {
         where: { status: "PUBLISHED", deletedAt: null },
         take: 1,
-        orderBy: { popularityScore: "desc" },
+        orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
         select: {
           content: true,
           authorName: true,
@@ -31,6 +70,23 @@ export default async function CategoriesPage() {
 
   const maxCategoryQuotes = Math.max(...categories.map((c) => c.quoteCount), 1)
   const totalQuotesCount = categories.reduce((sum, c) => sum + c.quoteCount, 0)
+
+  const data: CategoriesPageData = {
+    categories,
+    maxCategoryQuotes,
+    totalQuotesCount,
+  }
+
+  cachedCategoriesData = {
+    data,
+    timestamp: now,
+  }
+
+  return data
+}
+
+export default async function CategoriesPage() {
+  const { categories, maxCategoryQuotes, totalQuotesCount } = await loadCategoriesPageData()
 
   return (
     <PublicLayout>

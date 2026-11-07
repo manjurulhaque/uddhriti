@@ -15,6 +15,7 @@ import {
 } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 const QUOTES_PER_PAGE = 12
 
@@ -46,15 +47,175 @@ export async function generateStaticParams() {
   }
 }
 
+const getCategoryBySlug = React.cache(async (slug: string) => {
+  return prisma.category.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      metaTitle: true,
+      metaDescription: true,
+      quoteCount: true,
+    },
+  })
+})
+
+interface CategoryTaxonomyAuthor {
+  id: string
+  name: string
+  slug: string
+  profession: string | null
+  nationality: string | null
+  birthYear: number | null
+  deathYear: number | null
+  imageUrl: string | null
+  categoryQuoteCount: number
+}
+
+interface CategoryTaxonomyTag {
+  id: string
+  name: string
+  slug: string
+  quoteCount: number
+}
+
+interface CategoryTaxonomySibling {
+  id: string
+  name: string
+  slug: string
+  quoteCount: number
+}
+
+interface CategoryTaxonomy {
+  topAuthors: CategoryTaxonomyAuthor[]
+  topTags: CategoryTaxonomyTag[]
+  siblingCategories: CategoryTaxonomySibling[]
+}
+
+const taxonomyCache = new Map<string, { data: CategoryTaxonomy; timestamp: number }>()
+const TAXONOMY_TTL_MS = 15 * 60 * 1000 // 15 mins
+
+registerPublicDataInvalidator(() => {
+  taxonomyCache.clear()
+})
+
+async function loadCategoryTaxonomy(categoryId: string): Promise<CategoryTaxonomy> {
+  const cached = taxonomyCache.get(categoryId)
+  const now = Date.now()
+  if (cached && now - cached.timestamp < TAXONOMY_TTL_MS) {
+    return cached.data
+  }
+
+  const [authorGroups, tagGroups, siblingCategories] = await Promise.all([
+    prisma.quote.groupBy({
+      by: ["authorId"],
+      where: {
+        categoryId,
+        status: "PUBLISHED",
+        deletedAt: null,
+        authorId: { not: null },
+      },
+      _count: { authorId: true },
+      orderBy: { _count: { authorId: "desc" } },
+      take: 6,
+    }),
+    prisma.quoteTag.groupBy({
+      by: ["tagId"],
+      where: {
+        quote: {
+          categoryId,
+          status: "PUBLISHED",
+          deletedAt: null,
+        },
+      },
+      _count: { tagId: true },
+      orderBy: { _count: { tagId: "desc" } },
+      take: 10,
+    }),
+    prisma.category.findMany({
+      where: {
+        id: { not: categoryId },
+        quoteCount: { gt: 0 },
+      },
+      select: { id: true, name: true, slug: true, quoteCount: true },
+      take: 6,
+      orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+    }),
+  ])
+
+  const authorIds = authorGroups
+    .map((g) => g.authorId)
+    .filter((id): id is string => Boolean(id))
+
+  const tagIds = tagGroups.map((g) => g.tagId)
+
+  const [authorRecords, tagRecords] = await Promise.all([
+    authorIds.length > 0
+      ? prisma.author.findMany({
+          where: { id: { in: authorIds } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            profession: true,
+            nationality: true,
+            birthYear: true,
+            deathYear: true,
+            imageUrl: true,
+          },
+        })
+      : Promise.resolve([]),
+    tagIds.length > 0
+      ? prisma.tag.findMany({
+          where: { id: { in: tagIds } },
+          select: { id: true, name: true, slug: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  const authorMap = new Map(authorRecords.map((a) => [a.id, a]))
+  const topAuthors = authorGroups
+    .map((g) => {
+      if (!g.authorId) return null
+      const author = authorMap.get(g.authorId)
+      if (!author) return null
+      return {
+        ...author,
+        categoryQuoteCount: g._count.authorId,
+      }
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null)
+
+  const tagMap = new Map(tagRecords.map((t) => [t.id, t]))
+  const topTags = tagGroups
+    .map((g) => {
+      const tag = tagMap.get(g.tagId)
+      if (!tag) return null
+      return {
+        ...tag,
+        quoteCount: g._count.tagId,
+      }
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null)
+
+  const data: CategoryTaxonomy = {
+    topAuthors,
+    topTags,
+    siblingCategories,
+  }
+
+  taxonomyCache.set(categoryId, { data, timestamp: now })
+  return data
+}
+
 export async function generateMetadata({
   params,
 }: CategoryDetailPageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params
   const slug = sanitizeSlug(rawSlug, 150)
-  const category = await prisma.category.findUnique({
-    where: { slug },
-    select: { name: true, description: true, metaTitle: true, metaDescription: true, quoteCount: true },
-  })
+  const category = await getCategoryBySlug(slug)
 
   if (!category) {
     return { title: "Category Not Found" }
@@ -100,9 +261,7 @@ export default async function CategoryDetailPage({
     ? sanitizeSlug(resolvedSearchParams.author, 150)
     : null
 
-  const category = await prisma.category.findUnique({
-    where: { slug },
-  })
+  const category = await getCategoryBySlug(slug)
 
   if (!category) {
     notFound()
@@ -137,23 +296,30 @@ export default async function CategoryDetailPage({
     whereClause.authorId = selectedAuthor.id
   }
 
-  // Build order clause
-  let orderByClause: Record<string, "desc" | "asc"> = { popularityScore: "desc" }
+  let orderByClause: Array<Record<string, "desc" | "asc">> = [{ popularityScore: "desc" }, { id: "asc" }]
   if (currentSort === "newest") {
-    orderByClause = { createdAt: "desc" }
+    orderByClause = [{ createdAt: "desc" }, { id: "asc" }]
   } else if (currentSort === "views") {
-    orderByClause = { views: "desc" }
+    orderByClause = [{ views: "desc" }, { id: "asc" }]
   }
 
-  const [totalQuotes, quotes, authorGroups, tagGroups, siblingCategories] = await Promise.all([
-    prisma.quote.count({ where: whereClause }),
+  const isDefaultCount = !selectedAuthor && currentSort !== "verified"
+
+  const [totalQuotes, quotes, taxonomy] = await Promise.all([
+    isDefaultCount ? Promise.resolve(category.quoteCount) : prisma.quote.count({ where: whereClause }),
     prisma.quote.findMany({
       where: whereClause,
       orderBy: orderByClause,
       skip: (currentPage - 1) * QUOTES_PER_PAGE,
       take: QUOTES_PER_PAGE,
-      include: {
-        author: { select: { name: true, slug: true } },
+      select: {
+        id: true,
+        slug: true,
+        content: true,
+        authorName: true,
+        isVerified: true,
+        views: true,
+        author: { select: { id: true, name: true, slug: true } },
         source: { select: { title: true, year: true } },
         tags: {
           select: {
@@ -162,98 +328,10 @@ export default async function CategoryDetailPage({
         },
       },
     }),
-    prisma.quote.groupBy({
-      by: ["authorId"],
-      where: {
-        categoryId: category.id,
-        status: "PUBLISHED",
-        deletedAt: null,
-        authorId: { not: null },
-      },
-      _count: { authorId: true },
-      orderBy: { _count: { authorId: "desc" } },
-      take: 6,
-    }),
-    prisma.quoteTag.groupBy({
-      by: ["tagId"],
-      where: {
-        quote: {
-          categoryId: category.id,
-          status: "PUBLISHED",
-          deletedAt: null,
-        },
-      },
-      _count: { tagId: true },
-      orderBy: { _count: { tagId: "desc" } },
-      take: 10,
-    }),
-    prisma.category.findMany({
-      where: {
-        id: { not: category.id },
-        quoteCount: { gt: 0 },
-      },
-      select: { id: true, name: true, slug: true, quoteCount: true },
-      take: 6,
-      orderBy: { quoteCount: "desc" },
-    }),
+    loadCategoryTaxonomy(category.id),
   ])
 
-  // Resolve author metadata for top authors in this theme
-  const authorIds = authorGroups
-    .map((g) => g.authorId)
-    .filter((id): id is string => Boolean(id))
-
-  const authorRecords =
-    authorIds.length > 0
-      ? await prisma.author.findMany({
-          where: { id: { in: authorIds } },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            profession: true,
-            nationality: true,
-            birthYear: true,
-            deathYear: true,
-            imageUrl: true,
-          },
-        })
-      : []
-
-  const authorMap = new Map(authorRecords.map((a) => [a.id, a]))
-  const topAuthors = authorGroups
-    .map((g) => {
-      if (!g.authorId) return null
-      const author = authorMap.get(g.authorId)
-      if (!author) return null
-      return {
-        ...author,
-        categoryQuoteCount: g._count.authorId,
-      }
-    })
-    .filter((a): a is NonNullable<typeof a> => a !== null)
-
-  // Resolve tag metadata for nuance topics
-  const tagIds = tagGroups.map((g) => g.tagId)
-  const tagRecords =
-    tagIds.length > 0
-      ? await prisma.tag.findMany({
-          where: { id: { in: tagIds } },
-          select: { id: true, name: true, slug: true },
-        })
-      : []
-
-  const tagMap = new Map(tagRecords.map((t) => [t.id, t]))
-  const topTags = tagGroups
-    .map((g) => {
-      const tag = tagMap.get(g.tagId)
-      if (!tag) return null
-      return {
-        ...tag,
-        quoteCount: g._count.tagId,
-      }
-    })
-    .filter((t): t is NonNullable<typeof t> => t !== null)
+  const { topAuthors, topTags, siblingCategories } = taxonomy
 
   const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
   const meta = getCategoryMeta(category.name)

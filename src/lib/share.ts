@@ -64,3 +64,11 @@ export function getFacebookShareUrl({
   return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
 }
 
+/**
+ * Generates the web URL for Instagram.
+ * Note: Instagram does not provide a public web-intent URL scheme for direct link pre-filling.
+ */
+export function getInstagramShareUrl(): string {
+  return "https://www.instagram.com/"
+}
+

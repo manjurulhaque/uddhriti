@@ -27,7 +27,6 @@ export function PublicHeader() {
     { href: "/authors", label: "Authors" },
     { href: "/categories", label: "Categories" },
     { href: "/tags", label: "Tags" },
-    { href: "/saved", label: "Saved" },
   ]
 
   return (

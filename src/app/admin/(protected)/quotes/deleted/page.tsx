@@ -23,7 +23,7 @@ export default async function DeletedQuotesPage() {
       author: { select: { name: true } },
       source: { select: { title: true } },
     },
-    orderBy: { deletedAt: "desc" },
+    orderBy: [{ deletedAt: "desc" }, { id: "asc" }],
   })
 
   const normalizedQuotes = quotes

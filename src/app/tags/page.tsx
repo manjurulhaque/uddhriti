@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { PublicLayout } from "@/components/public"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { sanitizeSearchQuery } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 export const metadata: Metadata = {
   title: "Literary Tags & Catalog",
@@ -14,13 +15,31 @@ export const metadata: Metadata = {
 
 export const revalidate = 300
 
-interface TagsPageProps {
-  searchParams: Promise<{ q?: string }>
+interface TagItem {
+  id: string
+  name: string
+  slug: string
+  type: string
+  quoteCount: number
 }
 
-export default async function TagsPage({ searchParams }: TagsPageProps) {
-  const { q } = await searchParams
-  const searchQuery = sanitizeSearchQuery(q, 100)
+// In-memory cache for default tags index (15 min TTL)
+let cachedDefaultTags: {
+  tags: TagItem[]
+  timestamp: number
+} | null = null
+
+registerPublicDataInvalidator(() => {
+  cachedDefaultTags = null
+})
+
+async function loadTagsPageData(searchQuery?: string): Promise<TagItem[]> {
+  const isDefault = !searchQuery
+  const now = Date.now()
+
+  if (isDefault && cachedDefaultTags && now - cachedDefaultTags.timestamp < 15 * 60 * 1000) {
+    return cachedDefaultTags.tags
+  }
 
   const whereConditions = {
     quoteCount: { gt: 0 },
@@ -36,7 +55,7 @@ export default async function TagsPage({ searchParams }: TagsPageProps) {
 
   const tags = await prisma.tag.findMany({
     where: whereConditions,
-    orderBy: [{ type: "asc" }, { quoteCount: "desc" }],
+    orderBy: [{ type: "asc" }, { quoteCount: "desc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
@@ -45,6 +64,25 @@ export default async function TagsPage({ searchParams }: TagsPageProps) {
       quoteCount: true,
     },
   })
+
+  if (isDefault) {
+    cachedDefaultTags = {
+      tags,
+      timestamp: now,
+    }
+  }
+
+  return tags
+}
+
+interface TagsPageProps {
+  searchParams: Promise<{ q?: string }>
+}
+
+export default async function TagsPage({ searchParams }: TagsPageProps) {
+  const { q } = await searchParams
+  const searchQuery = sanitizeSearchQuery(q, 100)
+  const tags = await loadTagsPageData(searchQuery)
 
   // Group tags by type
   const groupedTags = tags.reduce((acc, tag) => {
@@ -150,20 +188,8 @@ export default async function TagsPage({ searchParams }: TagsPageProps) {
             })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center space-y-3">
-            <span className="text-3xl">🏷️</span>
-            <h3 className="font-serif text-lg font-bold text-stone-900">
-              No Tags Found
-            </h3>
-            <p className="text-xs text-stone-500 max-w-sm mx-auto">
-              We couldn&apos;t find any tags matching &ldquo;{searchQuery}&rdquo;. Try clearing your query to browse all topics.
-            </p>
-            <Link
-              href="/tags"
-              className="inline-flex items-center rounded-xl bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-black transition-all"
-            >
-              Browse All Tags
-            </Link>
+          <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center text-stone-500">
+            No tags found matching &ldquo;{searchQuery}&rdquo;.
           </div>
         )}
       </div>

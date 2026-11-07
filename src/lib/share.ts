@@ -52,3 +52,15 @@ export function getXShareUrl({
   return `https://x.com/intent/tweet?${params.toString()}`
 }
 
+/**
+ * Generates the universal share dialog URL for Facebook.
+ */
+export function getFacebookShareUrl({
+  quoteUrl,
+}: {
+  quoteUrl?: string
+}): string {
+  const url = quoteUrl || ""
+  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+}
+

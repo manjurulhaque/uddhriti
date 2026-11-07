@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { APP_TIME_ZONE, subtractDays } from "@/lib/datetime"
 import { unstable_cache } from "next/cache"
-import { ADMIN_DASHBOARD_CACHE_TAG } from "@/lib/revalidation"
+import { ADMIN_DASHBOARD_CACHE_TAG, registerDashboardInvalidator } from "@/lib/revalidation"
 
 type DashboardDateRange = {
   sevenDaysAgo: Date
@@ -432,36 +432,29 @@ async function fetchMostViewedQuotes() {
 }
 
 async function fetchTrendingQuotes() {
-  const rows = await prisma.$queryRaw<
-    {
-      id: string
-      content: string
-      views: number
-      authorName: string | null
-      score: number
-    }[]
-  >`
-    SELECT
-      q.id,
-      q.content,
-      q.views,
-      q."authorName",
-      (q.views / POWER(
-        EXTRACT(EPOCH FROM (NOW() - q."publishedAt")) / 3600 + 2,
-        1.8
-      ))::float AS score
-    FROM "Quote" q
-    WHERE q."status" = 'PUBLISHED'
-      AND q."deletedAt" IS NULL
-      AND q."publishedAt" IS NOT NULL
-    ORDER BY score DESC
-    LIMIT 5;
-  `
+  const rows = await prisma.quote.findMany({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
+      publishedAt: { not: null },
+    },
+    orderBy: [{ trendingScore: "desc" }, { id: "asc" }],
+    take: 5,
+    select: {
+      id: true,
+      content: true,
+      views: true,
+      authorName: true,
+      trendingScore: true,
+    },
+  })
 
   return rows.map((r) => ({
-    ...r,
+    id: r.id,
+    content: r.content,
     views: Number(r.views),
-    score: Number(r.score),
+    authorName: r.authorName,
+    score: Number(r.trendingScore),
   }))
 }
 
@@ -536,7 +529,14 @@ export async function getDashboardMetrics(range: DashboardDateRange): Promise<Da
   }
 }
 
-export const getCachedDashboardMetrics = unstable_cache(
+let inMemoryDashboardCache: { data: DashboardMetrics; timestamp: number } | null = null
+const IN_MEMORY_TTL_MS = 30 * 1000 // 30 seconds
+
+registerDashboardInvalidator(() => {
+  inMemoryDashboardCache = null
+})
+
+const getUnstableCachedDashboardMetrics = unstable_cache(
   async () => {
     const now = new Date()
     const sevenDaysAgo = subtractDays(now, 7)
@@ -555,3 +555,14 @@ export const getCachedDashboardMetrics = unstable_cache(
     tags: [ADMIN_DASHBOARD_CACHE_TAG],
   }
 )
+
+export async function getCachedDashboardMetrics(): Promise<DashboardMetrics> {
+  const now = Date.now()
+  if (inMemoryDashboardCache && now - inMemoryDashboardCache.timestamp < IN_MEMORY_TTL_MS) {
+    return inMemoryDashboardCache.data
+  }
+
+  const data = await getUnstableCachedDashboardMetrics()
+  inMemoryDashboardCache = { data, timestamp: now }
+  return data
+}

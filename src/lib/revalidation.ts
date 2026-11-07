@@ -6,9 +6,14 @@ export const HOME_TAXONOMIES_CACHE_TAG = "home-taxonomies"
 
 // Global in-memory cache invalidation registry
 let onPublicDataInvalidated: (() => void) | null = null
+let onDashboardInvalidated: (() => void) | null = null
 
 export function registerPublicDataInvalidator(fn: () => void) {
   onPublicDataInvalidated = fn
+}
+
+export function registerDashboardInvalidator(fn: () => void) {
+  onDashboardInvalidated = fn
 }
 
 export function revalidatePublicSurfaces() {
@@ -40,6 +45,14 @@ export function revalidatePublicSurfaces() {
 }
 
 export function revalidateDashboardMetrics() {
+  if (onDashboardInvalidated) {
+    try {
+      onDashboardInvalidated()
+    } catch (err) {
+      console.warn("Failed to trigger in-memory dashboard invalidator:", err)
+    }
+  }
+
   try {
     revalidateTag(ADMIN_DASHBOARD_CACHE_TAG, "max")
     revalidatePath("/admin/dashboard")

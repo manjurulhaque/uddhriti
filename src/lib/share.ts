@@ -31,3 +31,24 @@ export function getWhatsAppShareUrl(params: QuoteShareParams): string {
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
 }
 
+/**
+ * Generates the intent URL for sharing via X (formerly Twitter).
+ */
+export function getXShareUrl({
+  content,
+  authorName,
+  sourceTitle,
+  year,
+  quoteUrl,
+}: QuoteShareParams): string {
+  const author = authorName ? ` — ${authorName}` : ""
+  const source = sourceTitle ? ` (${sourceTitle}${year ? `, ${year}` : ""})` : ""
+  const text = `“${content}”${author}${source}`
+  const params = new URLSearchParams()
+  params.set("text", text)
+  if (quoteUrl) {
+    params.set("url", quoteUrl)
+  }
+  return `https://x.com/intent/tweet?${params.toString()}`
+}
+

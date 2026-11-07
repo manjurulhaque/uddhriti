@@ -367,6 +367,16 @@ export default async function HomePage() {
   const dedupedTrendingQuotes = trendingQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 4)
+  if (dedupedTrendingQuotes.length < 4 && trendingQuotes.length >= 4) {
+    const includedIds = new Set(dedupedTrendingQuotes.map((q) => q.id))
+    for (const q of trendingQuotes) {
+      if (!includedIds.has(q.id)) {
+        dedupedTrendingQuotes.push(q)
+        includedIds.add(q.id)
+        if (dedupedTrendingQuotes.length === 4) break
+      }
+    }
+  }
   dedupedTrendingQuotes.forEach((q) => {
     if (q.id) usedQuoteIds.add(q.id)
   })
@@ -375,6 +385,17 @@ export default async function HomePage() {
   const remainingLatestQuotes = latestQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 8)
+
+  if (remainingLatestQuotes.length < 8 && latestQuotes.length >= 8) {
+    const includedIds = new Set(remainingLatestQuotes.map((q) => q.id))
+    for (const q of latestQuotes) {
+      if (!includedIds.has(q.id)) {
+        remainingLatestQuotes.push(q)
+        includedIds.add(q.id)
+        if (remainingLatestQuotes.length === 8) break
+      }
+    }
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -585,14 +606,14 @@ async function fetchHomePageDataInternal(todayStr: string) {
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
-        orderBy: [{ publishedAt: "desc" }],
-        take: 10,
+        orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
+        take: 24,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
-        orderBy: [{ trendingScore: "desc" }, { views: "desc" }],
-        take: 6,
+        orderBy: [{ trendingScore: "desc" }, { views: "desc" }, { id: "asc" }],
+        take: 12,
         select: {
           ...quoteCardSelect,
           trendingScore: true,

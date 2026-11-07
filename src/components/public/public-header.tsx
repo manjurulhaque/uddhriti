@@ -76,7 +76,7 @@ export function PublicHeader() {
             </nav>
           </div>
 
-          {/* Right Actions: Quick Search Trigger, Saved, & Admin */}
+          {/* Right Actions: Quick Search Trigger, Saved */}
           <div className="flex items-center gap-3">
             {/* Offline Mode Indicator */}
             {!isOnline && (
@@ -163,28 +163,6 @@ export function PublicHeader() {
               )}
             </Link>
 
-            {/* Admin Entry Link */}
-            <Link
-              href="/admin/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-full border border-stone-900/12 bg-white px-3.5 py-1.5 text-xs font-medium text-stone-800 shadow-2xs hover:bg-stone-900 hover:text-white transition-all"
-            >
-              <svg
-                className="h-3.5 w-3.5 opacity-70"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              <span>Admin</span>
-            </Link>
-
             {/* Mobile Menu Toggle Button */}
             <button
               type="button"
@@ -247,11 +225,8 @@ export function PublicHeader() {
                   </Link>
                 )
               })}
-              <div className="pt-2 mt-2 border-t border-stone-200/70 flex justify-between items-center text-xs text-stone-500 px-1">
+              <div className="pt-2 mt-2 border-t border-stone-200/70 text-center text-xs text-stone-500 px-1">
                 <span>Timeless Quotes &amp; Ideas</span>
-                <Link href="/admin/login" className="text-[var(--accent-rust)] font-medium">
-                  Login &rarr;
-                </Link>
               </div>
             </nav>
           </div>

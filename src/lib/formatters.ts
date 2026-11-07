@@ -608,14 +608,36 @@ export function getTagTypeMeta(type: string): TagTypeMeta {
 export { slugify }
 
 /**
- * Normalizes Wikimedia Commons thumbnail URLs.
- * Wikimedia Commons enforces strict bucketed thumbnail sizes for TIFF files (e.g. 960px).
- * Standard Wikipedia API queries with pithumbsize=600 generate lossy-page1-600px- which returns HTTP 400.
+ * Normalizes Wikimedia Commons & Wikipedia thumbnail URLs.
+ * 1. Rewrites thumb.wikimedia.org to canonical upload.wikimedia.org host.
+ * 2. Strips API tracking query parameters (?utm_source=...).
+ * 3. Enforces valid 960px bucketed thumbnail sizes for TIFF files (avoiding HTTP 400).
  */
 export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): string | null {
   if (!url) return null
-  if (/\.tiff?\/lossy-page1-\d+px-/i.test(url)) {
-    return url.replace(/lossy-page1-\d+px-/i, "lossy-page1-960px-")
+  let normalized = url.trim()
+  if (!normalized) return null
+
+  // 1. Rewrite thumb.wikimedia.org to canonical upload.wikimedia.org host
+  if (normalized.includes("thumb.wikimedia.org/")) {
+    normalized = normalized.replace("thumb.wikimedia.org/", "upload.wikimedia.org/")
   }
-  return url
+
+  // 2. Strip API tracking queries on Wikimedia/Wikipedia assets
+  if ((normalized.includes("wikimedia.org/") || normalized.includes("wikipedia.org/")) && normalized.includes("?")) {
+    try {
+      const parsed = new URL(normalized)
+      parsed.search = ""
+      normalized = parsed.toString()
+    } catch {
+      normalized = normalized.split("?")[0]
+    }
+  }
+
+  // 3. Fix Wikimedia Commons TIFF bucket sizes (lossy-page1-{not-960}px returns HTTP 400)
+  if (/\.tiff?\/lossy-page1-\d+px-/i.test(normalized)) {
+    normalized = normalized.replace(/lossy-page1-\d+px-/i, "lossy-page1-960px-")
+  }
+
+  return normalized
 }

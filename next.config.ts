@@ -6,7 +6,7 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://va.vercel-scripts.com;
   style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob: https://commons.wikimedia.org https://upload.wikimedia.org;
+  img-src 'self' data: blob: https://commons.wikimedia.org https://upload.wikimedia.org https://thumb.wikimedia.org https://*.wikimedia.org https://*.wikipedia.org https:;
   font-src 'self' data:;
   connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com https://*.vercel-analytics.com;
   frame-ancestors 'none';
@@ -30,6 +30,18 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "upload.wikimedia.org",
+      },
+      {
+        protocol: "https",
+        hostname: "thumb.wikimedia.org",
+      },
+      {
+        protocol: "https",
+        hostname: "*.wikimedia.org",
+      },
+      {
+        protocol: "https",
+        hostname: "*.wikipedia.org",
       },
     ],
   },

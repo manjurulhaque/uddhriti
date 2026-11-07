@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Input, Button } from "@/components/ui"
+import { normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
 
 interface AuthorRichMediaStudioProps {
   imageUrl: string
@@ -62,18 +63,44 @@ export function AuthorRichMediaStudio({
     }
 
     img.onerror = () => {
-      if (!isCancelled) {
-        setVerifiedState({
-          url: trimmedUrl,
-          status: "error",
-        })
+      if (isCancelled) return
+
+      // Attempt normalized URL if different (e.g. thumb.wikimedia -> upload.wikimedia or tiff bucket size)
+      const normalized = normalizeWikimediaThumbnailUrl(trimmedUrl)
+      if (normalized && normalized !== trimmedUrl) {
+        const retryImg = new window.Image()
+        retryImg.src = normalized
+        retryImg.onload = () => {
+          if (!isCancelled) {
+            onChange(normalized)
+            setVerifiedState({
+              url: normalized,
+              status: "valid",
+              dimensions: { width: retryImg.naturalWidth, height: retryImg.naturalHeight },
+            })
+          }
+        }
+        retryImg.onerror = () => {
+          if (!isCancelled) {
+            setVerifiedState({
+              url: trimmedUrl,
+              status: "error",
+            })
+          }
+        }
+        return
       }
+
+      setVerifiedState({
+        url: trimmedUrl,
+        status: "error",
+      })
     }
 
     return () => {
       isCancelled = true
     }
-  }, [trimmedUrl])
+  }, [trimmedUrl, onChange])
 
   const isInsecure = trimmedUrl.startsWith("http://")
 
@@ -102,6 +129,12 @@ export function AuthorRichMediaStudio({
               name="imageUrl"
               value={imageUrl}
               onChange={(e) => onChange(e.target.value)}
+              onBlur={() => {
+                const normalized = normalizeWikimediaThumbnailUrl(imageUrl)
+                if (normalized && normalized !== imageUrl) {
+                  onChange(normalized)
+                }
+              }}
               placeholder="https://upload.wikimedia.org/... or public CDN image URL"
             />
           </div>
@@ -141,6 +174,16 @@ export function AuthorRichMediaStudio({
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                 Image unreachable or blocked by CORS
               </span>
+            )}
+
+            {status === "error" && normalizeWikimediaThumbnailUrl(trimmedUrl) !== trimmedUrl && (
+              <button
+                type="button"
+                onClick={() => onChange(normalizeWikimediaThumbnailUrl(trimmedUrl)!)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition cursor-pointer"
+              >
+                🪄 Auto-convert to canonical Wikimedia URL
+              </button>
             )}
 
             {isInsecure && (

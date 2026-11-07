@@ -9,7 +9,18 @@ export default async function AuthorsPage() {
   if (!admin) redirect("/admin/login")
 
   const authors = await prisma.author.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      birthYear: true,
+      deathYear: true,
+      profession: true,
+      nationality: true,
+      quoteCount: true,
+      createdAt: true,
+    },
   })
 
   const normalizedAuthors = authors.map((author) => ({

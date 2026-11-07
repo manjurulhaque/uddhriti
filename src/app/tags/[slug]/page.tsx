@@ -16,6 +16,8 @@ import {
 } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import type { TagType } from "@prisma/client"
 
 const QUOTES_PER_PAGE = 12
 
@@ -50,15 +52,215 @@ export async function generateStaticParams() {
   }
 }
 
+const getTagBySlug = React.cache(async (slug: string) => {
+  return prisma.tag.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      type: true,
+      description: true,
+      quoteCount: true,
+    },
+  })
+})
+
+interface TagTaxonomyAuthor {
+  id: string
+  name: string
+  slug: string
+  profession: string | null
+  nationality: string | null
+  birthYear: number | null
+  deathYear: number | null
+  imageUrl: string | null
+  tagQuoteCount: number
+}
+
+interface TagTaxonomyCategory {
+  id: string
+  name: string
+  slug: string
+  quoteCount: number
+}
+
+interface TagTaxonomyCooccurring {
+  id: string
+  name: string
+  slug: string
+  type: TagType
+  sharedCount: number
+}
+
+interface TagTaxonomySibling {
+  id: string
+  name: string
+  slug: string
+  quoteCount: number
+}
+
+interface TagTaxonomy {
+  topAuthors: TagTaxonomyAuthor[]
+  affiliatedCategories: TagTaxonomyCategory[]
+  cooccurringTags: TagTaxonomyCooccurring[]
+  siblingTypeTags: TagTaxonomySibling[]
+}
+
+const tagTaxonomyCache = new Map<string, { data: TagTaxonomy; timestamp: number }>()
+const TAXONOMY_TTL_MS = 15 * 60 * 1000 // 15 mins
+
+registerPublicDataInvalidator(() => {
+  tagTaxonomyCache.clear()
+})
+
+async function loadTagTaxonomy(tagId: string, tagType: TagType): Promise<TagTaxonomy> {
+  const cached = tagTaxonomyCache.get(tagId)
+  const now = Date.now()
+  if (cached && now - cached.timestamp < TAXONOMY_TTL_MS) {
+    return cached.data
+  }
+
+  const [authorGroups, categoryGroups, cooccurringTagGroups, siblingTypeTags] = await Promise.all([
+    prisma.quote.groupBy({
+      by: ["authorId"],
+      where: {
+        tags: { some: { tagId } },
+        status: "PUBLISHED",
+        deletedAt: null,
+        authorId: { not: null },
+      },
+      _count: { authorId: true },
+      orderBy: { _count: { authorId: "desc" } },
+      take: 6,
+    }),
+    prisma.quote.groupBy({
+      by: ["categoryId"],
+      where: {
+        tags: { some: { tagId } },
+        status: "PUBLISHED",
+        deletedAt: null,
+      },
+      _count: { categoryId: true },
+      orderBy: { _count: { categoryId: "desc" } },
+      take: 6,
+    }),
+    prisma.quoteTag.groupBy({
+      by: ["tagId"],
+      where: {
+        tagId: { not: tagId },
+        quote: {
+          tags: { some: { tagId } },
+          status: "PUBLISHED",
+          deletedAt: null,
+        },
+      },
+      _count: { tagId: true },
+      orderBy: { _count: { tagId: "desc" } },
+      take: 10,
+    }),
+    prisma.tag.findMany({
+      where: {
+        id: { not: tagId },
+        type: tagType,
+        quoteCount: { gt: 0 },
+      },
+      select: { id: true, name: true, slug: true, quoteCount: true },
+      take: 8,
+      orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
+    }),
+  ])
+
+  const authorIds = authorGroups
+    .map((g) => g.authorId)
+    .filter((id): id is string => Boolean(id))
+  const categoryIds = categoryGroups.map((g) => g.categoryId)
+  const tagIds = cooccurringTagGroups.map((g) => g.tagId)
+
+  const [authorRecords, categoryRecords, tagRecords] = await Promise.all([
+    authorIds.length > 0
+      ? prisma.author.findMany({
+          where: { id: { in: authorIds } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            profession: true,
+            nationality: true,
+            birthYear: true,
+            deathYear: true,
+            imageUrl: true,
+          },
+        })
+      : Promise.resolve([]),
+    categoryIds.length > 0
+      ? prisma.category.findMany({
+          where: { id: { in: categoryIds } },
+          select: { id: true, name: true, slug: true },
+        })
+      : Promise.resolve([]),
+    tagIds.length > 0
+      ? prisma.tag.findMany({
+          where: { id: { in: tagIds } },
+          select: { id: true, name: true, slug: true, type: true },
+        })
+      : Promise.resolve([]),
+  ])
+
+  const authorMap = new Map(authorRecords.map((a) => [a.id, a]))
+  const topAuthors = authorGroups
+    .map((g) => {
+      if (!g.authorId) return null
+      const author = authorMap.get(g.authorId)
+      if (!author) return null
+      return {
+        ...author,
+        tagQuoteCount: g._count.authorId,
+      }
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null)
+
+  const categoryMap = new Map(categoryRecords.map((c) => [c.id, c]))
+  const affiliatedCategories = categoryGroups
+    .map((g) => {
+      const cat = categoryMap.get(g.categoryId)
+      if (!cat) return null
+      return {
+        ...cat,
+        quoteCount: g._count.categoryId,
+      }
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+
+  const tagMap = new Map(tagRecords.map((t) => [t.id, t]))
+  const cooccurringTags = cooccurringTagGroups
+    .map((g) => {
+      const t = tagMap.get(g.tagId)
+      if (!t) return null
+      return {
+        ...t,
+        sharedCount: g._count.tagId,
+      }
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null)
+
+  const data: TagTaxonomy = {
+    topAuthors,
+    affiliatedCategories,
+    cooccurringTags,
+    siblingTypeTags,
+  }
+
+  tagTaxonomyCache.set(tagId, { data, timestamp: now })
+  return data
+}
+
 export async function generateMetadata({
   params,
 }: TagDetailPageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params
   const slug = sanitizeSlug(rawSlug, 150)
-  const tag = await prisma.tag.findUnique({
-    where: { slug },
-    select: { name: true, type: true, description: true, quoteCount: true },
-  })
+  const tag = await getTagBySlug(slug)
 
   if (!tag) {
     return { title: "Tag Not Found" }
@@ -107,9 +309,7 @@ export default async function TagDetailPage({
     ? sanitizeSlug(resolvedSearchParams.category, 150)
     : null
 
-  const tag = await prisma.tag.findUnique({
-    where: { slug },
-  })
+  const tag = await getTagBySlug(slug)
 
   if (!tag) {
     notFound()
@@ -157,31 +357,31 @@ export default async function TagDetailPage({
     whereClause.categoryId = selectedCategory.id
   }
 
-  // Build order clause
-  let orderByClause: Record<string, "desc" | "asc"> = { popularityScore: "desc" }
+  let orderByClause: Array<Record<string, "desc" | "asc">> = [{ popularityScore: "desc" }, { id: "asc" }]
   if (currentSort === "newest") {
-    orderByClause = { createdAt: "desc" }
+    orderByClause = [{ createdAt: "desc" }, { id: "asc" }]
   } else if (currentSort === "views") {
-    orderByClause = { views: "desc" }
+    orderByClause = [{ views: "desc" }, { id: "asc" }]
   }
 
-  const [
-    totalQuotes,
-    quotes,
-    authorGroups,
-    categoryGroups,
-    cooccurringTagGroups,
-    siblingTypeTags,
-  ] = await Promise.all([
-    prisma.quote.count({ where: whereClause }),
+  const isDefaultBrowse = !selectedAuthor && !selectedCategory && currentSort !== "verified"
+
+  const [totalQuotes, quotes, taxonomy] = await Promise.all([
+    isDefaultBrowse ? Promise.resolve(tag.quoteCount) : prisma.quote.count({ where: whereClause }),
     prisma.quote.findMany({
       where: whereClause,
       orderBy: orderByClause,
       skip: (currentPage - 1) * QUOTES_PER_PAGE,
       take: QUOTES_PER_PAGE,
-      include: {
-        author: { select: { name: true, slug: true } },
-        category: { select: { name: true, slug: true } },
+      select: {
+        id: true,
+        slug: true,
+        content: true,
+        authorName: true,
+        isVerified: true,
+        views: true,
+        author: { select: { id: true, name: true, slug: true } },
+        category: { select: { id: true, name: true, slug: true } },
         source: { select: { title: true, year: true } },
         tags: {
           select: {
@@ -190,133 +390,10 @@ export default async function TagDetailPage({
         },
       },
     }),
-    prisma.quote.groupBy({
-      by: ["authorId"],
-      where: {
-        tags: { some: { tagId: tag.id } },
-        status: "PUBLISHED",
-        deletedAt: null,
-        authorId: { not: null },
-      },
-      _count: { authorId: true },
-      orderBy: { _count: { authorId: "desc" } },
-      take: 6,
-    }),
-    prisma.quote.groupBy({
-      by: ["categoryId"],
-      where: {
-        tags: { some: { tagId: tag.id } },
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      _count: { categoryId: true },
-      orderBy: { _count: { categoryId: "desc" } },
-      take: 6,
-    }),
-    prisma.quoteTag.groupBy({
-      by: ["tagId"],
-      where: {
-        tagId: { not: tag.id },
-        quote: {
-          tags: { some: { tagId: tag.id } },
-          status: "PUBLISHED",
-          deletedAt: null,
-        },
-      },
-      _count: { tagId: true },
-      orderBy: { _count: { tagId: "desc" } },
-      take: 10,
-    }),
-    prisma.tag.findMany({
-      where: {
-        id: { not: tag.id },
-        type: tag.type,
-        quoteCount: { gt: 0 },
-      },
-      select: { id: true, name: true, slug: true, quoteCount: true },
-      take: 8,
-      orderBy: { quoteCount: "desc" },
-    }),
+    loadTagTaxonomy(tag.id, tag.type),
   ])
 
-  // Resolve author records
-  const authorIds = authorGroups
-    .map((g) => g.authorId)
-    .filter((id): id is string => Boolean(id))
-
-  const authorRecords =
-    authorIds.length > 0
-      ? await prisma.author.findMany({
-          where: { id: { in: authorIds } },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            profession: true,
-            nationality: true,
-            birthYear: true,
-            deathYear: true,
-            imageUrl: true,
-          },
-        })
-      : []
-
-  const authorMap = new Map(authorRecords.map((a) => [a.id, a]))
-  const topAuthors = authorGroups
-    .map((g) => {
-      if (!g.authorId) return null
-      const author = authorMap.get(g.authorId)
-      if (!author) return null
-      return {
-        ...author,
-        tagQuoteCount: g._count.authorId,
-      }
-    })
-    .filter((a): a is NonNullable<typeof a> => a !== null)
-
-  // Resolve category records
-  const categoryIds = categoryGroups.map((g) => g.categoryId)
-  const categoryRecords =
-    categoryIds.length > 0
-      ? await prisma.category.findMany({
-          where: { id: { in: categoryIds } },
-          select: { id: true, name: true, slug: true },
-        })
-      : []
-
-  const categoryMap = new Map(categoryRecords.map((c) => [c.id, c]))
-  const affiliatedCategories = categoryGroups
-    .map((g) => {
-      const cat = categoryMap.get(g.categoryId)
-      if (!cat) return null
-      return {
-        ...cat,
-        quoteCount: g._count.categoryId,
-      }
-    })
-    .filter((c): c is NonNullable<typeof c> => c !== null)
-
-  // Resolve co-occurring tags
-  const tagIds = cooccurringTagGroups.map((g) => g.tagId)
-  const tagRecords =
-    tagIds.length > 0
-      ? await prisma.tag.findMany({
-          where: { id: { in: tagIds } },
-          select: { id: true, name: true, slug: true, type: true },
-        })
-      : []
-
-  const tagMap = new Map(tagRecords.map((t) => [t.id, t]))
-  const cooccurringTags = cooccurringTagGroups
-    .map((g) => {
-      const t = tagMap.get(g.tagId)
-      if (!t) return null
-      return {
-        ...t,
-        sharedCount: g._count.tagId,
-      }
-    })
-    .filter((t): t is NonNullable<typeof t> => t !== null)
+  const { topAuthors, affiliatedCategories, cooccurringTags, siblingTypeTags } = taxonomy
 
   const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
   const typeMeta = getTagTypeMeta(tag.type)

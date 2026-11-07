@@ -244,7 +244,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
         {/* Authors Grid */}
         {authors.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {authors.map((author) => {
+            {authors.map((author, index) => {
               const epoch = formatEpoch(author.birthYear)
               const lifespan = formatLifespan(author.birthYear, author.deathYear)
               const cleanProf = cleanProfession(author.profession)
@@ -279,6 +279,8 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                             fill
                             sizes="56px"
                             unoptimized
+                            priority={index < 4}
+                            loading={index < 4 ? "eager" : "lazy"}
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (

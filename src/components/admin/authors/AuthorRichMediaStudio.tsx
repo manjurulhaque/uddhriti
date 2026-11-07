@@ -175,6 +175,8 @@ export function AuthorRichMediaStudio({
                   fill
                   sizes="64px"
                   unoptimized
+                  loading="eager"
+                  priority
                   className="object-cover"
                 />
               ) : (
@@ -200,6 +202,8 @@ export function AuthorRichMediaStudio({
                     fill
                     sizes="120px"
                     unoptimized
+                    loading="eager"
+                    priority
                     className="object-cover opacity-85"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -229,6 +233,8 @@ export function AuthorRichMediaStudio({
                   fill
                   sizes="64px"
                   unoptimized
+                  loading="eager"
+                  priority
                   className="object-cover"
                 />
               ) : (

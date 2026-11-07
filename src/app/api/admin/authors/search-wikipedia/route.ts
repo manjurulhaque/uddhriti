@@ -39,11 +39,15 @@ export async function GET(req: NextRequest) {
       query
     )}&gsrlimit=6&prop=pageimages|extracts|info|pageprops&ppprop=wikibase_item&inprop=url&exintro=1&explaintext=1&exchars=240&piprop=thumbnail&pithumbsize=240&format=json&origin=*`
 
-    const res = await fetchWithTimeout(wikiSearchUrl, {
-      headers: {
-        "User-Agent": "QuotzenBot/1.0 (https://quotzen.com; admin-import@quotzen.com)",
+    const res = await fetchWithTimeout(
+      wikiSearchUrl,
+      {
+        headers: {
+          "User-Agent": "QuotzenBot/1.0 (https://quotzen.com; admin-import@quotzen.com)",
+        },
       },
-    }, 5000)
+      10_000
+    )
 
     if (!res.ok) {
       return NextResponse.json({ candidates: [] })
@@ -73,7 +77,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ candidates })
   } catch (error) {
-    console.error("[search-wikipedia] Error fetching Wikipedia candidates:", error)
+    if (error instanceof Error && error.name === "TimeoutError") {
+      console.warn(`[search-wikipedia] Wikipedia search request timed out for query: "${query}"`)
+    } else {
+      console.error("[search-wikipedia] Error fetching Wikipedia candidates:", error)
+    }
     return NextResponse.json({ candidates: [] })
   }
 }

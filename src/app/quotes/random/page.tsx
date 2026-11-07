@@ -6,29 +6,37 @@ export const revalidate = 0
 
 export default async function RandomQuotePage() {
   try {
-    const count = await prisma.quote.count({
+    const targetKey = Math.random()
+
+    // O(log N) indexed B-Tree seek using randomKey column
+    let randomQuote = await prisma.quote.findFirst({
       where: {
         status: "PUBLISHED",
         deletedAt: null,
+        randomKey: { gte: targetKey },
       },
-    })
-
-    if (count === 0) {
-      redirect("/quotes")
-    }
-
-    const skip = Math.floor(Math.random() * count)
-    const randomQuote = await prisma.quote.findFirst({
-      where: {
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      skip,
+      orderBy: { randomKey: "asc" },
       select: {
         id: true,
         slug: true,
       },
     })
+
+    // If targetKey is near 1.0, wrap around to the smallest key
+    if (!randomQuote) {
+      randomQuote = await prisma.quote.findFirst({
+        where: {
+          status: "PUBLISHED",
+          deletedAt: null,
+          randomKey: { lt: targetKey },
+        },
+        orderBy: { randomKey: "asc" },
+        select: {
+          id: true,
+          slug: true,
+        },
+      })
+    }
 
     if (randomQuote) {
       redirect(`/quotes/${randomQuote.slug || randomQuote.id}`)

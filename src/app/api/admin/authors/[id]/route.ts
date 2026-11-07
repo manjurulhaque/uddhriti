@@ -67,7 +67,7 @@ export async function PATCH(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const raw = await parseJsonObjectBody(req)
@@ -170,7 +170,7 @@ export async function DELETE(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   try {

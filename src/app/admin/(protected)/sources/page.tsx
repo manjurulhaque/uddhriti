@@ -9,10 +9,18 @@ export default async function SourcesPage() {
   if (!admin) redirect("/admin/login")
 
   const sources = await prisma.source.findMany({
-    include: {
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: {
+      id: true,
+      title: true,
+      type: true,
+      year: true,
+      yearLabel: true,
+      yearApproximate: true,
+      quoteCount: true,
+      createdAt: true,
       author: { select: { name: true } },
     },
-    orderBy: { createdAt: "desc" },
   })
 
   const normalizedSources = sources.map((source) => ({

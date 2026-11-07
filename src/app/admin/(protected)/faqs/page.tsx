@@ -9,7 +9,17 @@ export default async function FaqsPage() {
   if (!admin) redirect("/admin/login")
 
   const faqs = await prisma.fAQ.findMany({
-    orderBy: [{ pageType: "asc" }, { pageSlug: "asc" }, { position: "asc" }],
+    orderBy: [{ pageType: "asc" }, { pageSlug: "asc" }, { position: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      question: true,
+      answer: true,
+      pageType: true,
+      pageSlug: true,
+      position: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   })
 
   const normalizedFaqs = faqs.map((faq) => ({

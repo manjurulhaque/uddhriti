@@ -44,3 +44,4 @@ export async function getQuoteEditorOptions(): Promise<QuoteEditorOptions> {
   cachedOptions = { data, timestamp: now }
   return data
 }
+

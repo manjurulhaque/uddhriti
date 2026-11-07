@@ -27,7 +27,11 @@ export function revalidatePublicSurfaces() {
     }
   }
 
-  revalidatePath("/")
+  try {
+    revalidatePath("/")
+  } catch (err) {
+    console.warn("Failed to revalidate public homepage path:", err)
+  }
   revalidateDashboardMetrics()
 }
 

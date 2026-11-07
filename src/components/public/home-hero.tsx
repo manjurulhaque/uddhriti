@@ -70,7 +70,7 @@ export function HomeHero({
                   title="Discover a random quotation from the archive"
                 >
                   <span className="text-sm">🎲</span>
-                  <span>Surprise Me</span>
+                  <span>Random Quote</span>
                 </Link>
 
                 <HeroSavedBadge />

@@ -1,9 +1,10 @@
 // src/lib/auth/getAdmin.ts
 
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 
-export async function getAdmin() {
+export const getAdmin = cache(async () => {
   const supabase = await createClient() // ✅ use shared wrapper
 
   const {
@@ -17,5 +18,4 @@ export async function getAdmin() {
   })
 
   return admin
-}
-
+})

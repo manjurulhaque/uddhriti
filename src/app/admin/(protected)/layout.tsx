@@ -1,9 +1,14 @@
+import dynamic from "next/dynamic"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { isPrivateOrLocalIp } from "@/lib/ip"
-import { AdminSidebar, AdminCommandPalette } from "@/components/admin"
+import { AdminSidebar } from "@/components/admin"
 import { CurrentIpDisplay } from "./CurrentIpDisplay"
+
+const AdminCommandPalette = dynamic(
+  () => import("@/components/admin/admin-command-palette").then((mod) => mod.AdminCommandPalette)
+)
 
 export default async function ProtectedAdminLayout({
   children,

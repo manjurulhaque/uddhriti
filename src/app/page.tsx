@@ -162,7 +162,11 @@ let cachedTaxonomies: {
     deathYear: number | null
     imageUrl: string | null
     quoteCount: number
-    topQuote: { content: string; slug: string | null } | null
+    quotes: Array<{
+      id: string
+      content: string
+      slug: string | null
+    }>
   }>
   categories: Array<{
     id: string
@@ -170,7 +174,11 @@ let cachedTaxonomies: {
     slug: string
     description: string | null
     quoteCount: number
-    topQuote: { content: string; authorName: string | null } | null
+    quotes: Array<{
+      id: string
+      content: string
+      authorName: string | null
+    }>
   }>
   tags: Array<{
     id: string
@@ -206,9 +214,10 @@ async function getTaxonomiesData() {
         quoteCount: true,
         quotes: {
           where: { status: "PUBLISHED", deletedAt: null },
-          take: 1,
-          orderBy: { popularityScore: "desc" },
+          take: 6,
+          orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
           select: {
+            id: true,
             content: true,
             authorName: true,
           },
@@ -231,9 +240,10 @@ async function getTaxonomiesData() {
         quoteCount: true,
         quotes: {
           where: { status: "PUBLISHED", deletedAt: null },
-          take: 1,
-          orderBy: { popularityScore: "desc" },
+          take: 6,
+          orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
           select: {
+            id: true,
             content: true,
             slug: true,
           },
@@ -253,19 +263,9 @@ async function getTaxonomiesData() {
     }),
   ])
 
-  const spotlightAuthors = spotlightAuthorsRaw.map((a) => ({
-    ...a,
-    topQuote: a.quotes[0] ?? null,
-  }))
-
-  const spotlightCategories = spotlightCategoriesRaw.map((c) => ({
-    ...c,
-    topQuote: c.quotes[0] ?? null,
-  }))
-
   const result = {
-    authors: spotlightAuthors,
-    categories: spotlightCategories,
+    authors: spotlightAuthorsRaw,
+    categories: spotlightCategoriesRaw,
     tags: topTags,
     timestamp: now,
   }
@@ -285,8 +285,8 @@ export default async function HomePage() {
     latestQuotes,
     trendingQuotes,
     topTags,
-    spotlightAuthors,
-    spotlightCategories,
+    spotlightAuthorsRaw,
+    spotlightCategoriesRaw,
     errorMessage,
   } = await loadHomePageData(todayStr)
 
@@ -363,39 +363,54 @@ export default async function HomePage() {
     if (q.id) usedQuoteIds.add(q.id)
   })
 
-  // 5. Trending quotes (distinct from hero, daily, mood, and companion quotes)
+  // 5. Spotlight Authors Top Quote (strictly deduplicated against all prior sections)
+  const rawAuthors = spotlightAuthorsRaw ?? []
+  const spotlightAuthors = rawAuthors.map((author) => {
+    const quotes = author.quotes ?? []
+    const quote = quotes.find((q) => !usedQuoteIds.has(q.id)) ?? null
+    if (quote?.id) usedQuoteIds.add(quote.id)
+    return {
+      id: author.id,
+      name: author.name,
+      slug: author.slug,
+      profession: author.profession,
+      nationality: author.nationality,
+      birthYear: author.birthYear,
+      deathYear: author.deathYear,
+      imageUrl: author.imageUrl,
+      quoteCount: author.quoteCount,
+      topQuote: quote ? { content: quote.content, slug: quote.slug } : null,
+    }
+  })
+
+  // 6. Spotlight Categories Top Quote (strictly deduplicated against all prior sections)
+  const rawCategories = spotlightCategoriesRaw ?? []
+  const spotlightCategories = rawCategories.map((category) => {
+    const quotes = category.quotes ?? []
+    const quote = quotes.find((q) => !usedQuoteIds.has(q.id)) ?? null
+    if (quote?.id) usedQuoteIds.add(quote.id)
+    return {
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      quoteCount: category.quoteCount,
+      topQuote: quote ? { content: quote.content, authorName: quote.authorName } : null,
+    }
+  })
+
+  // 7. Trending quotes (distinct from all prior sections)
   const dedupedTrendingQuotes = trendingQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 4)
-  if (dedupedTrendingQuotes.length < 4 && trendingQuotes.length >= 4) {
-    const includedIds = new Set(dedupedTrendingQuotes.map((q) => q.id))
-    for (const q of trendingQuotes) {
-      if (!includedIds.has(q.id)) {
-        dedupedTrendingQuotes.push(q)
-        includedIds.add(q.id)
-        if (dedupedTrendingQuotes.length === 4) break
-      }
-    }
-  }
   dedupedTrendingQuotes.forEach((q) => {
     if (q.id) usedQuoteIds.add(q.id)
   })
 
-  // 6. Remaining latest quotes (distinct from all previous sections)
+  // 8. Remaining latest quotes (distinct from all prior sections)
   const remainingLatestQuotes = latestQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 8)
-
-  if (remainingLatestQuotes.length < 8 && latestQuotes.length >= 8) {
-    const includedIds = new Set(remainingLatestQuotes.map((q) => q.id))
-    for (const q of latestQuotes) {
-      if (!includedIds.has(q.id)) {
-        remainingLatestQuotes.push(q)
-        includedIds.add(q.id)
-        if (remainingLatestQuotes.length === 8) break
-      }
-    }
-  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -494,7 +509,7 @@ export default async function HomePage() {
 // Module-level cached handler
 const getCachedHomePageData = unstable_cache(
   async (todayStr: string) => fetchHomePageDataInternal(todayStr),
-  ["home-page-data"],
+  ["home-page-data-v3"],
   {
     tags: [HOME_PAGE_CACHE_TAG, HOME_TAXONOMIES_CACHE_TAG, "quotes"],
     revalidate: 3600,
@@ -607,13 +622,13 @@ async function fetchHomePageDataInternal(todayStr: string) {
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
-        take: 24,
+        take: 40,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }, { id: "asc" }],
-        take: 12,
+        take: 16,
         select: {
           ...quoteCardSelect,
           trendingScore: true,
@@ -645,8 +660,8 @@ async function fetchHomePageDataInternal(todayStr: string) {
       latestQuotes,
       trendingQuotes,
       topTags: taxonomies.tags,
-      spotlightAuthors: taxonomies.authors,
-      spotlightCategories: taxonomies.categories,
+      spotlightAuthorsRaw: taxonomies.authors,
+      spotlightCategoriesRaw: taxonomies.categories,
       errorMessage: null,
     }
   } catch (error) {
@@ -661,8 +676,8 @@ async function fetchHomePageDataInternal(todayStr: string) {
       latestQuotes: [],
       trendingQuotes: [],
       topTags: [],
-      spotlightAuthors: [],
-      spotlightCategories: [],
+      spotlightAuthorsRaw: [],
+      spotlightCategoriesRaw: [],
       errorMessage: "Some homepage data is temporarily unavailable. The page is still online, but content may be incomplete.",
     }
   }

@@ -219,16 +219,6 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
               </svg>
             )}
           </button>
-
-          {quoteHref && (
-            <Link
-              href={quoteHref}
-              className="inline-flex items-center gap-1 font-semibold text-[11px] text-[var(--accent-sand)] hover:underline ml-1"
-            >
-              <span>Read</span>
-              <span>&rarr;</span>
-            </Link>
-          )}
         </div>
       </div>
     </article>

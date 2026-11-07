@@ -33,71 +33,28 @@ export async function generateStaticParams() {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export async function generateMetadata({
-  params,
-}: IndividualQuotePageProps): Promise<Metadata> {
-  const { slug: rawSlug } = await params
-  const slug = sanitizeSlug(rawSlug, 150)
+const getQuoteBySlug = React.cache(async (slug: string) => {
   const isUuid = UUID_REGEX.test(slug)
-
-  const quote = await prisma.quote.findFirst({
-    where: {
-      OR: [{ slug }, ...(isUuid ? [{ id: slug }] : [])],
-      status: "PUBLISHED",
-      deletedAt: null,
-    },
+  return prisma.quote.findFirst({
+    where: isUuid
+      ? { id: slug, status: "PUBLISHED", deletedAt: null }
+      : { slug, status: "PUBLISHED", deletedAt: null },
     select: {
+      id: true,
+      slug: true,
       content: true,
       authorName: true,
       meaning: true,
-      category: { select: { name: true } },
-    },
-  })
-
-  if (!quote) {
-    return { title: "Quote Not Found" }
-  }
-
-  const author = quote.authorName || "Unknown"
-  const cleanSnippet = quote.content.length > 70 ? `${quote.content.slice(0, 70)}...` : quote.content
-  const title = `“${cleanSnippet}” — ${author}`
-  const description =
-    quote.meaning ||
-    `Read the quotation “${cleanSnippet}” by ${author}. Explore its historical context, meaning, and thematic analysis.`
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `/quotes/${slug}`,
-    },
-    openGraph: {
-      title,
-      description,
-      type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
-  }
-}
-
-export default async function IndividualQuotePage({
-  params,
-}: IndividualQuotePageProps) {
-  const { slug: rawSlug } = await params
-  const slug = sanitizeSlug(rawSlug, 150)
-  const isUuid = UUID_REGEX.test(slug)
-
-  const quote = await prisma.quote.findFirst({
-    where: {
-      OR: [{ slug }, ...(isUuid ? [{ id: slug }] : [])],
-      status: "PUBLISHED",
-      deletedAt: null,
-    },
-    include: {
+      historicalContext: true,
+      modernRelevance: true,
+      verificationNote: true,
+      isFeatured: true,
+      isVerified: true,
+      views: true,
+      language: true,
+      wordCount: true,
+      authorId: true,
+      categoryId: true,
       author: {
         select: {
           id: true,
@@ -148,6 +105,53 @@ export default async function IndividualQuotePage({
       },
     },
   })
+})
+
+export async function generateMetadata({
+  params,
+}: IndividualQuotePageProps): Promise<Metadata> {
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
+  const quote = await getQuoteBySlug(slug)
+
+  if (!quote) {
+    return { title: "Quote Not Found" }
+  }
+
+  const author = quote.authorName || "Unknown"
+  const cleanSnippet = quote.content.length > 70 ? `${quote.content.slice(0, 70)}...` : quote.content
+  const title = `“${cleanSnippet}” — ${author}`
+  const description =
+    quote.meaning ||
+    `Read the quotation “${cleanSnippet}” by ${author}. Explore its historical context, meaning, and thematic analysis.`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/quotes/${slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  }
+}
+
+export default async function IndividualQuotePage({
+  params,
+}: IndividualQuotePageProps) {
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
+  const isUuid = UUID_REGEX.test(slug)
+
+  const quote = await getQuoteBySlug(slug)
 
   if (!quote) {
     notFound()
@@ -168,8 +172,14 @@ export default async function IndividualQuotePage({
             deletedAt: null,
           },
           take: 3,
-          orderBy: { popularityScore: "desc" },
-          include: {
+          orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
+          select: {
+            id: true,
+            slug: true,
+            content: true,
+            authorName: true,
+            isVerified: true,
+            views: true,
             author: { select: { name: true, slug: true } },
             category: { select: { name: true, slug: true } },
             source: { select: { title: true, year: true } },
@@ -177,23 +187,31 @@ export default async function IndividualQuotePage({
           },
         })
       : Promise.resolve([]),
-    prisma.quote.findMany({
-      where: {
-        categoryId: quote.categoryId,
-        id: { not: quote.id },
-        authorId: quote.authorId ? { not: quote.authorId } : undefined,
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      take: 3,
-      orderBy: { popularityScore: "desc" },
-      include: {
-        author: { select: { name: true, slug: true } },
-        category: { select: { name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: { select: { tag: { select: { name: true } } } },
-      },
-    }),
+    quote.categoryId
+      ? prisma.quote.findMany({
+          where: {
+            categoryId: quote.categoryId,
+            id: { not: quote.id },
+            ...(quote.authorId ? { authorId: { not: quote.authorId } } : {}),
+            status: "PUBLISHED",
+            deletedAt: null,
+          },
+          take: 3,
+          orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
+          select: {
+            id: true,
+            slug: true,
+            content: true,
+            authorName: true,
+            isVerified: true,
+            views: true,
+            author: { select: { name: true, slug: true } },
+            category: { select: { name: true, slug: true } },
+            source: { select: { title: true, year: true } },
+            tags: { select: { tag: { select: { name: true } } } },
+          },
+        })
+      : Promise.resolve([]),
   ])
 
   const authorName = quote.author?.name || quote.authorName || "Unknown Author"

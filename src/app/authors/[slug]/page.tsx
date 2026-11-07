@@ -43,15 +43,49 @@ export async function generateStaticParams() {
   }
 }
 
+const getAuthorBySlug = React.cache(async (slug: string) => {
+  return prisma.author.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
+      dateOfBirth: true,
+      dateOfDeath: true,
+      bio: true,
+      imageUrl: true,
+      quoteCount: true,
+      wikipediaUrl: true,
+      wikidataId: true,
+      sources: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          type: true,
+          year: true,
+          yearLabel: true,
+          publisher: true,
+          quoteCount: true,
+          externalUrl: true,
+        },
+        take: 6,
+        orderBy: [{ quoteCount: "desc" }, { id: "asc" }],
+      },
+    },
+  })
+})
+
 export async function generateMetadata({
   params,
 }: AuthorDetailPageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params
   const slug = sanitizeSlug(rawSlug, 150)
-  const author = await prisma.author.findUnique({
-    where: { slug },
-    select: { name: true, profession: true, bio: true, quoteCount: true, imageUrl: true },
-  })
+  const author = await getAuthorBySlug(slug)
 
   if (!author) {
     return { title: "Author Not Found" }
@@ -92,50 +126,30 @@ export default async function AuthorDetailPage({
   const { page } = await searchParams
   const currentPage = parseSafePageNumber(page, 500)
 
-  const author = await prisma.author.findUnique({
-    where: { slug },
-    include: {
-      sources: {
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          type: true,
-          year: true,
-          yearLabel: true,
-          publisher: true,
-          quoteCount: true,
-          externalUrl: true,
-        },
-        take: 6,
-        orderBy: { quoteCount: "desc" },
-      },
-    },
-  })
+  const author = await getAuthorBySlug(slug)
 
   if (!author) {
     notFound()
   }
 
-  const [totalQuotes, quotes, relatedAuthors, categoryGroups] = await Promise.all([
-    prisma.quote.count({
-      where: {
-        authorId: author.id,
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-    }),
+  const [quotes, relatedAuthors] = await Promise.all([
     prisma.quote.findMany({
       where: {
         authorId: author.id,
         status: "PUBLISHED",
         deletedAt: null,
       },
-      orderBy: { popularityScore: "desc" },
+      orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
       skip: (currentPage - 1) * QUOTES_PER_PAGE,
       take: QUOTES_PER_PAGE,
-      include: {
-        category: { select: { name: true, slug: true } },
+      select: {
+        id: true,
+        slug: true,
+        content: true,
+        authorName: true,
+        isVerified: true,
+        views: true,
+        category: { select: { id: true, name: true, slug: true } },
         source: { select: { title: true, year: true } },
         tags: {
           select: {
@@ -148,10 +162,14 @@ export default async function AuthorDetailPage({
       where: {
         id: { not: author.id },
         quoteCount: { gt: 0 },
-        OR: [
-          author.profession ? { profession: author.profession } : {},
-          author.nationality ? { nationality: author.nationality } : {},
-        ],
+        ...(author.nationality || author.profession
+          ? {
+              OR: [
+                author.profession ? { profession: author.profession } : {},
+                author.nationality ? { nationality: author.nationality } : {},
+              ],
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -165,44 +183,30 @@ export default async function AuthorDetailPage({
         quoteCount: true,
       },
       take: 4,
-      orderBy: { quoteCount: "desc" },
-    }),
-    prisma.quote.groupBy({
-      by: ["categoryId"],
-      where: {
-        authorId: author.id,
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      _count: { categoryId: true },
-      orderBy: { _count: { categoryId: "desc" } },
-      take: 6,
+      orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
     }),
   ])
 
-  const categoryIds = categoryGroups.map((g) => g.categoryId)
-  const categories =
-    categoryIds.length > 0
-      ? await prisma.category.findMany({
-          where: { id: { in: categoryIds } },
-          select: { id: true, name: true, slug: true },
+  // Aggregate active thematic domains directly from quotes
+  const categoryCountMap = new Map<string, { id: string; name: string; slug: string; quoteCount: number }>()
+  for (const q of quotes) {
+    if (q.category) {
+      const existing = categoryCountMap.get(q.category.id)
+      if (existing) {
+        existing.quoteCount++
+      } else {
+        categoryCountMap.set(q.category.id, {
+          id: q.category.id,
+          name: q.category.name,
+          slug: q.category.slug,
+          quoteCount: 1,
         })
-      : []
-
-  const categoryMap = new Map(categories.map((c) => [c.id, c]))
-  const topCategories = categoryGroups
-    .map((g) => {
-      const cat = categoryMap.get(g.categoryId)
-      if (!cat) return null
-      return {
-        id: cat.id,
-        name: cat.name,
-        slug: cat.slug,
-        quoteCount: g._count.categoryId,
       }
-    })
-    .filter((c): c is NonNullable<typeof c> => c !== null)
+    }
+  }
+  const topCategories = Array.from(categoryCountMap.values()).sort((a, b) => b.quoteCount - a.quoteCount)
 
+  const totalQuotes = author.quoteCount
   const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
 
   const lifespan = formatLifespan(author)

@@ -18,13 +18,24 @@ export async function GET(req: Request) {
         id: true,
         name: true,
       },
-      orderBy: { name: "asc" },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     })
     return NextResponse.json(authors)
   }
 
   const authors = await prisma.author.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
+      quoteCount: true,
+      createdAt: true,
+    },
   })
 
   return NextResponse.json(authors)

@@ -8,6 +8,7 @@ import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { formatEpoch, formatLifespan, cleanProfession } from "@/components/public/home-taxonomies-showcase"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 export const metadata: Metadata = {
   title: "Authors & Thinkers",
@@ -15,24 +16,53 @@ export const metadata: Metadata = {
     "Explore timeless wisdom from history's greatest philosophers, writers, poets, and leaders across antiquity, enlightenment, and modernity.",
 }
 
-export const revalidate = 120
+export const revalidate = 300
 
 const PAGE_SIZE = 24
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
 
-interface AuthorsPageProps {
-  searchParams: Promise<{
-    q?: string
-    letter?: string
-    page?: string
-  }>
+interface AuthorListItem {
+  id: string
+  name: string
+  slug: string
+  profession: string | null
+  nationality: string | null
+  birthYear: number | null
+  deathYear: number | null
+  imageUrl: string | null
+  quoteCount: number
+  quotes: Array<{ content: string }>
 }
 
-export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
-  const { q, letter, page } = await searchParams
-  const currentPage = parseSafePageNumber(page, 500)
-  const searchQuery = sanitizeSearchQuery(q, 100)
-  const selectedLetter = letter ? sanitizeSlug(letter, 10).toUpperCase() : ""
+// In-memory cache for default page 1 authors browse
+let cachedDefaultAuthorsPage: {
+  authors: AuthorListItem[]
+  totalAuthors: number
+  timestamp: number
+} | null = null
+
+registerPublicDataInvalidator(() => {
+  cachedDefaultAuthorsPage = null
+})
+
+async function loadAuthorsPageData({
+  currentPage,
+  searchQuery,
+  selectedLetter,
+}: {
+  currentPage: number
+  searchQuery?: string
+  selectedLetter?: string
+}) {
+  const isDefaultBrowse = !searchQuery && (!selectedLetter || selectedLetter === "ALL") && currentPage === 1
+  const now = Date.now()
+
+  if (isDefaultBrowse && cachedDefaultAuthorsPage && now - cachedDefaultAuthorsPage.timestamp < 5 * 60 * 1000) {
+    return {
+      totalAuthors: cachedDefaultAuthorsPage.totalAuthors,
+      authors: cachedDefaultAuthorsPage.authors,
+    }
+  }
 
   // Build where conditions
   const whereConditions: {
@@ -58,7 +88,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
     prisma.author.count({ where: whereConditions }),
     prisma.author.findMany({
       where: whereConditions,
-      orderBy: searchQuery || selectedLetter ? { name: "asc" } : { quoteCount: "desc" },
+      orderBy: searchQuery || selectedLetter ? { name: "asc" } : [{ quoteCount: "desc" }, { name: "asc" }],
       skip: (currentPage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
@@ -80,6 +110,37 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
       },
     }),
   ])
+
+  if (isDefaultBrowse) {
+    cachedDefaultAuthorsPage = {
+      authors,
+      totalAuthors,
+      timestamp: now,
+    }
+  }
+
+  return { totalAuthors, authors }
+}
+
+interface AuthorsPageProps {
+  searchParams: Promise<{
+    q?: string
+    letter?: string
+    page?: string
+  }>
+}
+
+export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
+  const { q, letter, page } = await searchParams
+  const currentPage = parseSafePageNumber(page, 500)
+  const searchQuery = sanitizeSearchQuery(q, 100)
+  const selectedLetter = letter ? sanitizeSlug(letter, 10).toUpperCase() : ""
+
+  const { totalAuthors, authors } = await loadAuthorsPageData({
+    currentPage,
+    searchQuery,
+    selectedLetter,
+  })
 
   const totalPages = Math.ceil(totalAuthors / PAGE_SIZE)
 
@@ -148,24 +209,29 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto scrollbar-none">
             <Link
               href="/authors"
-              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
                 !selectedLetter || selectedLetter === "ALL"
                   ? "bg-stone-900 text-white shadow-2xs"
-                  : "bg-white/80 text-stone-700 hover:bg-stone-900/5 border border-stone-200"
+                  : "bg-white border border-stone-200 text-stone-700 hover:border-stone-400"
               }`}
             >
               All
             </Link>
             {ALPHABET.map((char) => {
               const isActive = selectedLetter === char
+              const params = new URLSearchParams()
+              if (searchQuery) params.set("q", searchQuery)
+              params.set("letter", char)
+              const href = `/authors?${params.toString()}`
+
               return (
                 <Link
                   key={char}
-                  href={`/authors?letter=${char}`}
-                  className={`rounded-lg h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center text-xs font-semibold transition-all ${
+                  href={href}
+                  className={`h-8 w-8 rounded-xl text-xs font-mono font-medium flex items-center justify-center transition-all ${
                     isActive
-                      ? "bg-stone-900 text-white shadow-2xs"
-                      : "bg-white/80 text-stone-700 hover:bg-stone-900/5 border border-stone-200/80"
+                      ? "bg-stone-900 text-white shadow-2xs scale-105"
+                      : "bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 hover:bg-stone-50"
                   }`}
                 >
                   {char}
@@ -177,16 +243,17 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
 
         {/* Authors Grid */}
         {authors.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {authors.map((author) => {
               const epoch = formatEpoch(author.birthYear)
               const lifespan = formatLifespan(author.birthYear, author.deathYear)
               const cleanProf = cleanProfession(author.profession)
               const initials = author.name
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((w) => w[0])
+                .split(" ")
+                .filter(Boolean)
+                .map((part) => part[0])
                 .join("")
+                .slice(0, 2)
                 .toUpperCase()
 
               return (
@@ -195,7 +262,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                   href={`/authors/${author.slug}`}
                   className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99] h-full"
                 >
-                  {/* Subtle Top Gradient Accent on Hover */}
+                  {/* Subtle Top Gradient Accent */}
                   <div
                     className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--accent-rust)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-hidden="true"
@@ -262,24 +329,24 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                     ) : (
                       <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/60 p-3 space-y-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
-                          Curated Thinker
+                          Philosophical Fragment
                         </span>
                         <p className="font-serif italic text-xs text-stone-500 line-clamp-3 leading-relaxed">
-                          Explore preserved fragments, treatises, and historical citations.
+                          Explore cataloged insights, reflections, and source texts from {author.name}.
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Card Footer */}
-                  <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
-                    <span className="font-semibold text-stone-700">
-                      {formatCountWithNoun(author.quoteCount, "quote")}
+                  {/* Footer Card Ribbon */}
+                  <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
+                    <span className="font-mono text-[11px] font-semibold text-stone-500">
+                      {formatCountWithNoun(author.quoteCount, "quotation")}
                     </span>
 
-                    <span className="inline-flex items-center gap-1 font-bold text-[var(--accent-rust)] group-hover:translate-x-1 transition-transform">
+                    <span className="inline-flex items-center gap-1 font-semibold text-[var(--accent-rust)] transition-transform group-hover:translate-x-0.5">
                       <span>Explore</span>
-                      <span>&rarr;</span>
+                      <span aria-hidden="true">&rarr;</span>
                     </span>
                   </div>
                 </Link>
@@ -287,19 +354,19 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
             })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center space-y-3">
-            <span className="text-3xl">📜</span>
+          <div className="rounded-3xl border border-stone-200 bg-white p-12 text-center space-y-3">
+            <span className="text-3xl">✒️</span>
             <h3 className="font-serif text-lg font-bold text-stone-900">
               No Authors Found
             </h3>
             <p className="text-xs text-stone-500 max-w-sm mx-auto">
-              We couldn&apos;t find any authors matching &ldquo;{searchQuery || selectedLetter}&rdquo;. Try browsing all letters or clear your search query.
+              We couldn&apos;t find any thinkers matching your current search or alphabet filter.
             </p>
             <Link
               href="/authors"
               className="inline-flex items-center rounded-xl bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-black transition-all"
             >
-              Browse All Authors
+              Reset Filters
             </Link>
           </div>
         )}

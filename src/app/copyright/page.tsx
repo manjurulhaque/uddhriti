@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default function CopyrightPage() {
+  const effectiveDate = "October 26, 2026"
   const lastUpdated = "October 26, 2026"
 
   const sections = [
@@ -43,7 +44,7 @@ export default function CopyrightPage() {
               Intellectual Property &amp; Archival Rights
             </span>
             <span className="text-xs font-mono text-stone-500 bg-white/70 rounded-full px-3 py-1 border border-stone-200">
-              Last Updated: {lastUpdated}
+              Effective Date: {effectiveDate} &middot; Last Updated: {lastUpdated}
             </span>
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">

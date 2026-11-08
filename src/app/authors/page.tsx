@@ -1,12 +1,15 @@
 import * as React from "react"
 import type { Metadata } from "next"
-import Image from "next/image"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { PublicLayout } from "@/components/public"
+import { PublicLayout, AuthorAvatar } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
-import { formatCountWithNoun, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
-import { formatEpoch, formatLifespan, cleanProfession } from "@/components/public/home-taxonomies-showcase"
+import {
+  formatCountWithNoun,
+  formatEpoch,
+  formatLifespan,
+  cleanProfession,
+} from "@/lib/formatters"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
 import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
@@ -248,13 +251,6 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
               const epoch = formatEpoch(author.birthYear)
               const lifespan = formatLifespan(author.birthYear, author.deathYear)
               const cleanProf = cleanProfession(author.profession)
-              const initials = author.name
-                .split(" ")
-                .filter(Boolean)
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()
 
               return (
                 <Link
@@ -271,24 +267,13 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                   <div className="space-y-4">
                     {/* Header: Portrait / Monogram Seal + Meta */}
                     <div className="flex items-start gap-3.5">
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 shadow-2xs group-hover:border-[var(--accent-rust)]/40 transition-colors">
-                        {author.imageUrl ? (
-                          <Image
-                            src={normalizeWikimediaThumbnailUrl(author.imageUrl)!}
-                            alt={author.name}
-                            fill
-                            sizes="56px"
-                            unoptimized
-                            priority={index < 4}
-                            loading={index < 4 ? "eager" : "lazy"}
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center font-serif text-lg font-bold text-[var(--accent-rust)] bg-gradient-to-br from-amber-50 to-[#faf3e8]">
-                            {initials}
-                          </div>
-                        )}
-                      </div>
+                      <AuthorAvatar
+                        name={author.name}
+                        imageUrl={author.imageUrl}
+                        size="md"
+                        priority={index < 4}
+                        className="group-hover:border-[var(--accent-rust)]/40 transition-colors"
+                      />
 
                       <div className="min-w-0 flex-1">
                         <h2 className="font-serif text-lg font-bold tracking-tight text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">

@@ -25,7 +25,16 @@ export * from "./quote-actions"
 export * from "./quote-share-modal"
 export * from "./quote-zen-mode"
 export * from "./command-palette"
+export * from "./author-avatar"
+export * from "./taxonomy-hero"
+export * from "./thinker-card"
+export * from "./sort-toolbar"
+export * from "./active-filter-banner"
+export * from "./filter-pills"
+export * from "./quote-detail"
 
 // Re-export UI primitives commonly used on public pages
 export { Panel, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../ui/card"
 export { Empty, EmptyState } from "../ui/empty-state"
+export { Breadcrumb } from "../ui/breadcrumb"
+

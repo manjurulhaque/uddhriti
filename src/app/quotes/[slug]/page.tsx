@@ -1,13 +1,21 @@
 import * as React from "react"
 import type { Metadata } from "next"
-import Image from "next/image"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { sanitizeSlug } from "@/lib/security/input"
 import { prisma } from "@/lib/prisma"
 import { getSiteUrl } from "@/lib/site"
 import { formatEpoch, formatLifespan, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
-import { PublicLayout, QuoteCard, QuoteActions } from "@/components/public"
+import {
+  PublicLayout,
+  QuoteCard,
+  QuoteActions,
+  Breadcrumb,
+  AuthorAvatar,
+  QuoteCuratorialNotes,
+  QuotePrimarySource,
+  QuoteAuthorBriefing,
+} from "@/components/public"
 import { Badge } from "@/components/ui/badge"
 
 interface IndividualQuotePageProps {
@@ -271,26 +279,17 @@ export default async function IndividualQuotePage({
 
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-12 font-sans">
         {/* Breadcrumb Navigation */}
-        <nav aria-label="Breadcrumb" className="text-xs text-stone-500 flex flex-wrap items-center gap-2">
-          <Link href="/" className="hover:text-stone-900 transition-colors">
-            Home
-          </Link>
-          <span>/</span>
-          <Link href="/quotes" className="hover:text-stone-900 transition-colors">
-            Quotes
-          </Link>
-          <span>/</span>
-          <Link
-            href={`/categories/${quote.category.slug}`}
-            className="hover:text-stone-900 transition-colors font-medium"
-          >
-            Theme: {quote.category.name}
-          </Link>
-          <span>/</span>
-          <span className="font-semibold text-stone-900 truncate max-w-xs">
-            {quote.slug || quote.id}
-          </span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Quotes", href: "/quotes" },
+            {
+              label: `Theme: ${quote.category.name}`,
+              href: `/categories/${quote.category.slug}`,
+            },
+            { label: quote.slug || quote.id },
+          ]}
+        />
 
         {/* Master Quotation Hero Card */}
         <article className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-10 lg:p-12 shadow-sm space-y-8 relative overflow-hidden">
@@ -343,22 +342,7 @@ export default async function IndividualQuotePage({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pt-6 border-t border-stone-100">
             <div className="flex items-center gap-4">
               {/* Author Portrait Thumbnail */}
-              <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border border-stone-200 shadow-2xs">
-                {authorImageUrl ? (
-                  <Image
-                    src={authorImageUrl}
-                    alt={authorName}
-                    fill
-                    sizes="64px"
-                    unoptimized
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center font-serif text-2xl font-bold italic text-stone-400 bg-[var(--page-cream)]">
-                    {authorName.charAt(0)}
-                  </div>
-                )}
-              </div>
+              <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" />
 
               {/* Author Details */}
               <div className="space-y-0.5">
@@ -423,185 +407,22 @@ export default async function IndividualQuotePage({
         </article>
 
         {/* Curatorial & Scholarly Analysis Grid */}
-        {(quote.meaning || quote.historicalContext || quote.modernRelevance) && (
-          <section className="space-y-6">
-            <div className="border-b border-stone-900/10 pb-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-rust)]">
-                Curatorial Notes
-              </span>
-              <h2 className="font-serif text-2xl font-bold tracking-tight text-[var(--ink-900)] mt-0.5">
-                Meaning &amp; Historical Context
-              </h2>
-            </div>
+        <QuoteCuratorialNotes
+          meaning={quote.meaning}
+          historicalContext={quote.historicalContext}
+          modernRelevance={quote.modernRelevance}
+        />
 
-            <div className="grid gap-6 md:grid-cols-3">
-              {quote.meaning && (
-                <div className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-2xs space-y-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-900 flex items-center gap-1.5">
-                    <span>💡</span> Philosophical Meaning
-                  </span>
-                  <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-serif">
-                    {quote.meaning}
-                  </p>
-                </div>
-              )}
-
-              {quote.historicalContext && (
-                <div className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-2xs space-y-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-900 flex items-center gap-1.5">
-                    <span>📜</span> Historical Context
-                  </span>
-                  <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-serif">
-                    {quote.historicalContext}
-                  </p>
-                </div>
-              )}
-
-              {quote.modernRelevance && (
-                <div className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-2xs space-y-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-900 flex items-center gap-1.5">
-                    <span>🌱</span> Modern Relevance
-                  </span>
-                  <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-serif">
-                    {quote.modernRelevance}
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Primary Source Provenance Deep-Dive Card */}
+        {/* Primary Source Provenance Card */}
         {quote.source && (
-          <section className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-2xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 pb-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-rust)]/10 text-[var(--accent-rust)] text-base">
-                  📖
-                </span>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
-                    Primary Literary Source
-                  </span>
-                  <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900">
-                    {quote.source.title} {quote.source.year ? `(${quote.source.year})` : ""}
-                  </h3>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full bg-stone-100 border border-stone-200 px-3 py-0.5 font-semibold text-stone-700 uppercase text-[10px] tracking-wider">
-                  {quote.source.type.toLowerCase()}
-                </span>
-                {quote.source.publisher && (
-                  <span className="text-stone-500 text-xs">
-                    Published by {quote.source.publisher}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {quote.source.description && (
-              <p className="font-serif text-xs sm:text-sm text-stone-700 leading-relaxed italic">
-                {quote.source.description}
-              </p>
-            )}
-
-            {quote.verificationNote && (
-              <div className="rounded-xl bg-stone-50 border border-stone-200/80 p-3 text-xs text-stone-700 flex items-start gap-2">
-                <span className="font-bold text-stone-900 shrink-0">Verification Reference:</span>
-                <span className="font-mono text-stone-600">{quote.verificationNote}</span>
-              </div>
-            )}
-
-            {quote.source.externalUrl && (
-              <div className="pt-1">
-                <a
-                  href={quote.source.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-rust)] hover:underline"
-                >
-                  <span>Examine primary text in historical library catalog</span>
-                  <span aria-hidden="true">↗</span>
-                </a>
-              </div>
-            )}
-          </section>
+          <QuotePrimarySource
+            source={quote.source}
+            verificationNote={quote.verificationNote}
+          />
         )}
 
         {/* Author Biographical Briefing Card */}
-        {quote.author && (
-          <section className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
-              <div className="flex items-center gap-4">
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border border-stone-200 shadow-2xs">
-                  {quote.author.imageUrl ? (
-                    <Image
-                      src={quote.author.imageUrl}
-                      alt={authorName}
-                      fill
-                      sizes="56px"
-                      unoptimized
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center font-serif text-2xl font-bold italic text-stone-400 bg-[var(--page-cream)]">
-                      {authorName.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
-                    About the Thinker
-                  </span>
-                  <Link
-                    href={`/authors/${quote.author.slug}`}
-                    className="font-serif text-xl font-bold text-stone-900 hover:text-[var(--accent-rust)] transition-colors inline-flex items-center gap-1.5"
-                  >
-                    <span>{authorName}</span>
-                  </Link>
-                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-stone-500 mt-0.5">
-                    {quote.author.profession && <span>{quote.author.profession}</span>}
-                    {quote.author.nationality && <span>· {quote.author.nationality}</span>}
-                    {authorLifespan && <span className="font-mono">({authorLifespan})</span>}
-                    {authorEpoch && (
-                      <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.2 text-[10px] font-semibold text-amber-800">
-                        {authorEpoch}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`/authors/${quote.author.slug}`}
-                  className="text-xs font-semibold text-stone-800 hover:text-[var(--accent-rust)] transition-colors"
-                >
-                  View all {quote.author.quoteCount || "collected"} reflections &rarr;
-                </Link>
-                {quote.author.wikipediaUrl && (
-                  <a
-                    href={quote.author.wikipediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-stone-400 hover:text-stone-700 transition-colors"
-                    title="Read Wikipedia biography"
-                  >
-                    Wikipedia ↗
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {quote.author.bio && (
-              <p className="font-serif text-xs sm:text-sm text-stone-700 leading-relaxed">
-                {quote.author.bio}
-              </p>
-            )}
-          </section>
-        )}
+        {quote.author && <QuoteAuthorBriefing author={quote.author} />}
 
         {/* Thematic Tags Section */}
         {quote.tags.length > 0 && (

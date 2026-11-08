@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { BookmarkIcon } from "@/components/ui"
-import { PublicLayout, QuoteCard } from "@/components/public"
+import { PublicLayout, QuoteCard, Breadcrumb } from "@/components/public"
 import { useSavedQuotes, exportSavedQuotesAsMarkdown } from "@/lib/saved-quotes"
 
 function SavedQuotesContent() {
@@ -66,13 +66,9 @@ function SavedQuotesContent() {
   return (
     <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
-        <nav aria-label="Breadcrumb" className="text-xs text-stone-500 flex items-center gap-2">
-          <Link href="/" className="hover:text-stone-900 transition-colors">
-            Home
-          </Link>
-          <span>/</span>
-          <span className="text-stone-900 font-medium">Saved Quotes</span>
-        </nav>
+        <Breadcrumb
+          items={[{ label: "Home", href: "/" }, { label: "Saved Quotes" }]}
+        />
 
         {/* Hero Banner */}
         <div className="border-b border-stone-200/80 pb-8 space-y-4">

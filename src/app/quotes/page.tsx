@@ -2,7 +2,7 @@ import * as React from "react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { PublicLayout, QuoteCard } from "@/components/public"
+import { PublicLayout, QuoteCard, SortToolbar, FilterPills } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
@@ -255,84 +255,52 @@ export default async function QuotesBrowsePage({
               </button>
             </form>
 
-            {/* Sort Dropdown Selector */}
-            <div className="flex items-center gap-1 rounded-2xl border border-stone-200 bg-white p-1 shadow-2xs">
-              {[
-                { id: "trending", label: "Trending" },
-                { id: "latest", label: "Latest" },
-                { id: "popular", label: "Popular" },
-                { id: "featured", label: "Featured" },
-              ].map((opt) => {
-                const isActive = selectedSort === opt.id
+            {/* Sort Toolbar Selector */}
+            <SortToolbar
+              options={[
+                { key: "trending", label: "Trending" },
+                { key: "latest", label: "Latest" },
+                { key: "popular", label: "Popular" },
+                { key: "featured", label: "Featured" },
+              ]}
+              currentSort={selectedSort || "trending"}
+              buildSortHref={(sortKey) => {
                 const params = new URLSearchParams()
                 if (searchQuery) params.set("q", searchQuery)
                 if (categorySlug) params.set("category", categorySlug)
-                if (opt.id !== "trending") params.set("sort", opt.id)
+                if (sortKey !== "trending") params.set("sort", sortKey)
                 const qs = params.toString()
-                const href = `/quotes${qs ? `?${qs}` : ""}`
-
-                return (
-                  <Link
-                    key={opt.id}
-                    href={href}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-                      isActive
-                        ? "bg-stone-900 text-white shadow-2xs"
-                        : "text-stone-600 hover:text-stone-900"
-                    }`}
-                  >
-                    {opt.label}
-                  </Link>
-                )
-              })}
-            </div>
+                return `/quotes${qs ? `?${qs}` : ""}`
+              }}
+            />
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 py-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 mr-1">
-              Theme:
-            </span>
-            <Link
-              href={(() => {
-                const p = new URLSearchParams()
-                if (searchQuery) p.set("q", searchQuery)
-                if (selectedSort !== "trending") p.set("sort", selectedSort)
-                const qs = p.toString()
-                return `/quotes${qs ? `?${qs}` : ""}`
-              })()}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                !categorySlug
-                  ? "bg-stone-900 text-white"
-                  : "bg-white border border-stone-200 text-stone-700 hover:border-stone-400"
-              }`}
-            >
-              All Themes
-            </Link>
-            {categories.map((c) => {
-              const isActive = categorySlug === c.slug
+          <FilterPills
+            label="Theme:"
+            allLabel="All Themes"
+            allHref={(() => {
+              const p = new URLSearchParams()
+              if (searchQuery) p.set("q", searchQuery)
+              if (selectedSort !== "trending") p.set("sort", selectedSort)
+              const qs = p.toString()
+              return `/quotes${qs ? `?${qs}` : ""}`
+            })()}
+            isAllActive={!categorySlug}
+            items={categories.map((c) => {
               const p = new URLSearchParams()
               if (searchQuery) p.set("q", searchQuery)
               p.set("category", c.slug)
               if (selectedSort !== "trending") p.set("sort", selectedSort)
               const qs = p.toString()
-              const href = `/quotes${qs ? `?${qs}` : ""}`
-
-              return (
-                <Link
-                  key={c.id}
-                  href={href}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                    isActive
-                      ? "bg-stone-900 text-white shadow-2xs"
-                      : "bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 hover:bg-stone-50"
-                  }`}
-                >
-                  {c.name}
-                </Link>
-              )
+              return {
+                id: c.id,
+                label: c.name,
+                href: `/quotes${qs ? `?${qs}` : ""}`,
+                isActive: categorySlug === c.slug,
+              }
             })}
-          </div>
+          />
         </div>
 
         {/* Quotes Grid */}

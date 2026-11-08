@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { tagTypeOptions, type TagTypeOption } from "@/lib/tags/catalog"
-import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
+import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge, AdminBulkActionBar } from "@/components/admin"
 import { Select, EmptyState, ConfirmModal, Button } from "@/components/ui"
 import { formatCountWithNoun } from "@/lib/formatters"
 
@@ -247,52 +247,34 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
   return (
     <div className="space-y-4">
       {/* Sticky Bulk Action Bar */}
-      {selectedIds.length > 0 ? (
-        <div className="sticky top-2 z-20 backdrop-blur-md bg-stone-900/95 text-white border border-stone-800 shadow-xl rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 transition-all duration-150 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-800 text-stone-200 border border-stone-700">
-              {selectedIds.length} {selectedIds.length === 1 ? "tag" : "tags"} selected
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectedIds([])}
-              className="text-xs text-stone-400 hover:text-stone-200 underline transition cursor-pointer"
-            >
-              Deselect all
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={bulkType}
-              onChange={(event) => setBulkType(event.target.value as TagTypeOption)}
-              disabled={updatingIds.length > 0}
-              className="bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-stone-400"
-            >
-              {tagTypeOptions.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => updateTagType(selectedIds, bulkType)}
-              disabled={updatingIds.length > 0 || deletingIds.length > 0}
-              className="bg-white text-stone-900 font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-stone-100 disabled:opacity-50 transition cursor-pointer"
-            >
-              {updatingIds.length > 0 ? "Updating..." : "Change Category"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPendingDeleteIds(selectedIds)}
-              disabled={deletingIds.length > 0 || updatingIds.length > 0}
-              className="bg-red-600/90 text-white font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50 transition cursor-pointer"
-            >
-              {deletingIds.length > 0 ? "Deleting..." : "Delete Selected"}
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.length}
+        entityLabel="tag"
+        onDeselectAll={() => setSelectedIds([])}
+        onDelete={() => setPendingDeleteIds(selectedIds)}
+        isDeleting={deletingIds.length > 0 || updatingIds.length > 0}
+      >
+        <select
+          value={bulkType}
+          onChange={(event) => setBulkType(event.target.value as TagTypeOption)}
+          disabled={updatingIds.length > 0}
+          className="bg-stone-800 border border-stone-700 text-stone-100 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-stone-400"
+        >
+          {tagTypeOptions.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => updateTagType(selectedIds, bulkType)}
+          disabled={updatingIds.length > 0 || deletingIds.length > 0}
+          className="bg-white text-stone-900 font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-stone-100 disabled:opacity-50 transition cursor-pointer"
+        >
+          {updatingIds.length > 0 ? "Updating..." : "Change Category"}
+        </button>
+      </AdminBulkActionBar>
 
       {error ? <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{error}</p> : null}
 

@@ -1,10 +1,9 @@
 import * as React from "react"
 import type { Metadata } from "next"
-import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { PublicLayout, QuoteCard } from "@/components/public"
+import { PublicLayout, QuoteCard, Breadcrumb, AuthorAvatar } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import {
   cleanProfession,
@@ -13,7 +12,6 @@ import {
   formatEpoch,
   formatLifespan,
   formatWorkType,
-  getAuthorInitials,
   getCategoryMeta,
   normalizeWikimediaThumbnailUrl,
 } from "@/lib/formatters"
@@ -213,7 +211,6 @@ export default async function AuthorDetailPage({
 
   const lifespan = formatLifespan(author)
   const epoch = formatEpoch(author.birthYear)
-  const initials = getAuthorInitials(author.name)
   const authorImageUrl = normalizeWikimediaThumbnailUrl(author.imageUrl)
   const cleanedProfession = cleanProfession(author.profession)
   const dateOfBirthFormatted = formatDateOfRecord(author.dateOfBirth)
@@ -263,17 +260,13 @@ export default async function AuthorDetailPage({
       />
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
-        <nav aria-label="Breadcrumb" className="text-xs text-stone-500 flex items-center gap-2">
-          <Link href="/" className="hover:text-stone-900 transition-colors">
-            Home
-          </Link>
-          <span>/</span>
-          <Link href="/authors" className="hover:text-stone-900 transition-colors">
-            Authors
-          </Link>
-          <span>/</span>
-          <span className="font-semibold text-stone-900 truncate">{author.name}</span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Authors", href: "/authors" },
+            { label: author.name },
+          ]}
+        />
 
         {/* Author Profile Hero Card */}
         <div className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-8 lg:p-10 shadow-xs relative overflow-hidden">
@@ -285,28 +278,15 @@ export default async function AuthorDetailPage({
 
           <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start relative z-10">
             {/* Portrait Frame or Regal Monogram Seal */}
-            <div className="relative h-32 w-32 sm:h-40 sm:w-40 shrink-0 overflow-hidden rounded-2xl bg-stone-100 border-2 border-stone-200/90 shadow-md group">
-              {authorImageUrl ? (
-                <Image
-                  src={authorImageUrl}
-                  alt={author.name}
-                  fill
-                  sizes="(max-width: 640px) 128px, 160px"
-                  unoptimized
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  priority
-                />
-              ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-amber-50 via-[#faf6f0] to-[#f4ebe1] text-[var(--ink-900)] relative">
-                  <span className="font-serif text-4xl sm:text-5xl font-bold italic text-[var(--accent-rust)]">
-                    {initials}
-                  </span>
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 mt-1">
-                    Thinker
-                  </span>
-                </div>
-              )}
-            </div>
+            <AuthorAvatar
+              name={author.name}
+              imageUrl={authorImageUrl}
+              size="xl"
+              priority
+              showBadge
+              badgeLabel="Thinker"
+              className="border-2 border-stone-200/90 shadow-md"
+            />
 
             {/* Author Information */}
             <div className="space-y-4 flex-1">
@@ -587,7 +567,6 @@ export default async function AuthorDetailPage({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {relatedAuthors.map((item) => {
                 const itemLifespan = formatLifespan(item)
-                const itemInitials = getAuthorInitials(item.name)
                 const itemCleanProf = cleanProfession(item.profession)
 
                 return (
@@ -599,22 +578,7 @@ export default async function AuthorDetailPage({
                     <div className="space-y-3">
                       {/* Portrait Thumbnail / Monogram */}
                       <div className="flex items-center gap-3">
-                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-100 shadow-2xs">
-                          {item.imageUrl ? (
-                            <Image
-                              src={item.imageUrl}
-                              alt={item.name}
-                              fill
-                              sizes="48px"
-                              unoptimized
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center font-serif text-sm font-bold text-[var(--accent-rust)] bg-gradient-to-br from-amber-50 to-[#faf3e8]">
-                              {itemInitials}
-                            </div>
-                          )}
-                        </div>
+                        <AuthorAvatar name={item.name} imageUrl={item.imageUrl} size="sm" />
 
                         <div className="min-w-0 flex-1">
                           <p className="font-serif font-bold text-stone-900 text-sm group-hover:text-[var(--accent-rust)] transition-colors truncate">

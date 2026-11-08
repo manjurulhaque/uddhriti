@@ -1,7 +1,6 @@
 import * as React from "react"
 import type { Metadata } from "next"
-import Link from "next/link"
-import { PublicLayout, LegalNav } from "@/components/public"
+import { PublicLayout, LegalNav, Breadcrumb } from "@/components/public"
 
 export const metadata: Metadata = {
   title: "Copyright & Fair Use Policy",
@@ -27,15 +26,13 @@ export default function CopyrightPage() {
     <PublicLayout>
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
-        <nav aria-label="Breadcrumb" className="text-xs text-stone-500 flex flex-wrap items-center gap-2">
-          <Link href="/" className="hover:text-stone-900 transition-colors">
-            Home
-          </Link>
-          <span>/</span>
-          <span className="text-stone-700">Legal</span>
-          <span>/</span>
-          <span className="text-stone-900 font-medium">Copyright &amp; Fair Use</span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Legal" },
+            { label: "Copyright & Fair Use" },
+          ]}
+        />
 
         {/* Page Header */}
         <header className="border-b border-stone-900/10 pb-8 space-y-4">

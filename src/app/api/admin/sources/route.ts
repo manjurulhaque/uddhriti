@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { sourceSchema } from "@/lib/validation/source"
 import { normalizeSourceYearInput, parseSourceYearInput } from "@/lib/sourceYear"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 function getSourceYearLabel(raw: { year?: unknown; yearLabel?: unknown } | null) {
   return normalizeSourceYearInput(raw?.yearLabel) ?? normalizeSourceYearInput(raw?.year)
@@ -97,6 +98,8 @@ export async function POST(req: Request) {
         authorId: parsed.data.authorId || null,
       },
     })
+
+    revalidatePublicSurfaces()
 
     return NextResponse.json(source)
   } catch {

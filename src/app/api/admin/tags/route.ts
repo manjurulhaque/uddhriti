@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { tagSchema } from "@/lib/validation/tag"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 function normalizeTagName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ")
@@ -77,6 +78,8 @@ export async function POST(req: Request) {
         description: parsed.data.description || null,
       },
     })
+
+    revalidatePublicSurfaces()
 
     return NextResponse.json(tag, { status: 201 })
   } catch {

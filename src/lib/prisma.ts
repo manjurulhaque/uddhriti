@@ -42,8 +42,6 @@ export const prisma =
     adapter,
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-  globalForPrisma.pool = pool;
-  globalForPrisma.adapter = adapter;
-}
+globalForPrisma.prisma = prisma;
+globalForPrisma.pool = pool;
+globalForPrisma.adapter = adapter;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 // GET all categories (supports ?select=minimal)
 export async function GET(req: Request) {
@@ -54,6 +55,8 @@ export async function POST(req: Request) {
         metaDescription: parsed.data.metaDescription || null,
       },
     })
+
+    revalidatePublicSurfaces()
 
     return NextResponse.json(category)
   } catch (error) {

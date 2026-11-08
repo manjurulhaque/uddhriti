@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { collectionSchema } from "@/lib/validation/collection"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 export async function GET() {
   const admin = await getAdmin()
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
         visibility: parsed.data.visibility,
       },
     })
+    revalidatePublicSurfaces()
     return NextResponse.json(collection, { status: 201 })
   } catch {
     return NextResponse.json(

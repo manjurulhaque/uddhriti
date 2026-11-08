@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
+import { getExistingSourceLookup } from "@/lib/wikimedia/sourceImport"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 const workTypeSchema = z.enum([
   "BOOK",
@@ -69,13 +71,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const existingSources = await prisma.source.findMany({
-    select: { slug: true, title: true, authorId: true },
-  })
-  const usedSlugs = new Set(existingSources.map((s) => s.slug))
-  const existingTitleAuthor = new Set(
-    existingSources.map((s) => `${s.title.trim().toLowerCase()}|${s.authorId || ""}`)
-  )
+  const { usedSlugs, existingTitleAuthor } = await getExistingSourceLookup(parsed.data.items)
 
   const authorIds = Array.from(
     new Set(
@@ -144,6 +140,10 @@ export async function POST(req: Request) {
   }
 
   const result = await prisma.source.createMany({ data })
+
+  if (result.count > 0) {
+    revalidatePublicSurfaces()
+  }
 
   return NextResponse.json({
     received: parsed.data.items.length,

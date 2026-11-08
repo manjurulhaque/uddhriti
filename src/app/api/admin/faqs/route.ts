@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { faqSchema } from "@/lib/validation/faq"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 export async function GET() {
   const admin = await getAdmin()
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
       position: parsed.data.position ?? 0,
     },
   })
+
+  revalidatePublicSurfaces()
 
   return NextResponse.json(faq, { status: 201 })
 }

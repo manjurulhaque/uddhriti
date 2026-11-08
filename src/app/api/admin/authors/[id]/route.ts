@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, isValidUuid, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { authorSchema } from "@/lib/validation/author"
+import { revalidatePath } from "next/cache"
 import { slugify } from "@/lib/slug"
 import { recordAuditLog } from "@/lib/audit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -149,6 +151,11 @@ export async function PATCH(
       },
     })
 
+    revalidatePublicSurfaces()
+    if (updated.slug) {
+      revalidatePath(`/authors/${updated.slug}`)
+    }
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -196,6 +203,8 @@ export async function DELETE(
       adminEmail: admin.email,
       adminName: admin.name,
     })
+
+    revalidatePublicSurfaces()
 
     return NextResponse.json({ success: true })
 }

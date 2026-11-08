@@ -4,6 +4,7 @@ import { getAdmin } from "@/lib/auth/getAdmin"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { sourceSchema } from "@/lib/validation/source"
 import { normalizeSourceYearInput, parseSourceYearInput } from "@/lib/sourceYear"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 function getSourceYearLabel(raw: { year?: unknown; yearLabel?: unknown } | null) {
   return normalizeSourceYearInput(raw?.yearLabel) ?? normalizeSourceYearInput(raw?.year)
@@ -99,6 +100,8 @@ export async function PATCH(
       },
     })
 
+    revalidatePublicSurfaces()
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -137,6 +140,8 @@ export async function DELETE(
 
     throw error
   }
+
+  revalidatePublicSurfaces()
 
   return NextResponse.json({ success: true })
 }

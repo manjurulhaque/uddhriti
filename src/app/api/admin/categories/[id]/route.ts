@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -62,6 +64,11 @@ export async function PATCH(
       },
     })
 
+    revalidatePublicSurfaces()
+    if (updated.slug) {
+      revalidatePath(`/categories/${updated.slug}`)
+    }
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -100,6 +107,8 @@ export async function DELETE(
 
     throw error
   }
+
+  revalidatePublicSurfaces()
 
   return NextResponse.json({ success: true })
 }

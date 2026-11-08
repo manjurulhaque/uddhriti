@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { slugify } from "@/lib/slug"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 // ✅ GET ALL AUTHORS (supports ?select=minimal)
 export async function GET(req: Request) {
@@ -112,6 +113,8 @@ export async function POST(req: Request) {
         nameNormalized: normalizedName,
       },
     })
+
+    revalidatePublicSurfaces()
 
     return NextResponse.json(author, { status: 201 })
   } catch (error) {

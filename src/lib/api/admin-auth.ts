@@ -27,7 +27,10 @@ export async function requireSuperAdmin(): Promise<AdminAuthResult> {
   if (result.admin.role !== "SUPER_ADMIN") {
     return {
       admin: null,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Forbidden: super admin privileges required" },
+        { status: 403 }
+      ),
     }
   }
 

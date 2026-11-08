@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { faqSchema } from "@/lib/validation/faq"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -64,6 +65,8 @@ export async function PATCH(
       },
     })
 
+    revalidatePublicSurfaces()
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error)
@@ -99,6 +102,8 @@ export async function DELETE(
 
     throw error
   }
+
+  revalidatePublicSurfaces()
 
   return NextResponse.json({ success: true })
 }

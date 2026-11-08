@@ -5,14 +5,20 @@ import { enforceIpRateLimit } from "@/lib/api/rate-limit"
 import { getSupabaseConfig } from "@/lib/security/env"
 
 function isAllowedRequestOrigin(request: NextRequest): boolean {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
+  const directHost = request.headers.get("host") || request.nextUrl.host
+  const allowedHosts = new Set([
+    directHost.toLowerCase(),
+    ...(forwardedHost ? [forwardedHost.toLowerCase()] : []),
+  ])
+
   const origin = request.headers.get("origin")
   if (!origin) {
     const referer = request.headers.get("referer")
     if (!referer) return true // Same-origin navigation or direct request
     try {
       const refererUrl = new URL(referer)
-      const host = request.headers.get("host") || request.nextUrl.host
-      return refererUrl.host.toLowerCase() === host.toLowerCase()
+      return allowedHosts.has(refererUrl.host.toLowerCase())
     } catch {
       return false
     }
@@ -20,8 +26,7 @@ function isAllowedRequestOrigin(request: NextRequest): boolean {
 
   try {
     const originUrl = new URL(origin)
-    const host = request.headers.get("host") || request.nextUrl.host
-    return originUrl.host.toLowerCase() === host.toLowerCase()
+    return allowedHosts.has(originUrl.host.toLowerCase())
   } catch {
     return false
   }

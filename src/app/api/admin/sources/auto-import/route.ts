@@ -4,8 +4,10 @@ import { getAdmin } from "@/lib/auth/getAdmin"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import {
   createUniqueSourceSlug,
+  getExistingSourceLookup,
   importSourcesFromWikidataAuthor,
 } from "@/lib/wikimedia/sourceImport"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 export async function POST(req: Request) {
   const admin = await getAdmin()
@@ -56,13 +58,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
-  const existingSources = await prisma.source.findMany({
-    select: { slug: true, title: true, authorId: true },
-  })
-  const usedSlugs = new Set(existingSources.map((s) => s.slug))
-  const existingTitleAuthor = new Set(
-    existingSources.map((s) => `${s.title.trim().toLowerCase()}|${s.authorId || ""}`)
-  )
+  const { usedSlugs, existingTitleAuthor } = await getExistingSourceLookup(works, authorId)
 
   const errors: string[] = []
   let created = 0
@@ -95,6 +91,10 @@ export async function POST(req: Request) {
       const message = error instanceof Error ? error.message : "Failed to create source"
       errors.push(`${work.title}: ${message}`)
     }
+  }
+
+  if (created > 0) {
+    revalidatePublicSurfaces()
   }
 
   return NextResponse.json({

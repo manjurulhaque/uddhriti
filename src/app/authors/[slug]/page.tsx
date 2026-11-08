@@ -16,6 +16,7 @@ import {
   normalizeWikimediaThumbnailUrl,
 } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
+import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
 
 const QUOTES_PER_PAGE = 12
@@ -68,6 +69,7 @@ const getAuthorBySlug = React.cache(async (slug: string) => {
           type: true,
           year: true,
           yearLabel: true,
+          yearApproximate: true,
           publisher: true,
           quoteCount: true,
           externalUrl: true,
@@ -447,56 +449,59 @@ export default async function AuthorDetailPage({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {author.sources.map((source) => (
-                <div
-                  key={source.id}
-                  className="group relative flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs hover:border-[var(--accent-rust)]/40 hover:shadow-sm transition-all"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-500/20">
-                        {formatWorkType(source.type)}
-                      </span>
-                      {(source.year || source.yearLabel) && (
-                        <span className="font-mono text-xs text-stone-500">
-                          {source.yearLabel || (source.year && source.year < 0 ? `${Math.abs(source.year)} BC` : String(source.year))}
+              {author.sources.map((source) => {
+                const sourceYear = formatSourceYearLabel(source)
+                return (
+                  <div
+                    key={source.id}
+                    className="group relative flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs hover:border-[var(--accent-rust)]/40 hover:shadow-sm transition-all"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-500/20">
+                          {formatWorkType(source.type)}
                         </span>
+                        {sourceYear && (
+                          <span className="font-mono text-xs text-stone-500">
+                            {sourceYear}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="font-serif text-base sm:text-lg font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors leading-snug">
+                        <em>{source.title}</em>
+                      </h3>
+
+                      {source.publisher && (
+                        <p className="text-xs text-stone-500 line-clamp-1">
+                          Pub: {source.publisher}
+                        </p>
                       )}
                     </div>
 
-                    <h3 className="font-serif text-base sm:text-lg font-bold text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors leading-snug">
-                      <em>{source.title}</em>
-                    </h3>
+                    <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
+                      <span className="font-mono text-stone-600 font-medium">
+                        {formatCountWithNoun(source.quoteCount, "quote")}
+                      </span>
 
-                    {source.publisher && (
-                      <p className="text-xs text-stone-500 line-clamp-1">
-                        Pub: {source.publisher}
-                      </p>
-                    )}
+                      {source.externalUrl && (
+                        <a
+                          href={source.externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-semibold text-[var(--accent-rust)] hover:underline"
+                          aria-label={`External reference for ${source.title}`}
+                        >
+                          <span>Reference</span>
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-                    <span className="font-mono text-stone-600 font-medium">
-                      {formatCountWithNoun(source.quoteCount, "quote")}
-                    </span>
-
-                    {source.externalUrl && (
-                      <a
-                        href={source.externalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-semibold text-[var(--accent-rust)] hover:underline"
-                        aria-label={`External reference for ${source.title}`}
-                      >
-                        <span>Reference</span>
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
         )}

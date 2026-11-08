@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
+import { formatLifespan } from "@/lib/formatters"
 import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
 import { Select, EmptyState, Pagination } from "@/components/ui"
 
@@ -251,10 +252,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {paginatedAuthors.map((author) => {
-              const lifespan =
-                author.birthYear || author.deathYear
-                  ? `${author.birthYear ?? "?"} - ${author.deathYear ?? "Present"}`
-                  : undefined
+              const lifespan = formatLifespan(author)
               const subtitle = [
                 author.profession,
                 author.nationality,

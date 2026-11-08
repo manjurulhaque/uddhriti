@@ -1,5 +1,3 @@
-import { slugify } from "./slug"
-
 /**
  * Utility functions for formatting numbers, currency, scores, units, and text strings.
  */
@@ -604,8 +602,6 @@ export function getTagTypeMeta(type: string): TagTypeMeta {
       }
   }
 }
-
-export { slugify }
 
 /**
  * Normalizes Wikimedia Commons & Wikipedia thumbnail URLs.

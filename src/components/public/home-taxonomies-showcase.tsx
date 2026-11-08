@@ -9,9 +9,6 @@ import {
 import { TaxonomiesTabs } from "./taxonomies-tabs"
 import { AuthorAvatar } from "./author-avatar"
 
-// Re-export formatters for backward compatibility
-export { formatEpoch, formatLifespan, cleanProfession, getCategoryMeta }
-
 export interface SpotlightAuthorItem {
   id: string
   name: string

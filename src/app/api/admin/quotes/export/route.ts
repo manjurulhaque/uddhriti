@@ -3,16 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { searchQuoteIds } from "@/lib/quotes/search"
 import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
+import { escapeCsvCell } from "@/lib/security/csv"
 import type { Prisma, QuoteStatus } from "@prisma/client"
-
-function escapeCsvCell(value: unknown): string {
-  if (value === null || value === undefined) return ""
-  const str = String(value)
-  if (/[",\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`
-  }
-  return str
-}
 
 export async function GET(req: Request) {
   const { admin, response } = await requireSuperAdmin()

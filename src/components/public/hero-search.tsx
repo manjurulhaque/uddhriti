@@ -1,9 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useSavedQuotes } from "@/lib/saved-quotes"
 import { openCommandPalette } from "./command-palette"
 
 export interface HeroSearchProps {
@@ -125,30 +123,5 @@ export function HeroSearch() {
         </div>
       </div>
     </div>
-  )
-}
-
-export function HeroSavedBadge() {
-  const { count } = useSavedQuotes()
-
-  return (
-    <Link
-      href="/saved"
-      className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/8 px-3.5 py-1.5 text-xs font-medium text-white/90 backdrop-blur-xs transition hover:bg-white/16 hover:border-white/30 hover:text-white"
-      title="Open your saved quotes notebook"
-    >
-      <svg
-        className="h-3.5 w-3.5 text-[var(--accent-sand)]"
-        fill="currentColor"
-        viewBox="0 0 20 20"
-        aria-hidden="true"
-      >
-        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-      </svg>
-      <span>Saved Notebook</span>
-      {count > 0 ? (
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)]" aria-hidden="true" />
-      ) : null}
-    </Link>
   )
 }

@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
 import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import { searchPublicQuoteIds } from "@/lib/quotes/search"
 
 export const metadata: Metadata = {
   title: "Browse All Quotations",
@@ -117,6 +118,7 @@ async function loadQuotesBrowseData({
     deletedAt: null
     categorySlug?: string
     isFeatured?: boolean
+    id?: { in: string[] }
     OR?: Array<{
       content?: { contains: string; mode: "insensitive" }
       authorName?: { contains: string; mode: "insensitive" }
@@ -135,10 +137,18 @@ async function loadQuotesBrowseData({
   }
 
   if (searchQuery) {
-    whereConditions.OR = [
-      { content: { contains: searchQuery, mode: "insensitive" } },
-      { authorName: { contains: searchQuery, mode: "insensitive" } },
-    ]
+    const matchingQuoteIds = await searchPublicQuoteIds(searchQuery, {
+      categorySlug,
+      limit: 1000,
+    })
+    if (matchingQuoteIds !== null) {
+      whereConditions.id = { in: matchingQuoteIds }
+    } else {
+      whereConditions.OR = [
+        { content: { contains: searchQuery, mode: "insensitive" } },
+        { authorName: { contains: searchQuery, mode: "insensitive" } },
+      ]
+    }
   }
 
   // Determine order by

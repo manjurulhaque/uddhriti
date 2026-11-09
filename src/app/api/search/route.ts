@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sanitizeSearchQuery } from "@/lib/security/input"
 import { enforceIpRateLimit } from "@/lib/api/rate-limit"
+import { searchPublicQuoteIds } from "@/lib/quotes/search"
 
 export const dynamic = "force-dynamic"
 
@@ -24,43 +25,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [quotes, authors, categories, tags] = await Promise.all([
-      // 1. Quotes matching content or authorName
-      prisma.quote.findMany({
-        where: {
-          status: "PUBLISHED",
-          deletedAt: null,
-          OR: [
-            { content: { contains: query, mode: "insensitive" } },
-            { authorName: { contains: query, mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true,
-          slug: true,
-          content: true,
-          authorName: true,
-          author: {
-            select: {
-              name: true,
-              slug: true,
-              imageUrl: true,
-            },
-          },
-          category: {
-            select: {
-              name: true,
-              slug: true,
-            },
-          },
-          isVerified: true,
-        },
-        orderBy: [
-          { popularityScore: "desc" },
-          { views: "desc" },
-        ],
-        take: 5,
-      }),
+    const [matchingQuoteIds, authors, categories, tags] = await Promise.all([
+      // 1. Full-text search quote matches leveraging searchVector GIN index
+      searchPublicQuoteIds(query, { limit: 10 }),
 
       // 2. Thinkers & Authors matching name or profession
       prisma.author.findMany({
@@ -120,6 +87,90 @@ export async function GET(req: NextRequest) {
         take: 3,
       }),
     ])
+
+    let quotes: Array<{
+      id: string
+      slug: string
+      content: string
+      authorName: string | null
+      author: { name: string; slug: string; imageUrl: string | null } | null
+      category: { name: string; slug: string }
+      isVerified: boolean
+    }> = []
+
+    if (matchingQuoteIds !== null) {
+      if (matchingQuoteIds.length > 0) {
+        const foundQuotes = await prisma.quote.findMany({
+          where: {
+            id: { in: matchingQuoteIds },
+            status: "PUBLISHED",
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            slug: true,
+            content: true,
+            authorName: true,
+            author: {
+              select: {
+                name: true,
+                slug: true,
+                imageUrl: true,
+              },
+            },
+            category: {
+              select: {
+                name: true,
+                slug: true,
+              },
+            },
+            isVerified: true,
+          },
+        })
+        const quoteMap = new Map(foundQuotes.map((q) => [q.id, q]))
+        quotes = matchingQuoteIds
+          .map((id) => quoteMap.get(id))
+          .filter((q): q is NonNullable<typeof q> => Boolean(q))
+          .slice(0, 5)
+      }
+    } else {
+      // Fallback query if FTS expression encountered a syntax/parser error
+      quotes = await prisma.quote.findMany({
+        where: {
+          status: "PUBLISHED",
+          deletedAt: null,
+          OR: [
+            { content: { contains: query, mode: "insensitive" } },
+            { authorName: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          slug: true,
+          content: true,
+          authorName: true,
+          author: {
+            select: {
+              name: true,
+              slug: true,
+              imageUrl: true,
+            },
+          },
+          category: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          isVerified: true,
+        },
+        orderBy: [
+          { popularityScore: "desc" },
+          { views: "desc" },
+        ],
+        take: 5,
+      })
+    }
 
     return NextResponse.json(
       {

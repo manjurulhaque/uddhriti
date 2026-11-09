@@ -10,7 +10,7 @@
  */
 
 const DANGEROUS_FORMULA_PREFIX_REGEX = /^[=@%]/
-const DANGEROUS_DDE_PIPE_REGEX = /\|[\s]*['"]?[\s]*[A-Za-z0-9_.-]+/
+const DANGEROUS_DDE_PIPE_REGEX = /\|[\s]*['"]?[\s]*[/\\A-Za-z0-9_.-]+/
 const FUNCTION_CALL_REGEX = /^[-+][\s]*[A-Za-z_][A-Za-z0-9_.]*[\s]*\(/
 const EXTERNAL_REFERENCE_REGEX = /^[-+][\s]*['"]?[\s]*[A-Za-z0-9_.\\]+!/
 const NUMERIC_REGEX = /^[-+]?\d+(\.\d+)?$/

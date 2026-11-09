@@ -9,6 +9,7 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --env-file=.env --test \"tests/**/*.test.ts\"",
     "icons:generate": "node scripts/generate-icons.mjs",
     "screenshots:generate": "node scripts/generate-screenshots.mjs"
   },

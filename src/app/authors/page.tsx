@@ -72,15 +72,20 @@ async function loadAuthorsPageData({
     quoteCount?: { gt: number }
     name?: { contains: string; mode: "insensitive" }
     nameNormalized?: { startsWith: string }
+    OR?: Array<{
+      nameNormalized?: { startsWith: string }
+      name?: { contains: string; mode: "insensitive" }
+    }>
   } = {
     quoteCount: { gt: 0 },
   }
 
   if (searchQuery) {
-    whereConditions.name = {
-      contains: searchQuery,
-      mode: "insensitive",
-    }
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    whereConditions.OR = [
+      { nameNormalized: { startsWith: normalizedQuery } },
+      { name: { contains: searchQuery, mode: "insensitive" } },
+    ]
   } else if (selectedLetter && selectedLetter !== "ALL") {
     whereConditions.nameNormalized = {
       startsWith: selectedLetter.toLowerCase(),

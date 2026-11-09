@@ -25,67 +25,145 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const normalizedQuery = query.toLowerCase().trim()
+
     const [matchingQuoteIds, authors, categories, tags] = await Promise.all([
       // 1. Full-text search quote matches leveraging searchVector GIN index
       searchPublicQuoteIds(query, { limit: 10 }),
 
-      // 2. Thinkers & Authors matching name or profession
-      prisma.author.findMany({
-        where: {
-          quoteCount: { gt: 0 },
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { profession: { contains: query, mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          imageUrl: true,
-          profession: true,
-          quoteCount: true,
-          birthYear: true,
-          deathYear: true,
-        },
-        orderBy: { quoteCount: "desc" },
-        take: 4,
-      }),
+      // 2. Thinkers & Authors: indexed B-Tree prefix seek on nameNormalized with fallback
+      (async () => {
+        const prefixMatches = await prisma.author.findMany({
+          where: {
+            quoteCount: { gt: 0 },
+            nameNormalized: { startsWith: normalizedQuery },
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            imageUrl: true,
+            profession: true,
+            quoteCount: true,
+            birthYear: true,
+            deathYear: true,
+          },
+          orderBy: { quoteCount: "desc" },
+          take: 4,
+        })
 
-      // 3. Thematic Categories matching name or description
-      prisma.category.findMany({
-        where: {
-          quoteCount: { gt: 0 },
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          quoteCount: true,
-        },
-        orderBy: { quoteCount: "desc" },
-        take: 3,
-      }),
+        if (prefixMatches.length >= 4) {
+          return prefixMatches
+        }
 
-      // 4. Thematic Tags matching name
-      prisma.tag.findMany({
-        where: {
-          quoteCount: { gt: 0 },
-          name: { contains: query, mode: "insensitive" },
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          quoteCount: true,
-        },
-        orderBy: { quoteCount: "desc" },
-        take: 3,
-      }),
+        const fallbackMatches = await prisma.author.findMany({
+          where: {
+            quoteCount: { gt: 0 },
+            id: { notIn: prefixMatches.map((a) => a.id) },
+            OR: [
+              { name: { contains: query, mode: "insensitive" } },
+              { profession: { contains: query, mode: "insensitive" } },
+            ],
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            imageUrl: true,
+            profession: true,
+            quoteCount: true,
+            birthYear: true,
+            deathYear: true,
+          },
+          orderBy: { quoteCount: "desc" },
+          take: 4 - prefixMatches.length,
+        })
+
+        return [...prefixMatches, ...fallbackMatches]
+      })(),
+
+      // 3. Categories: indexed B-Tree prefix seek on unique slug with fallback
+      (async () => {
+        const prefixMatches = await prisma.category.findMany({
+          where: {
+            quoteCount: { gt: 0 },
+            slug: { startsWith: normalizedQuery },
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            quoteCount: true,
+          },
+          orderBy: { quoteCount: "desc" },
+          take: 3,
+        })
+
+        if (prefixMatches.length >= 3) {
+          return prefixMatches
+        }
+
+        const fallbackMatches = await prisma.category.findMany({
+          where: {
+            quoteCount: { gt: 0 },
+            id: { notIn: prefixMatches.map((c) => c.id) },
+            OR: [
+              { name: { contains: query, mode: "insensitive" } },
+              { description: { contains: query, mode: "insensitive" } },
+            ],
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            quoteCount: true,
+          },
+          orderBy: { quoteCount: "desc" },
+          take: 3 - prefixMatches.length,
+        })
+
+        return [...prefixMatches, ...fallbackMatches]
+      })(),
+
+      // 4. Tags: indexed B-Tree prefix seek on unique slug with fallback
+      (async () => {
+        const prefixMatches = await prisma.tag.findMany({
+          where: {
+            quoteCount: { gt: 0 },
+            slug: { startsWith: normalizedQuery },
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            quoteCount: true,
+          },
+          orderBy: { quoteCount: "desc" },
+          take: 3,
+        })
+
+        if (prefixMatches.length >= 3) {
+          return prefixMatches
+        }
+
+        const fallbackMatches = await prisma.tag.findMany({
+          where: {
+            quoteCount: { gt: 0 },
+            id: { notIn: prefixMatches.map((t) => t.id) },
+            name: { contains: query, mode: "insensitive" },
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            quoteCount: true,
+          },
+          orderBy: { quoteCount: "desc" },
+          take: 3 - prefixMatches.length,
+        })
+
+        return [...prefixMatches, ...fallbackMatches]
+      })(),
     ])
 
     let quotes: Array<{

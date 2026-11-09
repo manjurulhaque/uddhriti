@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { collectionSchema } from "@/lib/validation/collection"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 export async function GET() {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const collections = await prisma.collection.findMany({
     orderBy: { createdAt: "desc" },
@@ -18,10 +16,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const body = await req.json().catch(() => null)
   const parsed = collectionSchema.safeParse(body)

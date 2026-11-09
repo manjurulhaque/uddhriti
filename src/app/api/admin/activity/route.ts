@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin, requireSuperAdmin } from "@/lib/api/admin-auth"
 import { recordAuditLog } from "@/lib/audit"
 import type { AuditAction, AuditEntityType, Prisma } from "@prisma/client"
 
 export async function GET(req: NextRequest) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const { searchParams } = new URL(req.url)
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
@@ -98,10 +96,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Super Admin privileges required" }, { status: 403 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const { searchParams } = new URL(req.url)
   const olderThanDays = Math.max(30, parseInt(searchParams.get("olderThanDays") || "90", 10))

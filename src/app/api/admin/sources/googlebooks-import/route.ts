@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { createUniqueSourceSlug, getExistingSourceLookup } from "@/lib/wikimedia/sourceImport"
 import { importSourcesFromGoogleBooks } from "@/lib/googlebooks/sourceImport"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "import")
   if (rateLimited) return rateLimited

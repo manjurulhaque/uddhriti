@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { prisma } from "@/lib/prisma"
 import { isValidUuid } from "@/lib/api/route-helpers"
 import {
@@ -9,10 +9,8 @@ import {
 } from "@/lib/quotes/duplicateDetection"
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== "object") {

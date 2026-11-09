@@ -2,7 +2,7 @@ import crypto from "crypto"
 import slugify from "slugify"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { importQuotesFromWikiquoteUrl } from "@/lib/wikimedia/wikiquoteImport"
 import { importQuotesFromGutenbergUrl } from "@/lib/import/gutenbergImport"
 import { importQuotesFromWikisourceUrl } from "@/lib/wikimedia/wikisourceImport"
@@ -186,10 +186,8 @@ function sourceCacheKey(authorId: string, title: string) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited

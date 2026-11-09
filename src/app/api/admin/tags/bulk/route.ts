@@ -2,7 +2,7 @@ import slugify from "slugify"
 import { z } from "zod"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { tagTypeOptions } from "@/lib/tags/catalog"
@@ -44,10 +44,8 @@ function uniqueSlug(baseSlug: string, usedSlugs: Set<string>) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited

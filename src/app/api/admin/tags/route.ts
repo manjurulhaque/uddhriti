@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { tagSchema } from "@/lib/validation/tag"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
@@ -9,10 +9,8 @@ function normalizeTagName(name: string) {
 }
 
 export async function GET(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const { searchParams } = new URL(req.url)
   const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
@@ -36,10 +34,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const body = await req.json()
   const parsed = tagSchema.safeParse(body)

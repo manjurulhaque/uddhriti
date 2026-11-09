@@ -2,7 +2,7 @@ import crypto from "crypto"
 import slugify from "slugify"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { quoteUpdateSchema } from "@/lib/validation/quote"
 import { parseDateTimeLocalInAppTimeZone } from "@/lib/datetime"
 import {
@@ -39,10 +39,8 @@ export async function GET(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const quote = await prisma.quote.findUnique({
     where: { id },
@@ -74,10 +72,8 @@ export async function PATCH(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
 
   const body = await req.json().catch(() => null)
   const parsed = quoteUpdateSchema.safeParse(body)
@@ -310,9 +306,15 @@ export async function DELETE(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const isPermanentDelete = new URL(req.url).searchParams.get("permanent") === "true"
+  if (isPermanentDelete && admin.role !== "SUPER_ADMIN") {
+    return NextResponse.json(
+      { error: "Forbidden: super admin privileges required to permanently delete records" },
+      { status: 403 }
+    )
   }
 
   let shouldRevalidateHomepage = false
@@ -338,8 +340,6 @@ export async function DELETE(
     if (existing.status === "PUBLISHED" && !existing.deletedAt) {
       shouldRevalidateHomepage = true
     }
-
-    const isPermanentDelete = new URL(req.url).searchParams.get("permanent") === "true"
 
     if (isPermanentDelete) {
       await tx.quoteReport.deleteMany({
@@ -390,10 +390,8 @@ export async function POST(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
 
   const body = await req.json().catch(() => null)
   if (body?.action !== "restore") {

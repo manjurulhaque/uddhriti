@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { tagSchema } from "@/lib/validation/tag"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
@@ -21,10 +21,8 @@ export async function GET(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const tag = await prisma.tag.findUnique({
     where: { id },
@@ -44,10 +42,8 @@ export async function PATCH(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const body = await req.json().catch(() => null)
   const parsed = tagSchema.safeParse(body)
@@ -114,10 +110,8 @@ export async function DELETE(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   try {
     await prisma.tag.delete({

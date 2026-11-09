@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { QuoteStatus } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import {
@@ -33,10 +33,8 @@ function compactIds(values: Array<string | null | undefined>) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited

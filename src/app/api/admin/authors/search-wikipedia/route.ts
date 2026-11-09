@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { fetchWithTimeout } from "@/lib/security/fetch"
 import { normalizeWikimediaThumbnailUrl } from "@/lib/wikimedia/authorImport"
 
@@ -21,10 +21,8 @@ interface WikiPageItem {
 }
 
 export async function GET(req: NextRequest) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const { searchParams } = new URL(req.url)
   const query = searchParams.get("q")?.trim()

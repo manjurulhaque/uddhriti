@@ -3,10 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, isValidUuid, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { authorSchema } from "@/lib/validation/author"
-import { revalidatePath } from "next/cache"
 import { slugify } from "@/lib/slug"
 import { recordAuditLog } from "@/lib/audit"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateAuthor } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -126,6 +125,11 @@ export async function PATCH(
   }
 
   try {
+    const previous = await prisma.author.findUnique({
+      where: { id },
+      select: { slug: true },
+    })
+
     const updated = await prisma.author.update({
       where: { id },
       data: {
@@ -152,9 +156,7 @@ export async function PATCH(
     })
 
     revalidatePublicSurfaces()
-    if (updated.slug) {
-      revalidatePath(`/authors/${updated.slug}`)
-    }
+    revalidateAuthor(updated.slug, previous?.slug)
 
     return NextResponse.json(updated)
   } catch (error) {
@@ -180,10 +182,13 @@ export async function DELETE(
   const { admin, response } = await requireAdmin()
   if (response) return response
 
+  let deletedSlug: string | null = null
   try {
-    await prisma.author.delete({
+    const deleted = await prisma.author.delete({
       where: { id },
+      select: { slug: true },
     })
+    deletedSlug = deleted.slug
   } catch (error) {
     const response = mapPrismaRouteError(error, {
       foreignKey: "Author cannot be deleted while it is still referenced by other records.",
@@ -205,6 +210,9 @@ export async function DELETE(
     })
 
     revalidatePublicSurfaces()
+    if (deletedSlug) {
+      revalidateAuthor(deletedSlug)
+    }
 
     return NextResponse.json({ success: true })
 }

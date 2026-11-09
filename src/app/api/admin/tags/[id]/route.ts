@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { tagSchema } from "@/lib/validation/tag"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateTagPage } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -75,6 +74,11 @@ export async function PATCH(
   }
 
   try {
+    const previous = await prisma.tag.findUnique({
+      where: { id },
+      select: { slug: true },
+    })
+
     const updated = await prisma.tag.update({
       where: { id },
       data: {
@@ -86,9 +90,7 @@ export async function PATCH(
     })
 
     revalidatePublicSurfaces()
-    if (updated.slug) {
-      revalidatePath(`/tags/${updated.slug}`)
-    }
+    revalidateTagPage(updated.slug, previous?.slug)
 
     return NextResponse.json(updated)
   } catch (error) {
@@ -113,10 +115,13 @@ export async function DELETE(
   const { response } = await requireAdmin()
   if (response) return response
 
+  let deletedSlug: string | null = null
   try {
-    await prisma.tag.delete({
+    const deleted = await prisma.tag.delete({
       where: { id },
+      select: { slug: true },
     })
+    deletedSlug = deleted.slug
   } catch (error) {
     const response = mapPrismaRouteError(error, {
       foreignKey: "Tag cannot be deleted while it is still referenced by other records.",
@@ -129,6 +134,9 @@ export async function DELETE(
   }
 
   revalidatePublicSurfaces()
+  if (deletedSlug) {
+    revalidateTagPage(deletedSlug)
+  }
 
   return NextResponse.json({ success: true })
 }

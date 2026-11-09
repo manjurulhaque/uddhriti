@@ -12,7 +12,7 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
 import { isValidUuid } from "@/lib/api/route-helpers"
 import { recordAuditLog } from "@/lib/audit"
 
@@ -133,6 +133,9 @@ export async function PATCH(
       const previousQuote = await tx.quote.findUnique({
         where: { id },
         select: {
+          slug: true,
+          author: { select: { slug: true } },
+          category: { select: { slug: true } },
           authorId: true,
           sourceId: true,
           categoryId: true,
@@ -270,11 +273,26 @@ export async function PATCH(
       await recalculateCategoryQuoteCounts(tx, [previousQuote.categoryId, category.id])
       await recalculateTagQuoteCounts(tx, [...previousQuote.tags.map((entry) => entry.tagId), ...tags.map((tag) => tag.id)])
 
-      return { quote, previousStatus: previousQuote.status }
+      return {
+        quote,
+        previousStatus: previousQuote.status,
+        previousQuoteSlug: previousQuote.slug,
+        previousAuthorSlug: previousQuote.author?.slug,
+        previousCategorySlug: previousQuote.category?.slug,
+        tagSlugs: tags.map((t) => t.slug),
+      }
     })
 
     if (updated.previousStatus === "PUBLISHED" || updated.quote.status === "PUBLISHED") {
       revalidatePublicSurfaces()
+      revalidateQuote(updated.quote.slug, {
+        oldSlug: updated.previousQuoteSlug,
+        authorSlug: author.slug,
+        oldAuthorSlug: updated.previousAuthorSlug,
+        categorySlug: category.slug,
+        oldCategorySlug: updated.previousCategorySlug,
+        tagSlugs: updated.tagSlugs,
+      })
     }
 
     await recordAuditLog({
@@ -317,17 +335,20 @@ export async function DELETE(
     )
   }
 
-  let shouldRevalidateHomepage = false
-
-  await prisma.$transaction(async (tx) => {
+  const { shouldRevalidateHomepage, deletedQuoteDetails } = await prisma.$transaction(async (tx) => {
+    let shouldRevalidate = false
+    let details: { slug: string; authorSlug?: string; categorySlug?: string; tagSlugs: string[] } | null = null
     const existing = await tx.quote.findUnique({
       where: { id },
       select: {
         id: true,
+        slug: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } }, tagId: true } },
         authorId: true,
         sourceId: true,
         categoryId: true,
-        tags: { select: { tagId: true } },
         deletedAt: true,
         status: true,
       },
@@ -337,8 +358,15 @@ export async function DELETE(
       throw new Error("Quote not found")
     }
 
+    details = {
+      slug: existing.slug,
+      authorSlug: existing.author?.slug,
+      categorySlug: existing.category?.slug,
+      tagSlugs: existing.tags.map((t) => t.tag.slug),
+    }
+
     if (existing.status === "PUBLISHED" && !existing.deletedAt) {
-      shouldRevalidateHomepage = true
+      shouldRevalidate = true
     }
 
     if (isPermanentDelete) {
@@ -364,10 +392,19 @@ export async function DELETE(
     await recalculateSourceQuoteCounts(tx, [existing.sourceId])
     await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
     await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
+
+    return { shouldRevalidateHomepage: shouldRevalidate, deletedQuoteDetails: details }
   })
 
   if (shouldRevalidateHomepage) {
     revalidatePublicSurfaces()
+    if (deletedQuoteDetails) {
+      revalidateQuote(deletedQuoteDetails.slug, {
+        authorSlug: deletedQuoteDetails.authorSlug,
+        categorySlug: deletedQuoteDetails.categorySlug,
+        tagSlugs: deletedQuoteDetails.tagSlugs,
+      })
+    }
   }
 
   await recordAuditLog({
@@ -398,16 +435,19 @@ export async function POST(
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
 
-  let shouldRevalidateHomepage = false
-
-  await prisma.$transaction(async (tx) => {
+  const { shouldRevalidateHomepage, restoredQuoteDetails } = await prisma.$transaction(async (tx) => {
+    let shouldRevalidate = false
+    let details: { slug: string; authorSlug?: string; categorySlug?: string; tagSlugs: string[] } | null = null
     const existing = await tx.quote.findUnique({
       where: { id },
       select: {
+        slug: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } }, tagId: true } },
         authorId: true,
         sourceId: true,
         categoryId: true,
-        tags: { select: { tagId: true } },
         deletedAt: true,
         status: true,
       },
@@ -417,6 +457,13 @@ export async function POST(
       throw new Error("Quote not found")
     }
 
+    details = {
+      slug: existing.slug,
+      authorSlug: existing.author?.slug,
+      categorySlug: existing.category?.slug,
+      tagSlugs: existing.tags.map((t) => t.tag.slug),
+    }
+
     if (existing.deletedAt) {
       await tx.quote.update({
         where: { id },
@@ -424,7 +471,7 @@ export async function POST(
       })
 
       if (existing.status === "PUBLISHED") {
-        shouldRevalidateHomepage = true
+        shouldRevalidate = true
       }
 
       await recalculateAuthorQuoteCounts(tx, [existing.authorId])
@@ -432,10 +479,19 @@ export async function POST(
       await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
       await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
     }
+
+    return { shouldRevalidateHomepage: shouldRevalidate, restoredQuoteDetails: details }
   })
 
   if (shouldRevalidateHomepage) {
     revalidatePublicSurfaces()
+    if (restoredQuoteDetails) {
+      revalidateQuote(restoredQuoteDetails.slug, {
+        authorSlug: restoredQuoteDetails.authorSlug,
+        categorySlug: restoredQuoteDetails.categorySlug,
+        tagSlugs: restoredQuoteDetails.tagSlugs,
+      })
+    }
   }
 
   await recordAuditLog({

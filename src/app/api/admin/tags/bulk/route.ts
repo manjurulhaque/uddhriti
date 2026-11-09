@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 
@@ -106,6 +107,10 @@ export async function POST(req: Request) {
   }
 
   const result = await prisma.tag.createMany({ data })
+
+  if (result.count > 0) {
+    revalidatePublicSurfaces()
+  }
 
   return NextResponse.json({
     received: parsed.data.items.length,

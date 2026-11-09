@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateCategory } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -53,6 +52,11 @@ export async function PATCH(
   }
 
   try {
+    const previous = await prisma.category.findUnique({
+      where: { id },
+      select: { slug: true },
+    })
+
     const updated = await prisma.category.update({
       where: { id },
       data: {
@@ -65,9 +69,7 @@ export async function PATCH(
     })
 
     revalidatePublicSurfaces()
-    if (updated.slug) {
-      revalidatePath(`/categories/${updated.slug}`)
-    }
+    revalidateCategory(updated.slug, previous?.slug)
 
     return NextResponse.json(updated)
   } catch (error) {
@@ -93,10 +95,13 @@ export async function DELETE(
   const { response } = await requireAdmin()
   if (response) return response
 
+  let deletedSlug: string | null = null
   try {
-    await prisma.category.delete({
+    const deleted = await prisma.category.delete({
       where: { id },
+      select: { slug: true },
     })
+    deletedSlug = deleted.slug
   } catch (error) {
     const response = mapPrismaRouteError(error, {
       foreignKey: "Category cannot be deleted while it is still referenced by other records.",
@@ -109,6 +114,9 @@ export async function DELETE(
   }
 
   revalidatePublicSurfaces()
+  if (deletedSlug) {
+    revalidateCategory(deletedSlug)
+  }
 
   return NextResponse.json({ success: true })
 }

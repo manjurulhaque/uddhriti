@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { prisma } from "@/lib/prisma"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 
@@ -36,6 +37,10 @@ export async function POST(req: Request) {
       type: parsed.data.type,
     },
   })
+
+  if (result.count > 0) {
+    revalidatePublicSurfaces()
+  }
 
   return NextResponse.json({
     updated: result.count,

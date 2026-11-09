@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { authorSchema } from "@/lib/validation/author"
 import {
@@ -339,6 +340,10 @@ export async function POST(req: Request) {
       const message = error instanceof Error ? error.message : "Import failed"
       errors.push(`${rowLabel}: ${message}`)
     }
+  }
+
+  if (created > 0) {
+    revalidatePublicSurfaces()
   }
 
   return NextResponse.json({

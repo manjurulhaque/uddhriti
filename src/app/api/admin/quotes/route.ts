@@ -11,7 +11,7 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
 
 function normalize(content: string) {
   return content.trim().replace(/\s+/g, " ").toLowerCase()
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
   })
 
   try {
-    const quote = await prisma.$transaction(async (tx) => {
+    const { quote, tagSlugs } = await prisma.$transaction(async (tx) => {
       const duplicate = await tx.quote.findFirst({
         where: { contentHash, language: normalizedLanguage },
         select: { id: true },
@@ -218,11 +218,16 @@ export async function POST(req: Request) {
         tags.map((tag) => tag.id)
       )
 
-      return createdQuote
+      return { quote: createdQuote, tagSlugs: tags.map((t) => t.slug) }
     })
 
     if (isPublishing) {
       revalidatePublicSurfaces()
+      revalidateQuote(quote.slug, {
+        authorSlug: selectedAuthor.slug,
+        categorySlug: selectedCategory.slug,
+        tagSlugs,
+      })
     }
 
     return NextResponse.json(quote)

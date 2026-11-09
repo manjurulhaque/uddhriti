@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
 
 export async function POST() {
   const { admin, response } = await requireSuperAdmin()
@@ -130,6 +131,8 @@ export async function POST() {
       )
     `,
   ])
+
+  revalidatePublicSurfaces()
 
   return NextResponse.json({
     success: true,

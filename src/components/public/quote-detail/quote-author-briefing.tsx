@@ -2,6 +2,7 @@ import * as React from "react"
 import Link from "next/link"
 import { AuthorAvatar } from "../author-avatar"
 import { formatEpoch, formatLifespan } from "@/lib/formatters"
+import { isSafeExternalUrl } from "@/lib/security/input"
 
 export interface QuoteAuthorInfo {
   name: string
@@ -71,9 +72,9 @@ export function QuoteAuthorBriefing({ author, className = "" }: QuoteAuthorBrief
               View all {author.quoteCount || "collected"} reflections &rarr;
             </Link>
           )}
-          {author.wikipediaUrl && (
+          {isSafeExternalUrl(author.wikipediaUrl) && (
             <a
-              href={author.wikipediaUrl}
+              href={author.wikipediaUrl!}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-stone-400 hover:text-stone-700 transition-colors"

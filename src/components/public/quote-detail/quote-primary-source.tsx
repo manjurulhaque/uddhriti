@@ -1,4 +1,5 @@
 import * as React from "react"
+import { isSafeExternalUrl } from "@/lib/security/input"
 
 export interface QuoteSourceInfo {
   id?: string
@@ -67,10 +68,10 @@ export function QuotePrimarySource({
         </div>
       )}
 
-      {source.externalUrl && (
+      {isSafeExternalUrl(source.externalUrl) && (
         <div className="pt-1">
           <a
-            href={source.externalUrl}
+            href={source.externalUrl!}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-rust)] hover:underline"

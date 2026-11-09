@@ -2,7 +2,7 @@ import * as React from "react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { sanitizeSlug } from "@/lib/security/input"
+import { sanitizeSlug, isSafeExternalUrl } from "@/lib/security/input"
 import { prisma } from "@/lib/prisma"
 import { getSiteUrl } from "@/lib/site"
 import { formatEpoch, formatLifespan, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
@@ -255,7 +255,7 @@ export default async function IndividualQuotePage({
             name: quote.source.title,
             ...(quote.source.year ? { datePublished: String(quote.source.year) } : {}),
             ...(quote.source.publisher ? { publisher: { "@type": "Organization", name: quote.source.publisher } } : {}),
-            ...(quote.source.externalUrl ? { url: quote.source.externalUrl } : {}),
+            ...(isSafeExternalUrl(quote.source.externalUrl) ? { url: quote.source.externalUrl! } : {}),
           },
         }
       : {}),

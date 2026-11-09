@@ -79,17 +79,18 @@ export function rateLimitResponse(result: RateLimitFailure, isHtml = false) {
   )
 }
 
-export function getClientIp(request: Request): string {
-  const cfIp = request.headers.get("cf-connecting-ip")
+export function getClientIp(requestOrHeaders: Request | Headers | { headers: Headers }): string {
+  const headers = "headers" in requestOrHeaders ? requestOrHeaders.headers : requestOrHeaders
+  const cfIp = headers.get("cf-connecting-ip")
   if (cfIp) return cfIp.trim()
 
-  const trueClientIp = request.headers.get("true-client-ip")
+  const trueClientIp = headers.get("true-client-ip")
   if (trueClientIp) return trueClientIp.trim()
 
-  const xRealIp = request.headers.get("x-real-ip")
+  const xRealIp = headers.get("x-real-ip")
   if (xRealIp) return xRealIp.trim()
 
-  const xForwardedFor = request.headers.get("x-forwarded-for")
+  const xForwardedFor = headers.get("x-forwarded-for")
   if (xForwardedFor) {
     const first = xForwardedFor.split(",")[0]?.trim()
     if (first) return first

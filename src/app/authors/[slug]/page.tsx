@@ -17,7 +17,7 @@ import {
 } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
-import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
+import { parseSafePageNumber, sanitizeSlug, isSafeExternalUrl, isValidWikidataId } from "@/lib/security/input"
 
 const QUOTES_PER_PAGE = 12
 
@@ -222,8 +222,8 @@ export default async function AuthorDetailPage({
   const authorUrl = `${siteUrl}/authors/${author.slug}`
 
   const sameAsList: string[] = []
-  if (author.wikipediaUrl) sameAsList.push(author.wikipediaUrl)
-  if (author.wikidataId) sameAsList.push(`https://www.wikidata.org/wiki/${author.wikidataId}`)
+  if (isSafeExternalUrl(author.wikipediaUrl)) sameAsList.push(author.wikipediaUrl!)
+  if (isValidWikidataId(author.wikidataId)) sameAsList.push(`https://www.wikidata.org/wiki/${author.wikidataId}`)
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -365,9 +365,9 @@ export default async function AuthorDetailPage({
                   </span>
                 )}
 
-                {author.wikipediaUrl && (
+                {isSafeExternalUrl(author.wikipediaUrl) && (
                   <a
-                    href={author.wikipediaUrl}
+                    href={author.wikipediaUrl!}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition-all shadow-2xs"
@@ -379,7 +379,7 @@ export default async function AuthorDetailPage({
                   </a>
                 )}
 
-                {author.wikidataId && (
+                {isValidWikidataId(author.wikidataId) && (
                   <a
                     href={`https://www.wikidata.org/wiki/${author.wikidataId}`}
                     target="_blank"
@@ -484,9 +484,9 @@ export default async function AuthorDetailPage({
                         {formatCountWithNoun(source.quoteCount, "quote")}
                       </span>
 
-                      {source.externalUrl && (
+                      {isSafeExternalUrl(source.externalUrl) && (
                         <a
-                          href={source.externalUrl}
+                          href={source.externalUrl!}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 font-semibold text-[var(--accent-rust)] hover:underline"

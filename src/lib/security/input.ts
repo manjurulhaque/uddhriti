@@ -81,3 +81,39 @@ export function sanitizeSlug(slug?: string | null, maxLength = 150): string {
   return cleaned.slice(0, maxLength).trim()
 }
 
+/**
+ * Validates whether a given URL is a safe external hyperlink.
+ * Strictly permits only HTTP and HTTPS schemes to prevent script execution
+ * or DOM injection via javascript:, data:, or vbscript: URIs.
+ */
+export function isSafeExternalUrl(url?: string | null): boolean {
+  if (!url || typeof url !== "string") {
+    return false
+  }
+
+  const trimmed = url.trim()
+  if (!trimmed) {
+    return false
+  }
+
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.protocol === "https:" || parsed.protocol === "http:"
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Validates whether a Wikidata entity ID conforms to canonical format (e.g. 'Q42').
+ * Prevents URL parameter injection or invalid characters when generating Wikidata links.
+ */
+export function isValidWikidataId(id?: string | null): boolean {
+  if (!id || typeof id !== "string") {
+    return false
+  }
+
+  return /^Q\d+$/.test(id.trim())
+}
+
+

@@ -5,6 +5,7 @@ import { invalidJsonBodyResponse, isValidUuid, mapPrismaRouteError, parseJsonObj
 import { authorSchema } from "@/lib/validation/author"
 import { slugify } from "@/lib/slug"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces, revalidateAuthor } from "@/lib/revalidation"
 
 type Context = {
@@ -70,6 +71,9 @@ export async function PATCH(
 
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const raw = await parseJsonObjectBody(req)
   if (!raw) {
@@ -181,6 +185,9 @@ export async function DELETE(
 
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   let deletedSlug: string | null = null
   try {

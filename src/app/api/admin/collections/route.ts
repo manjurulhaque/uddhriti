@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { collectionSchema } from "@/lib/validation/collection"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 export async function GET() {
   const { response } = await requireAdmin()
@@ -19,6 +20,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = collectionSchema.safeParse(body)

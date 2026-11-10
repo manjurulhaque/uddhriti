@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/api/admin-auth"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { fetchWithTimeout } from "@/lib/security/fetch"
 import { normalizeWikimediaThumbnailUrl } from "@/lib/wikimedia/authorImport"
 
@@ -21,8 +22,11 @@ interface WikiPageItem {
 }
 
 export async function GET(req: NextRequest) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const { searchParams } = new URL(req.url)
   const query = searchParams.get("q")?.trim()

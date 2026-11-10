@@ -5,6 +5,7 @@ import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
 import { revalidatePublicSurfaces, revalidateCategory } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -42,6 +43,9 @@ export async function PATCH(
 
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = categorySchema.safeParse(body)
@@ -107,6 +111,9 @@ export async function DELETE(
 
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   let deletedSlug: string | null = null
   let deletedName: string | null = null

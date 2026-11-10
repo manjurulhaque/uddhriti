@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/api/admin-auth"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { prisma } from "@/lib/prisma"
 import { isValidUuid } from "@/lib/api/route-helpers"
 import {
@@ -9,8 +10,11 @@ import {
 } from "@/lib/quotes/duplicateDetection"
 
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "quoteView")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== "object") {

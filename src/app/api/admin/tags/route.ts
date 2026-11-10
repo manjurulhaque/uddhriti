@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { tagSchema } from "@/lib/validation/tag"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 function normalizeTagName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ")
@@ -37,6 +38,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json()
   const parsed = tagSchema.safeParse(body)

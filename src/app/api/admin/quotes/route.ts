@@ -13,6 +13,7 @@ import {
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
 import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 function normalize(content: string) {
   return content.trim().replace(/\s+/g, " ").toLowerCase()
@@ -32,6 +33,9 @@ function countWords(content: string) {
 export async function POST(req: Request) {
   const { admin, response } = await requireSuperAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = quoteCreateSchema.safeParse(body)

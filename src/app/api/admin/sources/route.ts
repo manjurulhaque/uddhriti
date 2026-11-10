@@ -5,6 +5,7 @@ import { sourceSchema } from "@/lib/validation/source"
 import { normalizeSourceYearInput, parseSourceYearInput } from "@/lib/sourceYear"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 function getSourceYearLabel(raw: { year?: unknown; yearLabel?: unknown } | null) {
   return normalizeSourceYearInput(raw?.yearLabel) ?? normalizeSourceYearInput(raw?.year)
@@ -43,6 +44,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const raw = await req.json().catch(() => null)
   const parsedYear = parseSourceYearInput(raw?.year, raw?.yearApproximate)

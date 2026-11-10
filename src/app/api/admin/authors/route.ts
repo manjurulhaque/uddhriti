@@ -5,6 +5,7 @@ import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } fro
 import { slugify } from "@/lib/slug"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 // ✅ GET ALL AUTHORS (supports ?select=minimal)
 export async function GET(req: Request) {
@@ -53,6 +54,9 @@ function normalizeAuthorName(name: string) {
 export async function POST(req: Request) {
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const raw = await parseJsonObjectBody(req)
   if (!raw) {

@@ -65,5 +65,6 @@ describe("Security: rateLimit sliding window", () => {
     assert.equal(RATE_LIMITS.recalculate.limit, 2)
     assert.equal(RATE_LIMITS.publicApi.limit, 120)
     assert.equal(RATE_LIMITS.quoteView.limit, 60)
+    assert.equal(RATE_LIMITS.adminMutation.limit, 60)
   })
 })

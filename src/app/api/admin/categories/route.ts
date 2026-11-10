@@ -5,6 +5,7 @@ import { mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 // GET all categories (supports ?select=minimal)
 export async function GET(req: Request) {
@@ -36,6 +37,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = categorySchema.safeParse(body)

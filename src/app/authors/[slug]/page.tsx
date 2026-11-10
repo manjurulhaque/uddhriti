@@ -106,7 +106,6 @@ export async function generateMetadata({
     `Read timeless quotes and philosophical thoughts by ${author.name}${
       author.profession ? `, ${author.profession}` : ""
     }.`
-  const authorImageUrl = normalizeWikimediaThumbnailUrl(author.imageUrl)
 
   return {
     title: `${author.name} Quotes`,
@@ -117,13 +116,12 @@ export async function generateMetadata({
     openGraph: {
       title: `${author.name} Quotes - Quotzen`,
       description: desc,
-      images: authorImageUrl ? [{ url: authorImageUrl, alt: author.name }] : undefined,
+      type: "profile",
     },
     twitter: {
       card: "summary_large_image",
       title: `${author.name} Quotes - Quotzen`,
       description: desc,
-      images: authorImageUrl ? [authorImageUrl] : undefined,
     },
   }
 }

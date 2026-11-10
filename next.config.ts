@@ -51,6 +51,14 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["@prisma/client"],
+  async rewrites() {
+    return [
+      {
+        source: "/sitemap.xml",
+        destination: "/sitemap/0.xml",
+      },
+    ];
+  },
   async headers() {
     return [
       {

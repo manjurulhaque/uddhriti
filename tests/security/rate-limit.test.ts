@@ -35,6 +35,22 @@ describe("Security: getClientIp", () => {
     const headers = new Headers()
     assert.equal(getClientIp(headers), "127.0.0.1")
   })
+
+  it("handles Next.js ReadonlyHeaders (which has both .get() and an internal .headers proxy)", () => {
+    // Simulates Next.js HeadersAdapter / ReadonlyHeaders structure
+    const mockNextHeaders = {
+      headers: { "cf-connecting-ip": "198.51.100.99" }, // Note: no .get() on .headers
+      get: (name: string) => (name.toLowerCase() === "cf-connecting-ip" ? "198.51.100.99" : null),
+    } as unknown as Headers
+    assert.equal(getClientIp(mockNextHeaders), "198.51.100.99")
+  })
+
+  it("extracts IP from Request object with .headers property", () => {
+    const req = new Request("https://example.com", {
+      headers: { "x-forwarded-for": "198.51.100.55" },
+    })
+    assert.equal(getClientIp(req), "198.51.100.55")
+  })
 })
 
 describe("Security: rateLimit sliding window", () => {

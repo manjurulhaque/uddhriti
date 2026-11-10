@@ -81,18 +81,49 @@ export function rateLimitResponse(result: RateLimitFailure, isHtml = false) {
   )
 }
 
-export function getClientIp(requestOrHeaders: Request | Headers | { headers: Headers }): string {
-  const headers = "headers" in requestOrHeaders ? requestOrHeaders.headers : requestOrHeaders
-  const cfIp = headers.get("cf-connecting-ip")
+function extractHeader(
+  requestOrHeaders: Request | Headers | { headers: Headers } | unknown,
+  name: string
+): string | null {
+  if (!requestOrHeaders || typeof requestOrHeaders !== "object") {
+    return null
+  }
+
+  // 1. Direct Headers object, Next.js ReadonlyHeaders, or custom header instance (has .get() method)
+  if ("get" in requestOrHeaders && typeof (requestOrHeaders as { get: unknown }).get === "function") {
+    return (requestOrHeaders as { get: (headerName: string) => string | null }).get(name)
+  }
+
+  // 2. Request object or wrapper object with .headers property
+  if ("headers" in requestOrHeaders && requestOrHeaders.headers && typeof requestOrHeaders.headers === "object") {
+    const inner = requestOrHeaders.headers
+    if ("get" in inner && typeof (inner as { get: unknown }).get === "function") {
+      return (inner as { get: (headerName: string) => string | null }).get(name)
+    }
+    const direct = (inner as Record<string, unknown>)[name.toLowerCase()]
+    if (typeof direct === "string") return direct
+  }
+
+  // 3. Fallback for plain header dictionary
+  const direct = (requestOrHeaders as Record<string, unknown>)[name.toLowerCase()]
+  if (typeof direct === "string") return direct
+
+  return null
+}
+
+export function getClientIp(
+  requestOrHeaders: Request | Headers | { headers: Headers } | Record<string, unknown>
+): string {
+  const cfIp = extractHeader(requestOrHeaders, "cf-connecting-ip")
   if (cfIp) return cfIp.trim()
 
-  const trueClientIp = headers.get("true-client-ip")
+  const trueClientIp = extractHeader(requestOrHeaders, "true-client-ip")
   if (trueClientIp) return trueClientIp.trim()
 
-  const xRealIp = headers.get("x-real-ip")
+  const xRealIp = extractHeader(requestOrHeaders, "x-real-ip")
   if (xRealIp) return xRealIp.trim()
 
-  const xForwardedFor = headers.get("x-forwarded-for")
+  const xForwardedFor = extractHeader(requestOrHeaders, "x-forwarded-for")
   if (xForwardedFor) {
     const first = xForwardedFor.split(",")[0]?.trim()
     if (first) return first

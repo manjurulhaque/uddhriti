@@ -3,26 +3,20 @@ import { prisma } from "@/lib/prisma"
 import { sanitizeSearchQuery } from "@/lib/security/input"
 import { enforceIpRateLimit } from "@/lib/api/rate-limit"
 import { searchPublicQuoteIds } from "@/lib/quotes/search"
-import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
 
 export const dynamic = "force-dynamic"
 
-interface SearchCacheEntry {
-  data: {
-    quotes: unknown[]
-    authors: unknown[]
-    categories: unknown[]
-    tags: unknown[]
-  }
-  expiresAt: number
+interface SearchResultData {
+  quotes: unknown[]
+  authors: unknown[]
+  categories: unknown[]
+  tags: unknown[]
 }
 
-const searchCache = new Map<string, SearchCacheEntry>()
-const MAX_SEARCH_CACHE_ENTRIES = 150
-const SEARCH_CACHE_TTL_MS = 60 * 1000 // 60 seconds
-
-registerPublicDataInvalidator(() => {
-  searchCache.clear()
+const searchCache = new BoundedMemoryCache<string, SearchResultData>({
+  maxSize: 150,
+  ttlMs: 60 * 1000, // 60 seconds
 })
 
 export async function GET(req: NextRequest) {
@@ -47,8 +41,8 @@ export async function GET(req: NextRequest) {
 
   // Fast in-memory cache lookup
   const cached = searchCache.get(normalizedQuery)
-  if (cached && cached.expiresAt > Date.now()) {
-    return NextResponse.json(cached.data, {
+  if (cached) {
+    return NextResponse.json(cached, {
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
         "X-Cache": "HIT",
@@ -281,7 +275,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const result = {
+    const result: SearchResultData = {
       quotes,
       authors,
       categories,
@@ -289,14 +283,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Store in bounded LRU memory cache
-    if (searchCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
-      const oldestKey = searchCache.keys().next().value
-      if (oldestKey) searchCache.delete(oldestKey)
-    }
-    searchCache.set(normalizedQuery, {
-      data: result,
-      expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
-    })
+    searchCache.set(normalizedQuery, result)
 
     return NextResponse.json(
       result,

@@ -33,7 +33,7 @@ export async function GET() {
   const { admin, response } = await requireSuperAdmin()
   if (response) return response
 
-  const rateLimited = enforceAdminRateLimit(admin.id, "recalculate")
+  const rateLimited = enforceAdminRateLimit(admin.id, "diagnostics")
   if (rateLimited) return rateLimited
 
   try {

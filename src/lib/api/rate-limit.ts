@@ -26,6 +26,7 @@ export const RATE_LIMITS = {
   import: { limit: 5, windowMs: 60_000 },
   bulk: { limit: 10, windowMs: 60_000 },
   recalculate: { limit: 2, windowMs: 60_000 },
+  diagnostics: { limit: 30, windowMs: 60_000 },
   adminMutation: { limit: 60, windowMs: 60_000 },
   quoteView: { limit: 60, windowMs: 60_000 },
   quoteShare: { limit: 30, windowMs: 60_000 },

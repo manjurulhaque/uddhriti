@@ -3,6 +3,7 @@ import { z } from "zod"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 import { prisma } from "@/lib/prisma"
 import { tagTypeOptions } from "@/lib/tags/catalog"
 
@@ -41,6 +42,21 @@ export async function POST(req: Request) {
   if (result.count > 0) {
     revalidatePublicSurfaces()
   }
+
+  await recordAuditLog({
+    action: "BULK_UPDATE",
+    entityType: "TAG",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      action: parsed.data.action,
+      type: parsed.data.type,
+      tagIdsCount: parsed.data.tagIds.length,
+      updated: result.count,
+    },
+    req,
+  })
 
   return NextResponse.json({
     updated: result.count,

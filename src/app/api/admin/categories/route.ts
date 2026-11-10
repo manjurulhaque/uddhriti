@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 // GET all categories (supports ?select=minimal)
 export async function GET(req: Request) {
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
 
 // CREATE category
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const body = await req.json().catch(() => null)
@@ -57,6 +58,18 @@ export async function POST(req: Request) {
     })
 
     revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "CATEGORY",
+      entityId: category.id,
+      entityName: category.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: category.slug },
+      req,
+    })
 
     return NextResponse.json(category)
   } catch (error) {

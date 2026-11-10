@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { collectionSchema } from "@/lib/validation/collection"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -37,7 +38,7 @@ export async function PATCH(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const body = await req.json().catch(() => null)
@@ -62,6 +63,18 @@ export async function PATCH(
 
     revalidatePublicSurfaces()
 
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "COLLECTION",
+      entityId: updated.id,
+      entityName: updated.title,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: updated.slug, visibility: updated.visibility },
+      req,
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -76,18 +89,20 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: Context
 ) {
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
+  let deleted: { id: string; title: string } | null = null
   try {
-    await prisma.collection.delete({
+    deleted = await prisma.collection.delete({
       where: { id },
+      select: { id: true, title: true },
     })
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -101,6 +116,17 @@ export async function DELETE(
   }
 
   revalidatePublicSurfaces()
+
+  await recordAuditLog({
+    action: "DELETE",
+    entityType: "COLLECTION",
+    entityId: id,
+    entityName: deleted?.title,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
 
   return NextResponse.json({ success: true })
 }

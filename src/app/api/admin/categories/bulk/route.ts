@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 
 const itemSchema = z.object({
@@ -90,6 +91,20 @@ export async function POST(req: Request) {
   if (result.count > 0) {
     revalidatePublicSurfaces()
   }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "CATEGORY",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: parsed.data.items.length,
+      created: result.count,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: parsed.data.items.length,

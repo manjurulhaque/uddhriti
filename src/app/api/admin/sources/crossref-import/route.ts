@@ -5,6 +5,7 @@ import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { createUniqueSourceSlug, getExistingSourceLookup } from "@/lib/wikimedia/sourceImport"
 import { importSourcesFromCrossref } from "@/lib/crossref/sourceImport"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 export async function POST(req: Request) {
   const { admin, response } = await requireSuperAdmin()
@@ -120,6 +121,22 @@ export async function POST(req: Request) {
 
   if (!preview && created > 0) {
     revalidatePublicSurfaces()
+    await recordAuditLog({
+      action: "IMPORT",
+      entityType: "SOURCE",
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        provider: "crossref",
+        authorId,
+        resolved: works.length,
+        created,
+        skipped,
+        failed: errors.length,
+      },
+      req,
+    })
   }
 
   return NextResponse.json({

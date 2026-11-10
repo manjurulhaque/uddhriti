@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { categorySchema } from "@/lib/validation/category"
 import { revalidatePublicSurfaces, revalidateCategory } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -39,7 +40,7 @@ export async function PATCH(
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const body = await req.json().catch(() => null)
@@ -71,6 +72,18 @@ export async function PATCH(
     revalidatePublicSurfaces()
     revalidateCategory(updated.slug, previous?.slug)
 
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "CATEGORY",
+      entityId: updated.id,
+      entityName: updated.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: updated.slug, previousSlug: previous?.slug },
+      req,
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error, {
@@ -86,22 +99,24 @@ export async function PATCH(
 
 // DELETE
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: Context
 ) {
   const { id } = await context.params
   if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   let deletedSlug: string | null = null
+  let deletedName: string | null = null
   try {
     const deleted = await prisma.category.delete({
       where: { id },
-      select: { slug: true },
+      select: { slug: true, name: true },
     })
     deletedSlug = deleted.slug
+    deletedName = deleted.name
   } catch (error) {
     const response = mapPrismaRouteError(error, {
       foreignKey: "Category cannot be deleted while it is still referenced by other records.",
@@ -117,6 +132,17 @@ export async function DELETE(
   if (deletedSlug) {
     revalidateCategory(deletedSlug)
   }
+
+  await recordAuditLog({
+    action: "DELETE",
+    entityType: "CATEGORY",
+    entityId: id,
+    entityName: deletedName,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
 
   return NextResponse.json({ success: true })
 }

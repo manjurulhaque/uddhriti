@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { tagSchema } from "@/lib/validation/tag"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 function normalizeTagName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ")
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const body = await req.json()
@@ -76,6 +77,18 @@ export async function POST(req: Request) {
     })
 
     revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "TAG",
+      entityId: tag.id,
+      entityName: tag.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: tag.slug, type: tag.type },
+      req,
+    })
 
     return NextResponse.json(tag, { status: 201 })
   } catch {

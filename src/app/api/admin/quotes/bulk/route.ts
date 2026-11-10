@@ -16,6 +16,7 @@ import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAut
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
+import { recordAuditLog } from "@/lib/audit"
 
 type ImportItem = {
   content?: string
@@ -1122,6 +1123,27 @@ export async function POST(req: Request) {
     if (publishedAny) {
       revalidatePublicSurfaces()
     }
+
+    await recordAuditLog({
+      action: "IMPORT",
+      entityType: "QUOTE",
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        totalReceived:
+          items.length +
+          wikiquoteUrls.length +
+          gutenbergUrls.length +
+          wikisourceUrls.length +
+          selectedSourceCandidates.length,
+        acceptedRows: candidates.length,
+        created,
+        skipped,
+        failed: errors.length,
+      },
+      req,
+    })
 
     return NextResponse.json({
       totalReceived:

@@ -12,6 +12,7 @@ import {
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
 import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 function normalize(content: string) {
   return content.trim().replace(/\s+/g, " ").toLowerCase()
@@ -229,6 +230,23 @@ export async function POST(req: Request) {
         tagSlugs,
       })
     }
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "QUOTE",
+      entityId: quote.id,
+      entityName: quote.content.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        status: quote.status,
+        authorId: quote.authorId,
+        categoryId: quote.categoryId,
+        sourceId: quote.sourceId,
+      },
+      req,
+    })
 
     return NextResponse.json(quote)
 

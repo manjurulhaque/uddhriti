@@ -11,6 +11,7 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 type BulkActionPayload = {
   quoteIds?: unknown
@@ -124,6 +125,16 @@ export async function POST(req: Request) {
         revalidatePublicSurfaces()
       }
 
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, status, quoteIdsCount: quoteIds.length, updatedCount: result.updatedCount },
+        req,
+      })
+
       return NextResponse.json({ success: true, updatedCount: result.updatedCount })
     }
 
@@ -142,6 +153,16 @@ export async function POST(req: Request) {
       })
 
       revalidatePublicSurfaces()
+
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, isVerified, quoteIdsCount: quoteIds.length, updatedCount: result.count },
+        req,
+      })
 
       return NextResponse.json({ success: true, updatedCount: result.count })
     }
@@ -181,6 +202,16 @@ export async function POST(req: Request) {
         return updated
       })
 
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, authorId: author.id, authorName: author.name, quoteIdsCount: quoteIds.length, updatedCount: result.count },
+        req,
+      })
+
       return NextResponse.json({ success: true, updatedCount: result.count })
     }
 
@@ -215,6 +246,16 @@ export async function POST(req: Request) {
         return updated
       })
 
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, sourceId: source.id, quoteIdsCount: quoteIds.length, updatedCount: result.count },
+        req,
+      })
+
       return NextResponse.json({ success: true, updatedCount: result.count })
     }
 
@@ -233,6 +274,16 @@ export async function POST(req: Request) {
 
         await recalculateSourceQuoteCounts(tx, previousSourceIds)
         return updated
+      })
+
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, quoteIdsCount: quoteIds.length, updatedCount: result.count },
+        req,
       })
 
       return NextResponse.json({ success: true, updatedCount: result.count })
@@ -273,6 +324,16 @@ export async function POST(req: Request) {
       })
 
       revalidatePublicSurfaces()
+
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, categoryId: category.id, categorySlug: category.slug, quoteIdsCount: quoteIds.length, updatedCount: result.count },
+        req,
+      })
 
       return NextResponse.json({ success: true, updatedCount: result.count })
     }
@@ -336,6 +397,16 @@ export async function POST(req: Request) {
       await recalculateTagQuoteCounts(tx, validTagIds)
 
       return { updatedCount: targetQuoteIds.length }
+    })
+
+    await recordAuditLog({
+      action: "BULK_UPDATE",
+      entityType: "QUOTE",
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { action, tagIds: validTagIds, quoteIdsCount: quoteIds.length, updatedCount: result.updatedCount },
+      req,
     })
 
     return NextResponse.json({ success: true, updatedCount: result.updatedCount })

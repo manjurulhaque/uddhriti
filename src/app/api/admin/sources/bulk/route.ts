@@ -7,6 +7,7 @@ import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { getExistingSourceLookup } from "@/lib/wikimedia/sourceImport"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 const workTypeSchema = z.enum([
   "BOOK",
@@ -142,6 +143,21 @@ export async function POST(req: Request) {
   if (result.count > 0) {
     revalidatePublicSurfaces()
   }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "SOURCE",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: parsed.data.items.length,
+      created: result.count,
+      skipped,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: parsed.data.items.length,

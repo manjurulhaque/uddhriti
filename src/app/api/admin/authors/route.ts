@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { slugify } from "@/lib/slug"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 // ✅ GET ALL AUTHORS (supports ?select=minimal)
 export async function GET(req: Request) {
@@ -50,7 +51,7 @@ function normalizeAuthorName(name: string) {
 }
 
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const raw = await parseJsonObjectBody(req)
@@ -115,6 +116,18 @@ export async function POST(req: Request) {
     })
 
     revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "AUTHOR",
+      entityId: author.id,
+      entityName: author.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: author.slug },
+      req,
+    })
 
     return NextResponse.json(author, { status: 201 })
   } catch (error) {

@@ -6,7 +6,7 @@ import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
 
-export async function POST() {
+export async function POST(req: Request) {
   const { admin, response } = await requireSuperAdmin()
   if (response) return response
 
@@ -210,6 +210,7 @@ export async function POST() {
         backfilledHashes: backfilledCount,
         backfilledSearchVectors,
       },
+      req,
     })
 
     return NextResponse.json({

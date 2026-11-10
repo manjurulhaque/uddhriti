@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/api/admin-auth"
 import { sourceSchema } from "@/lib/validation/source"
 import { normalizeSourceYearInput, parseSourceYearInput } from "@/lib/sourceYear"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 function getSourceYearLabel(raw: { year?: unknown; yearLabel?: unknown } | null) {
   return normalizeSourceYearInput(raw?.yearLabel) ?? normalizeSourceYearInput(raw?.year)
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const raw = await req.json().catch(() => null)
@@ -96,6 +97,18 @@ export async function POST(req: Request) {
     })
 
     revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "SOURCE",
+      entityId: source.id,
+      entityName: source.title,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { type: source.type, authorId: source.authorId },
+      req,
+    })
 
     return NextResponse.json(source)
   } catch {

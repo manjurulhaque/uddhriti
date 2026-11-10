@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
-export async function POST() {
+export async function POST(req: Request) {
   const { admin, response } = await requireSuperAdmin()
   if (response || !admin) return response
 
@@ -133,6 +134,30 @@ export async function POST() {
   ])
 
   revalidatePublicSurfaces()
+
+  await recordAuditLog({
+    action: "REPAIR",
+    entityType: "SYSTEM",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      tool: "recalculate-counts",
+      updatedRows: {
+        authorsSet,
+        authorsReset,
+        sourcesSet,
+        sourcesReset,
+        categoriesSet,
+        categoriesReset,
+        collectionsSet,
+        collectionsReset,
+        tagsSet,
+        tagsReset,
+      },
+    },
+    req,
+  })
 
   return NextResponse.json({
     success: true,

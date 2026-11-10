@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { faqSchema } from "@/lib/validation/faq"
 
@@ -96,6 +97,21 @@ export async function POST(req: Request) {
   if (result.count > 0) {
     revalidatePublicSurfaces()
   }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "FAQ",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: parsedPayload.data.items.length,
+      created: result.count,
+      skipped,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: parsedPayload.data.items.length,

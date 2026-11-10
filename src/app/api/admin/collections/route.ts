@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { collectionSchema } from "@/lib/validation/collection"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 export async function GET() {
   const { response } = await requireAdmin()
@@ -16,7 +17,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
   const body = await req.json().catch(() => null)
@@ -38,6 +39,19 @@ export async function POST(req: Request) {
       },
     })
     revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "COLLECTION",
+      entityId: collection.id,
+      entityName: collection.title,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: collection.slug, visibility: collection.visibility },
+      req,
+    })
+
     return NextResponse.json(collection, { status: 201 })
   } catch {
     return NextResponse.json(

@@ -4,6 +4,7 @@ import { Empty } from "../ui/empty-state"
 import { HeroSearch } from "./hero-search"
 import { HeroCompanionQuote } from "./hero-companion-quote"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+import { HERO_JUMP_LINKS } from "@/data/home-hero"
 
 export interface HomeHeroQuote {
   id?: string
@@ -31,16 +32,6 @@ export interface HomeHeroProps {
   heroQuote?: HomeHeroQuote | null
   companionQuotes?: HomeHeroQuote[]
 }
-
-const HERO_JUMP_LINKS = [
-  { href: "#mood-filter", label: "Reflect by Mood", icon: "🌿", featured: true },
-  { href: "#highlights", label: "Curator’s Parchment", icon: "🏛️", featured: true },
-  { href: "#daily-quote", label: "Daily Contemplation", icon: "🌅", featured: true },
-  { href: "#taxonomies", label: "Thinkers & Themes", icon: "✒️", featured: true },
-  { href: "#reader-studio", label: "Reader Studio", icon: "🛠️", featured: true },
-  { href: "#trending", label: "Trending Now", icon: "🔥", featured: false },
-  { href: "#latest", label: "Latest Quotes", icon: "✨", featured: false },
-] as const
 
 export function HomeHero({
   heroQuote,

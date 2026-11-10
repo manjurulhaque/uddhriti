@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { PublicLayout, QuoteCard, Breadcrumb, AuthorAvatar } from "@/components/public"
+import { PublicLayout, QuoteCard, Breadcrumb, AuthorAvatar, JsonLd } from "@/components/public"
 import { Pagination } from "@/components/ui/pagination"
 import {
   cleanProfession,
@@ -215,7 +215,7 @@ async function AuthorQuotesSection({
             <QuoteCard
               key={quote.id}
               id={quote.id}
-              slug={quote.slug ?? undefined}
+              slug={quote.slug}
               content={quote.content}
               authorName={authorName}
               authorSlug={authorSlug}
@@ -362,12 +362,7 @@ export default async function AuthorDetailPage({
 
   return (
     <PublicLayout>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd data={jsonLd} />
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
         <Breadcrumb

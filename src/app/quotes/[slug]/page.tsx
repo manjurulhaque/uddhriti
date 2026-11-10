@@ -9,6 +9,7 @@ import { getSiteUrl } from "@/lib/site"
 import { formatEpoch, formatLifespan, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
 import {
   PublicLayout,
+  JsonLd,
   QuoteCard,
   QuoteActions,
   Breadcrumb,
@@ -248,13 +249,7 @@ export default async function IndividualQuotePage({
 
   return (
     <PublicLayout>
-      {/* Schema.org JSON-LD Script */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd data={jsonLd} />
 
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-12 font-sans">
         {/* Breadcrumb Navigation */}

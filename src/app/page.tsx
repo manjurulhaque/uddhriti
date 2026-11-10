@@ -11,6 +11,7 @@ import { publicQuoteCardSelect } from "@/lib/quotes/selects"
 import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
 import {
   PublicLayout,
+  JsonLd,
   HomeHero,
   HomeMoodFilter,
   HomeHighlights,
@@ -409,12 +410,7 @@ export default async function HomePage() {
 
   return (
     <PublicLayout>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd data={jsonLd} />
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
         <HomeHero
           heroQuote={heroQuote}

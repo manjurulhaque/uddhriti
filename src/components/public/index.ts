@@ -30,7 +30,9 @@ export * from "./sort-toolbar"
 export * from "./active-filter-banner"
 export * from "./filter-pills"
 export * from "./quote-detail"
+export * from "./saved-quotes-content"
 
 // Re-export UI primitives commonly used on public pages
 export { Breadcrumb } from "../ui/breadcrumb"
+export { JsonLd } from "../ui/json-ld"
 

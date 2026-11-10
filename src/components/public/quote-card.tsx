@@ -6,7 +6,7 @@ import { formatScore, formatCountWithNoun } from "@/lib/formatters"
 
 export interface QuoteCardProps {
   id?: string
-  slug?: string
+  slug?: string | null
   content: string
   authorName?: string | null
   authorSlug?: string | null

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import {
   PublicLayout,
+  JsonLd,
   QuoteCard,
   Breadcrumb,
   TaxonomyHero,
@@ -446,12 +447,7 @@ export default async function CategoryDetailPage({
 
   return (
     <PublicLayout>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd data={jsonLd} />
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-10 font-sans">
         {/* Breadcrumb Navigation */}
         <Breadcrumb
@@ -584,7 +580,7 @@ export default async function CategoryDetailPage({
                 <QuoteCard
                   key={quote.id}
                   id={quote.id}
-                  slug={quote.slug ?? undefined}
+                  slug={quote.slug}
                   content={quote.content}
                   authorName={quote.author?.name || quote.authorName}
                   authorSlug={quote.author?.slug}

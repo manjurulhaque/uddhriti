@@ -1,5 +1,6 @@
 import * as React from "react"
 import Link from "next/link"
+import { JsonLd } from "./json-ld"
 
 export interface BreadcrumbItem {
   label: string
@@ -38,14 +39,7 @@ export function Breadcrumb({
 
   return (
     <>
-      {jsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-          }}
-        />
-      )}
+      {jsonLd && <JsonLd data={jsonLd} />}
       <nav
         aria-label="Breadcrumb"
         className={`text-xs text-stone-500 flex flex-wrap items-center gap-2 ${className}`}

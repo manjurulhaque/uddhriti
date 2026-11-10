@@ -36,7 +36,7 @@ export function HomeMoodFilter({ initialMoodQuotes = {} }: HomeMoodFilterProps =
     copyQuote({
       content: currentQuote.content,
       author: currentQuote.author,
-      source: currentQuote.source ?? undefined,
+      source: currentQuote.source,
     })
   }
 
@@ -45,9 +45,9 @@ export function HomeMoodFilter({ initialMoodQuotes = {} }: HomeMoodFilterProps =
       id: quoteKey,
       content: currentQuote.content,
       authorName: currentQuote.author,
-      authorSlug: currentQuote.authorSlug ?? undefined,
-      sourceTitle: currentQuote.source ?? undefined,
-      year: currentQuote.year ?? undefined,
+      authorSlug: currentQuote.authorSlug,
+      sourceTitle: currentQuote.source,
+      year: currentQuote.year,
       category: activeMoodBase.label,
     })
   }

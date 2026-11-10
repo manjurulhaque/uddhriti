@@ -6,7 +6,7 @@ import { useSavedQuotes } from "@/lib/saved-quotes"
 
 export interface QuoteBookmarkButtonProps {
   id?: string
-  slug?: string
+  slug?: string | null
   content: string
   authorName?: string | null
   authorSlug?: string | null

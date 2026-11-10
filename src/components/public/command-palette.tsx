@@ -4,6 +4,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
+import { QUICK_ACTIONS, CURATED_PATHWAYS } from "@/data/command-palette"
 
 export interface SearchResultQuote {
   id: string
@@ -56,68 +57,6 @@ interface PaletteItem {
   badge?: string
   imageUrl?: string | null
 }
-
-const QUICK_ACTIONS: PaletteItem[] = [
-  {
-    id: "action-random",
-    type: "action",
-    title: "Surprise Me (Random Quote)",
-    subtitle: "Discover a random timeless philosophical passage",
-    href: "/quotes/random",
-    badge: "Discovery",
-  },
-  {
-    id: "action-saved",
-    type: "action",
-    title: "My Saved Notebook",
-    subtitle: "View bookmarked quotes available offline",
-    href: "/saved",
-    badge: "Notebook",
-  },
-  {
-    id: "action-trending",
-    type: "action",
-    title: "Trending Quotes Today",
-    subtitle: "See the most read and reflected-upon passages",
-    href: "/#trending",
-    badge: "Trending",
-  },
-  {
-    id: "action-authors",
-    type: "action",
-    title: "Thinkers & Authors Archive",
-    subtitle: "Browse all philosophers, poets, and writers",
-    href: "/authors",
-    badge: "Catalog",
-  },
-  {
-    id: "action-categories",
-    type: "action",
-    title: "Thematic Topics & Categories",
-    subtitle: "Explore quotes organized by life themes",
-    href: "/categories",
-    badge: "Themes",
-  },
-  {
-    id: "action-feed",
-    type: "action",
-    title: "Daily Quote RSS Feed",
-    subtitle: "Subscribe to /feed.xml in your favorite RSS reader",
-    href: "/feed.xml",
-    badge: "RSS 2.0",
-  },
-]
-
-const CURATED_PATHWAYS = [
-  "Wisdom",
-  "Courage",
-  "Truth",
-  "Marcus Aurelius",
-  "Rumi",
-  "Stillness",
-  "Hope",
-  "Freedom",
-]
 
 function emptySubscribe() {
   return () => {}

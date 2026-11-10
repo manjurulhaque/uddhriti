@@ -4,7 +4,7 @@ import * as React from "react";
 
 export interface SavedQuote {
   id: string;
-  slug?: string;
+  slug?: string | null;
   content: string;
   authorName?: string | null;
   authorSlug?: string | null;

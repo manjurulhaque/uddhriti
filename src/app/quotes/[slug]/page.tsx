@@ -316,7 +316,7 @@ export default async function IndividualQuotePage({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pt-6 border-t border-stone-100">
             <div className="flex items-center gap-4">
               {/* Author Portrait Thumbnail */}
-              <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" />
+              <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" priority />
 
               {/* Author Details */}
               <div className="space-y-0.5">

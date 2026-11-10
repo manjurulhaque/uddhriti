@@ -66,7 +66,7 @@ export function HomeTaxonomiesShowcase({
   const thinkersSlot = (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {spotlightAuthors.map((author) => {
+        {spotlightAuthors.map((author, index) => {
           const epoch = formatEpoch(author.birthYear)
           const lifespan = formatLifespan(author.birthYear, author.deathYear)
           const cleanProf = cleanProfession(author.profession)
@@ -90,6 +90,7 @@ export function HomeTaxonomiesShowcase({
                     name={author.name}
                     imageUrl={author.imageUrl}
                     size="md"
+                    priority={index < 4}
                     className="group-hover:border-[var(--accent-rust)]/40 transition-colors"
                   />
 

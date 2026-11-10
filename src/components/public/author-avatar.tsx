@@ -10,6 +10,7 @@ export interface AuthorAvatarProps {
   size?: AuthorAvatarSize
   className?: string
   priority?: boolean
+  loading?: "eager" | "lazy"
   showBadge?: boolean
   badgeLabel?: string
 }
@@ -48,6 +49,7 @@ export function AuthorAvatar({
   size = "md",
   className = "",
   priority = false,
+  loading,
   showBadge = false,
   badgeLabel = "Thinker",
 }: AuthorAvatarProps) {
@@ -67,6 +69,7 @@ export function AuthorAvatar({
           sizes={sizeConfig.imageSizes}
           unoptimized
           priority={priority}
+          loading={priority ? undefined : loading}
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

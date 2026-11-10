@@ -285,6 +285,100 @@ async function loadTagTaxonomy(tagId: string, tagType: TagType): Promise<TagTaxo
   return data
 }
 
+async function loadTagQuotesData({
+  tagId,
+  tagType,
+  tagQuoteCount,
+  selectedAuthorId,
+  selectedCategoryId,
+  currentSort,
+  currentPage,
+  whereClause,
+  orderByClause,
+}: {
+  tagId: string
+  tagType: TagType
+  tagQuoteCount: number
+  selectedAuthorId?: string
+  selectedCategoryId?: string
+  currentSort: string
+  currentPage: number
+  whereClause: {
+    tags: { some: { tagId: string } }
+    status: "PUBLISHED"
+    deletedAt: null
+    isVerified?: boolean
+    authorId?: string
+    categoryId?: string
+  }
+  orderByClause: Array<Record<string, "desc" | "asc">>
+}): Promise<{
+  totalQuotes: number
+  quotes: TagQuotesItem[]
+  taxonomy: TagTaxonomy
+}> {
+  const isDefaultBrowse = !selectedAuthorId && !selectedCategoryId && currentSort === "popular" && currentPage === 1
+  const now = Date.now()
+
+  const cachedPage = isDefaultBrowse ? tagPage1Cache.get(tagId) : null
+
+  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
+    const taxonomy = await loadTagTaxonomy(tagId, tagType)
+    return {
+      totalQuotes: cachedPage.totalQuotes,
+      quotes: cachedPage.quotes,
+      taxonomy,
+    }
+  }
+
+  const isDefaultCount = !selectedAuthorId && !selectedCategoryId && currentSort !== "verified"
+
+  const [fetchedTotal, fetchedQuotes, fetchedTaxonomy] = await Promise.all([
+    isDefaultCount ? Promise.resolve(tagQuoteCount) : prisma.quote.count({ where: whereClause }),
+    prisma.quote.findMany({
+      where: whereClause,
+      orderBy: orderByClause,
+      skip: (currentPage - 1) * QUOTES_PER_PAGE,
+      take: QUOTES_PER_PAGE,
+      select: {
+        id: true,
+        slug: true,
+        content: true,
+        authorName: true,
+        isVerified: true,
+        views: true,
+        author: { select: { id: true, name: true, slug: true } },
+        category: { select: { id: true, name: true, slug: true } },
+        source: { select: { title: true, year: true } },
+        tags: {
+          select: {
+            tag: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    }),
+    loadTagTaxonomy(tagId, tagType),
+  ])
+
+  if (isDefaultBrowse) {
+    if (tagPage1Cache.size >= MAX_TAG_CACHE_ENTRIES) {
+      const oldest = tagPage1Cache.keys().next().value
+      if (oldest) tagPage1Cache.delete(oldest)
+    }
+    tagPage1Cache.set(tagId, {
+      quotes: fetchedQuotes,
+      totalQuotes: fetchedTotal,
+      timestamp: now,
+    })
+  }
+
+  return {
+    totalQuotes: fetchedTotal,
+    quotes: fetchedQuotes,
+    taxonomy: fetchedTaxonomy,
+  }
+}
+
 export async function generateMetadata({
   params,
 }: TagDetailPageProps): Promise<Metadata> {
@@ -394,65 +488,17 @@ export default async function TagDetailPage({
     orderByClause = [{ views: "desc" }, { id: "asc" }]
   }
 
-  const isDefaultBrowse = !selectedAuthor && !selectedCategory && currentSort === "popular" && currentPage === 1
-  const now = Date.now()
-
-  let totalQuotes: number
-  let quotes: TagQuotesItem[]
-  let taxonomy: TagTaxonomy
-
-  const cachedPage = isDefaultBrowse ? tagPage1Cache.get(tag.id) : null
-
-  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
-    totalQuotes = cachedPage.totalQuotes
-    quotes = cachedPage.quotes
-    taxonomy = await loadTagTaxonomy(tag.id, tag.type)
-  } else {
-    const isDefaultCount = !selectedAuthor && !selectedCategory && currentSort !== "verified"
-
-    const [fetchedTotal, fetchedQuotes, fetchedTaxonomy] = await Promise.all([
-      isDefaultCount ? Promise.resolve(tag.quoteCount) : prisma.quote.count({ where: whereClause }),
-      prisma.quote.findMany({
-        where: whereClause,
-        orderBy: orderByClause,
-        skip: (currentPage - 1) * QUOTES_PER_PAGE,
-        take: QUOTES_PER_PAGE,
-        select: {
-          id: true,
-          slug: true,
-          content: true,
-          authorName: true,
-          isVerified: true,
-          views: true,
-          author: { select: { id: true, name: true, slug: true } },
-          category: { select: { id: true, name: true, slug: true } },
-          source: { select: { title: true, year: true } },
-          tags: {
-            select: {
-              tag: { select: { name: true, slug: true } },
-            },
-          },
-        },
-      }),
-      loadTagTaxonomy(tag.id, tag.type),
-    ])
-
-    totalQuotes = fetchedTotal
-    quotes = fetchedQuotes
-    taxonomy = fetchedTaxonomy
-
-    if (isDefaultBrowse) {
-      if (tagPage1Cache.size >= MAX_TAG_CACHE_ENTRIES) {
-        const oldest = tagPage1Cache.keys().next().value
-        if (oldest) tagPage1Cache.delete(oldest)
-      }
-      tagPage1Cache.set(tag.id, {
-        quotes,
-        totalQuotes,
-        timestamp: now,
-      })
-    }
-  }
+  const { totalQuotes, quotes, taxonomy } = await loadTagQuotesData({
+    tagId: tag.id,
+    tagType: tag.type,
+    tagQuoteCount: tag.quoteCount,
+    selectedAuthorId: selectedAuthor?.id,
+    selectedCategoryId: selectedCategory?.id,
+    currentSort,
+    currentPage,
+    whereClause,
+    orderByClause,
+  })
 
   const { topAuthors, affiliatedCategories, cooccurringTags, siblingTypeTags } = taxonomy
 

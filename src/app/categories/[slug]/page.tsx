@@ -236,6 +236,94 @@ async function loadCategoryTaxonomy(categoryId: string): Promise<CategoryTaxonom
   return data
 }
 
+async function loadCategoryQuotesData({
+  categoryId,
+  categoryQuoteCount,
+  selectedAuthorId,
+  currentSort,
+  currentPage,
+  whereClause,
+  orderByClause,
+}: {
+  categoryId: string
+  categoryQuoteCount: number
+  selectedAuthorId?: string
+  currentSort: string
+  currentPage: number
+  whereClause: {
+    categoryId: string
+    status: "PUBLISHED"
+    deletedAt: null
+    isVerified?: boolean
+    authorId?: string
+  }
+  orderByClause: Array<Record<string, "desc" | "asc">>
+}): Promise<{
+  totalQuotes: number
+  quotes: CategoryQuotesItem[]
+  taxonomy: CategoryTaxonomy
+}> {
+  const isDefaultBrowse = !selectedAuthorId && currentSort === "popular" && currentPage === 1
+  const now = Date.now()
+
+  const cachedPage = isDefaultBrowse ? categoryPage1Cache.get(categoryId) : null
+
+  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
+    const taxonomy = await loadCategoryTaxonomy(categoryId)
+    return {
+      totalQuotes: cachedPage.totalQuotes,
+      quotes: cachedPage.quotes,
+      taxonomy,
+    }
+  }
+
+  const isDefaultCount = !selectedAuthorId && currentSort !== "verified"
+
+  const [fetchedTotal, fetchedQuotes, fetchedTaxonomy] = await Promise.all([
+    isDefaultCount ? Promise.resolve(categoryQuoteCount) : prisma.quote.count({ where: whereClause }),
+    prisma.quote.findMany({
+      where: whereClause,
+      orderBy: orderByClause,
+      skip: (currentPage - 1) * QUOTES_PER_PAGE,
+      take: QUOTES_PER_PAGE,
+      select: {
+        id: true,
+        slug: true,
+        content: true,
+        authorName: true,
+        isVerified: true,
+        views: true,
+        author: { select: { id: true, name: true, slug: true } },
+        source: { select: { title: true, year: true } },
+        tags: {
+          select: {
+            tag: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    }),
+    loadCategoryTaxonomy(categoryId),
+  ])
+
+  if (isDefaultBrowse) {
+    if (categoryPage1Cache.size >= MAX_TAXONOMY_CACHE_ENTRIES) {
+      const oldest = categoryPage1Cache.keys().next().value
+      if (oldest) categoryPage1Cache.delete(oldest)
+    }
+    categoryPage1Cache.set(categoryId, {
+      quotes: fetchedQuotes,
+      totalQuotes: fetchedTotal,
+      timestamp: now,
+    })
+  }
+
+  return {
+    totalQuotes: fetchedTotal,
+    quotes: fetchedQuotes,
+    taxonomy: fetchedTaxonomy,
+  }
+}
+
 export async function generateMetadata({
   params,
 }: CategoryDetailPageProps): Promise<Metadata> {
@@ -329,64 +417,15 @@ export default async function CategoryDetailPage({
     orderByClause = [{ views: "desc" }, { id: "asc" }]
   }
 
-  const isDefaultBrowse = !selectedAuthor && currentSort === "popular" && currentPage === 1
-  const now = Date.now()
-
-  let totalQuotes: number
-  let quotes: CategoryQuotesItem[]
-  let taxonomy: CategoryTaxonomy
-
-  const cachedPage = isDefaultBrowse ? categoryPage1Cache.get(category.id) : null
-
-  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
-    totalQuotes = cachedPage.totalQuotes
-    quotes = cachedPage.quotes
-    taxonomy = await loadCategoryTaxonomy(category.id)
-  } else {
-    const isDefaultCount = !selectedAuthor && currentSort !== "verified"
-
-    const [fetchedTotal, fetchedQuotes, fetchedTaxonomy] = await Promise.all([
-      isDefaultCount ? Promise.resolve(category.quoteCount) : prisma.quote.count({ where: whereClause }),
-      prisma.quote.findMany({
-        where: whereClause,
-        orderBy: orderByClause,
-        skip: (currentPage - 1) * QUOTES_PER_PAGE,
-        take: QUOTES_PER_PAGE,
-        select: {
-          id: true,
-          slug: true,
-          content: true,
-          authorName: true,
-          isVerified: true,
-          views: true,
-          author: { select: { id: true, name: true, slug: true } },
-          source: { select: { title: true, year: true } },
-          tags: {
-            select: {
-              tag: { select: { name: true, slug: true } },
-            },
-          },
-        },
-      }),
-      loadCategoryTaxonomy(category.id),
-    ])
-
-    totalQuotes = fetchedTotal
-    quotes = fetchedQuotes
-    taxonomy = fetchedTaxonomy
-
-    if (isDefaultBrowse) {
-      if (categoryPage1Cache.size >= MAX_TAXONOMY_CACHE_ENTRIES) {
-        const oldest = categoryPage1Cache.keys().next().value
-        if (oldest) categoryPage1Cache.delete(oldest)
-      }
-      categoryPage1Cache.set(category.id, {
-        quotes,
-        totalQuotes,
-        timestamp: now,
-      })
-    }
-  }
+  const { totalQuotes, quotes, taxonomy } = await loadCategoryQuotesData({
+    categoryId: category.id,
+    categoryQuoteCount: category.quoteCount,
+    selectedAuthorId: selectedAuthor?.id,
+    currentSort,
+    currentPage,
+    whereClause,
+    orderByClause,
+  })
 
   const { topAuthors, topTags, siblingCategories } = taxonomy
 

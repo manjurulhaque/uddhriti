@@ -159,6 +159,58 @@ function AuthorQuotesSkeleton() {
   )
 }
 
+async function getAuthorQuotes({
+  authorId,
+  currentPage,
+}: {
+  authorId: string
+  currentPage: number
+}): Promise<AuthorQuotesCacheEntry["quotes"]> {
+  const isPage1 = currentPage === 1
+  const now = Date.now()
+  const cached = isPage1 ? authorPage1Cache.get(authorId) : null
+
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.quotes
+  }
+
+  const quotes = await prisma.quote.findMany({
+    where: {
+      authorId,
+      status: "PUBLISHED",
+      deletedAt: null,
+    },
+    orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
+    skip: (currentPage - 1) * QUOTES_PER_PAGE,
+    take: QUOTES_PER_PAGE,
+    select: {
+      id: true,
+      slug: true,
+      content: true,
+      authorName: true,
+      isVerified: true,
+      views: true,
+      category: { select: { id: true, name: true, slug: true } },
+      source: { select: { title: true, year: true } },
+      tags: {
+        select: {
+          tag: { select: { name: true, slug: true } },
+        },
+      },
+    },
+  })
+
+  if (isPage1) {
+    if (authorPage1Cache.size >= MAX_AUTHOR_CACHE_ENTRIES) {
+      const oldest = authorPage1Cache.keys().next().value
+      if (oldest) authorPage1Cache.delete(oldest)
+    }
+    authorPage1Cache.set(authorId, { quotes, timestamp: now })
+  }
+
+  return quotes
+}
+
 async function AuthorQuotesSection({
   authorId,
   authorName,
@@ -174,50 +226,7 @@ async function AuthorQuotesSection({
 }) {
   const { page } = await searchParams
   const currentPage = parseSafePageNumber(page, 500)
-  const isPage1 = currentPage === 1
-  const now = Date.now()
-
-  let quotes: AuthorQuotesCacheEntry["quotes"]
-  const cached = isPage1 ? authorPage1Cache.get(authorId) : null
-
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    quotes = cached.quotes
-  } else {
-    quotes = await prisma.quote.findMany({
-      where: {
-        authorId,
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
-      skip: (currentPage - 1) * QUOTES_PER_PAGE,
-      take: QUOTES_PER_PAGE,
-      select: {
-        id: true,
-        slug: true,
-        content: true,
-        authorName: true,
-        isVerified: true,
-        views: true,
-        category: { select: { id: true, name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: {
-          select: {
-            tag: { select: { name: true, slug: true } },
-          },
-        },
-      },
-    })
-
-    if (isPage1) {
-      if (authorPage1Cache.size >= MAX_AUTHOR_CACHE_ENTRIES) {
-        const oldest = authorPage1Cache.keys().next().value
-        if (oldest) authorPage1Cache.delete(oldest)
-      }
-      authorPage1Cache.set(authorId, { quotes, timestamp: now })
-    }
-  }
-
+  const quotes = await getAuthorQuotes({ authorId, currentPage })
   const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
 
   function buildHref(newPage: number) {
@@ -348,7 +357,6 @@ export default async function AuthorDetailPage({
   const topCategories = Array.from(categoryCountMap.values()).sort((a, b) => b.quoteCount - a.quoteCount)
 
   const totalQuotes = author.quoteCount
-  const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
 
   const lifespan = formatLifespan(author)
   const epoch = formatEpoch(author.birthYear)
@@ -385,10 +393,6 @@ export default async function AuthorDetailPage({
         ? { deathDate: String(author.deathYear) }
         : {}),
     ...(sameAsList.length > 0 ? { sameAs: sameAsList } : {}),
-  }
-
-  function buildHref(newPage: number) {
-    return `/authors/${slug}${newPage > 1 ? `?page=${newPage}` : ""}`
   }
 
   return (

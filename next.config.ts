@@ -21,7 +21,8 @@ const cspHeader = `
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
-    unoptimized: true,
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: "https",
@@ -42,6 +43,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "*.wikipedia.org",
+      },
+      {
+        protocol: "https",
+        hostname: "covers.openlibrary.org",
       },
     ],
   },

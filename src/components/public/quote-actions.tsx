@@ -1,12 +1,21 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { BookmarkIcon } from "@/components/ui"
 import { useCopyToClipboard } from "@/hooks"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { getWhatsAppShareUrl, getXShareUrl, getFacebookShareUrl, getInstagramShareUrl } from "@/lib/share"
-import { QuoteShareModal } from "./quote-share-modal"
-import { QuoteZenMode } from "./quote-zen-mode"
+
+const QuoteShareModal = dynamic(
+  () => import("./quote-share-modal").then((mod) => mod.QuoteShareModal),
+  { ssr: false }
+)
+
+const QuoteZenMode = dynamic(
+  () => import("./quote-zen-mode").then((mod) => mod.QuoteZenMode),
+  { ssr: false }
+)
 
 interface QuoteActionsProps {
   id?: string
@@ -365,32 +374,36 @@ export function QuoteActions({
         )}
       </div>
 
-      {/* Quote Card Image Export Modal */}
-      <QuoteShareModal
-        isOpen={shareModalOpen}
-        onClose={() => setShareModalOpen(false)}
-        content={content}
-        authorName={authorName}
-        sourceTitle={sourceTitle}
-        quoteUrl={quoteUrl}
-      />
+      {/* Quote Card Image Export Modal (Lazy-Loaded) */}
+      {shareModalOpen && (
+        <QuoteShareModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          content={content}
+          authorName={authorName}
+          sourceTitle={sourceTitle}
+          quoteUrl={quoteUrl}
+        />
+      )}
 
-      {/* Zen Contemplation Mode Overlay */}
-      <QuoteZenMode
-        isOpen={zenModeOpen}
-        onClose={() => setZenModeOpen(false)}
-        id={id}
-        slug={slug}
-        content={content}
-        authorName={authorName}
-        authorSlug={authorSlug}
-        category={category}
-        categorySlug={categorySlug}
-        sourceTitle={sourceTitle}
-        year={year}
-        tags={tags}
-        quoteUrl={quoteUrl}
-      />
+      {/* Zen Contemplation Mode Overlay (Lazy-Loaded) */}
+      {zenModeOpen && (
+        <QuoteZenMode
+          isOpen={zenModeOpen}
+          onClose={() => setZenModeOpen(false)}
+          id={id}
+          slug={slug}
+          content={content}
+          authorName={authorName}
+          authorSlug={authorSlug}
+          category={category}
+          categorySlug={categorySlug}
+          sourceTitle={sourceTitle}
+          year={year}
+          tags={tags}
+          quoteUrl={quoteUrl}
+        />
+      )}
     </>
   )
 }

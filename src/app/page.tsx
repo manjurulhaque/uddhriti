@@ -214,7 +214,7 @@ async function getTaxonomiesData() {
         quoteCount: true,
         quotes: {
           where: { status: "PUBLISHED", deletedAt: null },
-          take: 6,
+          take: 2,
           orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
           select: {
             id: true,
@@ -240,7 +240,7 @@ async function getTaxonomiesData() {
         quoteCount: true,
         quotes: {
           where: { status: "PUBLISHED", deletedAt: null },
-          take: 6,
+          take: 2,
           orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
           select: {
             id: true,
@@ -622,13 +622,13 @@ async function fetchHomePageDataInternal(todayStr: string) {
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
-        take: 40,
+        take: 16,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }, { id: "asc" }],
-        take: 16,
+        take: 8,
         select: {
           ...quoteCardSelect,
           trendingScore: true,

@@ -65,7 +65,6 @@ export function AuthorAvatar({
           alt={name}
           fill
           sizes={sizeConfig.imageSizes}
-          unoptimized
           priority={priority}
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />

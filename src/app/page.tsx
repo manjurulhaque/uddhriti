@@ -6,8 +6,9 @@ import { formatSourceYearLabel } from "@/lib/sourceYear"
 import {
   HOME_PAGE_CACHE_TAG,
   HOME_TAXONOMIES_CACHE_TAG,
-  registerPublicDataInvalidator,
 } from "@/lib/revalidation"
+import { publicQuoteCardSelect } from "@/lib/quotes/selects"
+import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
 import {
   PublicLayout,
   HomeHero,
@@ -59,46 +60,6 @@ export const metadata: Metadata = {
   },
 }
 
-const quoteCardSelect = {
-  id: true,
-  slug: true,
-  content: true,
-  authorName: true,
-  isVerified: true,
-  author: {
-    select: {
-      name: true,
-      slug: true,
-    },
-  },
-  views: true,
-  category: {
-    select: {
-      name: true,
-      slug: true,
-    },
-  },
-  source: {
-    select: {
-      title: true,
-      year: true,
-      yearLabel: true,
-      yearApproximate: true,
-    },
-  },
-  tags: {
-    select: {
-      tag: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-    take: 4,
-  },
-} as const
-
 const dailyQuoteSelect = {
   id: true,
   slug: true,
@@ -145,63 +106,7 @@ const dailyQuoteSelect = {
   },
 } as const
 
-// Module-level in-memory cache for ultra-fast response in dev and warm instances
-let inMemoryHomePageCache: {
-  date: string
-  data: Awaited<ReturnType<typeof fetchHomePageDataInternal>>
-  timestamp: number
-} | null = null
-
-let cachedTaxonomies: {
-  authors: Array<{
-    id: string
-    name: string
-    slug: string
-    profession: string | null
-    nationality: string | null
-    birthYear: number | null
-    deathYear: number | null
-    imageUrl: string | null
-    quoteCount: number
-    quotes: Array<{
-      id: string
-      content: string
-      slug: string | null
-    }>
-  }>
-  categories: Array<{
-    id: string
-    name: string
-    slug: string
-    description: string | null
-    quoteCount: number
-    quotes: Array<{
-      id: string
-      content: string
-      authorName: string | null
-    }>
-  }>
-  tags: Array<{
-    id: string
-    name: string
-    type: string
-    quoteCount: number
-  }>
-  timestamp: number
-} | null = null
-
-// Invalidate in-memory caches whenever public content mutations occur in admin
-registerPublicDataInvalidator(() => {
-  inMemoryHomePageCache = null
-  cachedTaxonomies = null
-})
-
-async function getTaxonomiesData() {
-  const now = Date.now()
-  if (cachedTaxonomies && now - cachedTaxonomies.timestamp < 15 * 60 * 1000) {
-    return cachedTaxonomies
-  }
-
+async function fetchTaxonomiesInternal() {
   const [spotlightCategoriesRaw, spotlightAuthorsRaw, topTags] = await Promise.all([
     prisma.category.findMany({
       where: { quoteCount: { gt: 0 } },
@@ -264,14 +169,28 @@ async function getTaxonomiesData() {
     }),
   ])
 
-  const result = {
+  return {
     authors: spotlightAuthorsRaw,
     categories: spotlightCategoriesRaw,
     tags: topTags,
-    timestamp: now,
+  }
+}
+
+type TaxonomiesData = Awaited<ReturnType<typeof fetchTaxonomiesInternal>>
+
+const taxonomiesCache = new BoundedMemoryCache<string, TaxonomiesData>({
+  maxSize: 1,
+  ttlMs: 15 * 60 * 1000,
+})
+
+async function getTaxonomiesData(): Promise<TaxonomiesData> {
+  const cached = taxonomiesCache.get("taxonomies")
+  if (cached) {
+    return cached
   }
 
-  cachedTaxonomies = result
+  const result = await fetchTaxonomiesInternal()
+  taxonomiesCache.set("taxonomies", result)
   return result
 }
 
@@ -544,19 +463,23 @@ const getCachedHomePageData = unstable_cache(
   }
 )
 
+const homePageMemoryCache = new BoundedMemoryCache<
+  string,
+  Awaited<ReturnType<typeof fetchHomePageDataInternal>>
+>({
+  maxSize: 2,
+  ttlMs: 5 * 60 * 1000,
+})
+
 async function loadHomePageData(todayStr: string) {
   // Ultra-fast in-memory path (1ms response on warm process)
-  const now = Date.now()
-  if (inMemoryHomePageCache && inMemoryHomePageCache.date === todayStr && now - inMemoryHomePageCache.timestamp < 5 * 60 * 1000) {
-    return inMemoryHomePageCache.data
+  const cached = homePageMemoryCache.get(todayStr)
+  if (cached) {
+    return cached
   }
 
   const data = await getCachedHomePageData(todayStr)
-  inMemoryHomePageCache = {
-    date: todayStr,
-    data,
-    timestamp: now,
-  }
+  homePageMemoryCache.set(todayStr, data)
   return data
 }
 
@@ -597,13 +520,13 @@ async function fetchHomePageDataInternal(todayStr: string) {
         where: { status: "PUBLISHED", deletedAt: null, isFeatured: true },
         orderBy: [{ popularityScore: "desc" }, { views: "desc" }, { id: "asc" }],
         take: 2,
-        select: quoteCardSelect,
+        select: publicQuoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
         take: 6,
-        select: quoteCardSelect,
+        select: publicQuoteCardSelect,
       }),
       prisma.quote.findMany({
         where: {
@@ -651,14 +574,14 @@ async function fetchHomePageDataInternal(todayStr: string) {
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
         take: 24,
-        select: quoteCardSelect,
+        select: publicQuoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }, { id: "asc" }],
         take: 32,
         select: {
-          ...quoteCardSelect,
+          ...publicQuoteCardSelect,
           trendingScore: true,
         },
       }),

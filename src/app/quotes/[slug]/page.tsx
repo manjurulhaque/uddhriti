@@ -4,6 +4,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { sanitizeSlug, isSafeExternalUrl } from "@/lib/security/input"
 import { prisma } from "@/lib/prisma"
+import { publicQuoteCardSelect } from "@/lib/quotes/selects"
 import { getSiteUrl } from "@/lib/site"
 import { formatEpoch, formatLifespan, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
 import {
@@ -181,18 +182,7 @@ export default async function IndividualQuotePage({
           },
           take: 3,
           orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
-          select: {
-            id: true,
-            slug: true,
-            content: true,
-            authorName: true,
-            isVerified: true,
-            views: true,
-            author: { select: { name: true, slug: true } },
-            category: { select: { name: true, slug: true } },
-            source: { select: { title: true, year: true } },
-            tags: { select: { tag: { select: { name: true } } } },
-          },
+          select: publicQuoteCardSelect,
         })
       : Promise.resolve([]),
     quote.categoryId
@@ -206,18 +196,7 @@ export default async function IndividualQuotePage({
           },
           take: 3,
           orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
-          select: {
-            id: true,
-            slug: true,
-            content: true,
-            authorName: true,
-            isVerified: true,
-            views: true,
-            author: { select: { name: true, slug: true } },
-            category: { select: { name: true, slug: true } },
-            source: { select: { title: true, year: true } },
-            tags: { select: { tag: { select: { name: true } } } },
-          },
+          select: publicQuoteCardSelect,
         })
       : Promise.resolve([]),
   ])

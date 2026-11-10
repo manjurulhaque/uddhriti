@@ -16,7 +16,8 @@ import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun, getCategoryMeta } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
-import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
+import { publicQuoteCardSelect, type PublicQuoteCardItem } from "@/lib/quotes/selects"
 
 const QUOTES_PER_PAGE = 12
 
@@ -95,39 +96,26 @@ interface CategoryTaxonomy {
   siblingCategories: CategoryTaxonomySibling[]
 }
 
-interface CategoryQuotesItem {
-  id: string
-  slug: string | null
-  content: string
-  authorName: string | null
-  isVerified: boolean
-  views: number
-  author: { id: string; name: string; slug: string } | null
-  source: { title: string; year: number | null } | null
-  tags: Array<{ tag: { name: string; slug: string } }>
-}
-
-interface CategoryDefaultPageCache {
-  quotes: CategoryQuotesItem[]
-  totalQuotes: number
-  timestamp: number
-}
-
-const taxonomyCache = new Map<string, { data: CategoryTaxonomy; timestamp: number }>()
-const categoryPage1Cache = new Map<string, CategoryDefaultPageCache>()
 const TAXONOMY_TTL_MS = 15 * 60 * 1000 // 15 mins
 const MAX_TAXONOMY_CACHE_ENTRIES = 80
 
-registerPublicDataInvalidator(() => {
-  taxonomyCache.clear()
-  categoryPage1Cache.clear()
+const taxonomyCache = new BoundedMemoryCache<string, CategoryTaxonomy>({
+  maxSize: MAX_TAXONOMY_CACHE_ENTRIES,
+  ttlMs: TAXONOMY_TTL_MS,
+})
+
+const categoryPage1Cache = new BoundedMemoryCache<
+  string,
+  { quotes: PublicQuoteCardItem[]; totalQuotes: number }
+>({
+  maxSize: MAX_TAXONOMY_CACHE_ENTRIES,
+  ttlMs: TAXONOMY_TTL_MS,
 })
 
 async function loadCategoryTaxonomy(categoryId: string): Promise<CategoryTaxonomy> {
   const cached = taxonomyCache.get(categoryId)
-  const now = Date.now()
-  if (cached && now - cached.timestamp < TAXONOMY_TTL_MS) {
-    return cached.data
+  if (cached) {
+    return cached
   }
 
   const [authorGroups, tagGroups, siblingCategories] = await Promise.all([
@@ -228,11 +216,7 @@ async function loadCategoryTaxonomy(categoryId: string): Promise<CategoryTaxonom
     siblingCategories,
   }
 
-  if (taxonomyCache.size >= MAX_TAXONOMY_CACHE_ENTRIES) {
-    const oldest = taxonomyCache.keys().next().value
-    if (oldest) taxonomyCache.delete(oldest)
-  }
-  taxonomyCache.set(categoryId, { data, timestamp: now })
+  taxonomyCache.set(categoryId, data)
   return data
 }
 
@@ -260,15 +244,13 @@ async function loadCategoryQuotesData({
   orderByClause: Array<Record<string, "desc" | "asc">>
 }): Promise<{
   totalQuotes: number
-  quotes: CategoryQuotesItem[]
+  quotes: PublicQuoteCardItem[]
   taxonomy: CategoryTaxonomy
 }> {
   const isDefaultBrowse = !selectedAuthorId && currentSort === "popular" && currentPage === 1
-  const now = Date.now()
 
   const cachedPage = isDefaultBrowse ? categoryPage1Cache.get(categoryId) : null
-
-  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
+  if (cachedPage) {
     const taxonomy = await loadCategoryTaxonomy(categoryId)
     return {
       totalQuotes: cachedPage.totalQuotes,
@@ -286,34 +268,15 @@ async function loadCategoryQuotesData({
       orderBy: orderByClause,
       skip: (currentPage - 1) * QUOTES_PER_PAGE,
       take: QUOTES_PER_PAGE,
-      select: {
-        id: true,
-        slug: true,
-        content: true,
-        authorName: true,
-        isVerified: true,
-        views: true,
-        author: { select: { id: true, name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: {
-          select: {
-            tag: { select: { name: true, slug: true } },
-          },
-        },
-      },
+      select: publicQuoteCardSelect,
     }),
     loadCategoryTaxonomy(categoryId),
   ])
 
   if (isDefaultBrowse) {
-    if (categoryPage1Cache.size >= MAX_TAXONOMY_CACHE_ENTRIES) {
-      const oldest = categoryPage1Cache.keys().next().value
-      if (oldest) categoryPage1Cache.delete(oldest)
-    }
     categoryPage1Cache.set(categoryId, {
       quotes: fetchedQuotes,
       totalQuotes: fetchedTotal,
-      timestamp: now,
     })
   }
 

@@ -18,31 +18,16 @@ import {
 import { getSiteUrl } from "@/lib/site"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { parseSafePageNumber, sanitizeSlug, isSafeExternalUrl, isValidWikidataId } from "@/lib/security/input"
-import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
+import { publicQuoteCardSelect, type PublicQuoteCardItem } from "@/lib/quotes/selects"
 
 const QUOTES_PER_PAGE = 12
 const MAX_AUTHOR_CACHE_ENTRIES = 120
 const CACHE_TTL_MS = 15 * 60 * 1000
 
-interface AuthorQuotesCacheEntry {
-  quotes: Array<{
-    id: string
-    slug: string | null
-    content: string
-    authorName: string | null
-    isVerified: boolean
-    views: number
-    category: { id: string; name: string; slug: string }
-    source: { title: string; year: number | null } | null
-    tags: Array<{ tag: { name: string; slug: string } }>
-  }>
-  timestamp: number
-}
-
-const authorPage1Cache = new Map<string, AuthorQuotesCacheEntry>()
-
-registerPublicDataInvalidator(() => {
-  authorPage1Cache.clear()
+const authorPage1Cache = new BoundedMemoryCache<string, PublicQuoteCardItem[]>({
+  maxSize: MAX_AUTHOR_CACHE_ENTRIES,
+  ttlMs: CACHE_TTL_MS,
 })
 
 interface AuthorDetailPageProps {
@@ -165,13 +150,11 @@ async function getAuthorQuotes({
 }: {
   authorId: string
   currentPage: number
-}): Promise<AuthorQuotesCacheEntry["quotes"]> {
+}): Promise<PublicQuoteCardItem[]> {
   const isPage1 = currentPage === 1
-  const now = Date.now()
-  const cached = isPage1 ? authorPage1Cache.get(authorId) : null
-
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    return cached.quotes
+  if (isPage1) {
+    const cached = authorPage1Cache.get(authorId)
+    if (cached) return cached
   }
 
   const quotes = await prisma.quote.findMany({
@@ -183,29 +166,11 @@ async function getAuthorQuotes({
     orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
     skip: (currentPage - 1) * QUOTES_PER_PAGE,
     take: QUOTES_PER_PAGE,
-    select: {
-      id: true,
-      slug: true,
-      content: true,
-      authorName: true,
-      isVerified: true,
-      views: true,
-      category: { select: { id: true, name: true, slug: true } },
-      source: { select: { title: true, year: true } },
-      tags: {
-        select: {
-          tag: { select: { name: true, slug: true } },
-        },
-      },
-    },
+    select: publicQuoteCardSelect,
   })
 
   if (isPage1) {
-    if (authorPage1Cache.size >= MAX_AUTHOR_CACHE_ENTRIES) {
-      const oldest = authorPage1Cache.keys().next().value
-      if (oldest) authorPage1Cache.delete(oldest)
-    }
-    authorPage1Cache.set(authorId, { quotes, timestamp: now })
+    authorPage1Cache.set(authorId, quotes)
   }
 
   return quotes

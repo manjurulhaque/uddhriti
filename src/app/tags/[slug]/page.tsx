@@ -20,7 +20,8 @@ import {
 } from "@/lib/formatters"
 import { getSiteUrl } from "@/lib/site"
 import { parseSafePageNumber, sanitizeSlug } from "@/lib/security/input"
-import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
+import { publicQuoteCardSelect, type PublicQuoteCardItem } from "@/lib/quotes/selects"
 import type { TagType } from "@prisma/client"
 
 const QUOTES_PER_PAGE = 12
@@ -111,40 +112,26 @@ interface TagTaxonomy {
   siblingTypeTags: TagTaxonomySibling[]
 }
 
-interface TagQuotesItem {
-  id: string
-  slug: string | null
-  content: string
-  authorName: string | null
-  isVerified: boolean
-  views: number
-  author: { id: string; name: string; slug: string } | null
-  category: { id: string; name: string; slug: string }
-  source: { title: string; year: number | null } | null
-  tags: Array<{ tag: { name: string; slug: string } }>
-}
-
-interface TagDefaultPageCache {
-  quotes: TagQuotesItem[]
-  totalQuotes: number
-  timestamp: number
-}
-
-const tagTaxonomyCache = new Map<string, { data: TagTaxonomy; timestamp: number }>()
-const tagPage1Cache = new Map<string, TagDefaultPageCache>()
 const TAXONOMY_TTL_MS = 15 * 60 * 1000 // 15 mins
 const MAX_TAG_CACHE_ENTRIES = 80
 
-registerPublicDataInvalidator(() => {
-  tagTaxonomyCache.clear()
-  tagPage1Cache.clear()
+const tagTaxonomyCache = new BoundedMemoryCache<string, TagTaxonomy>({
+  maxSize: MAX_TAG_CACHE_ENTRIES,
+  ttlMs: TAXONOMY_TTL_MS,
+})
+
+const tagPage1Cache = new BoundedMemoryCache<
+  string,
+  { quotes: PublicQuoteCardItem[]; totalQuotes: number }
+>({
+  maxSize: MAX_TAG_CACHE_ENTRIES,
+  ttlMs: TAXONOMY_TTL_MS,
 })
 
 async function loadTagTaxonomy(tagId: string, tagType: TagType): Promise<TagTaxonomy> {
   const cached = tagTaxonomyCache.get(tagId)
-  const now = Date.now()
-  if (cached && now - cached.timestamp < TAXONOMY_TTL_MS) {
-    return cached.data
+  if (cached) {
+    return cached
   }
 
   const [authorGroups, categoryGroups, cooccurringTagGroups, siblingTypeTags] = await Promise.all([
@@ -277,11 +264,7 @@ async function loadTagTaxonomy(tagId: string, tagType: TagType): Promise<TagTaxo
     siblingTypeTags,
   }
 
-  if (tagTaxonomyCache.size >= MAX_TAG_CACHE_ENTRIES) {
-    const oldest = tagTaxonomyCache.keys().next().value
-    if (oldest) tagTaxonomyCache.delete(oldest)
-  }
-  tagTaxonomyCache.set(tagId, { data, timestamp: now })
+  tagTaxonomyCache.set(tagId, data)
   return data
 }
 
@@ -314,15 +297,13 @@ async function loadTagQuotesData({
   orderByClause: Array<Record<string, "desc" | "asc">>
 }): Promise<{
   totalQuotes: number
-  quotes: TagQuotesItem[]
+  quotes: PublicQuoteCardItem[]
   taxonomy: TagTaxonomy
 }> {
   const isDefaultBrowse = !selectedAuthorId && !selectedCategoryId && currentSort === "popular" && currentPage === 1
-  const now = Date.now()
 
   const cachedPage = isDefaultBrowse ? tagPage1Cache.get(tagId) : null
-
-  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
+  if (cachedPage) {
     const taxonomy = await loadTagTaxonomy(tagId, tagType)
     return {
       totalQuotes: cachedPage.totalQuotes,
@@ -340,35 +321,15 @@ async function loadTagQuotesData({
       orderBy: orderByClause,
       skip: (currentPage - 1) * QUOTES_PER_PAGE,
       take: QUOTES_PER_PAGE,
-      select: {
-        id: true,
-        slug: true,
-        content: true,
-        authorName: true,
-        isVerified: true,
-        views: true,
-        author: { select: { id: true, name: true, slug: true } },
-        category: { select: { id: true, name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: {
-          select: {
-            tag: { select: { name: true, slug: true } },
-          },
-        },
-      },
+      select: publicQuoteCardSelect,
     }),
     loadTagTaxonomy(tagId, tagType),
   ])
 
   if (isDefaultBrowse) {
-    if (tagPage1Cache.size >= MAX_TAG_CACHE_ENTRIES) {
-      const oldest = tagPage1Cache.keys().next().value
-      if (oldest) tagPage1Cache.delete(oldest)
-    }
     tagPage1Cache.set(tagId, {
       quotes: fetchedQuotes,
       totalQuotes: fetchedTotal,
-      timestamp: now,
     })
   }
 

@@ -6,8 +6,9 @@ import { PublicLayout, QuoteCard, SortToolbar, FilterPills } from "@/components/
 import { Pagination } from "@/components/ui/pagination"
 import { formatCountWithNoun } from "@/lib/formatters"
 import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
-import { registerPublicDataInvalidator } from "@/lib/revalidation"
 import { searchPublicQuoteIds } from "@/lib/quotes/search"
+import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
+import { publicQuoteCardSelect, type PublicQuoteCardItem } from "@/lib/quotes/selects"
 
 export const metadata: Metadata = {
   title: "Browse All Quotations",
@@ -19,37 +20,6 @@ export const revalidate = 300
 
 const PAGE_SIZE = 18
 
-const quoteBrowseSelect = {
-  id: true,
-  slug: true,
-  content: true,
-  authorName: true,
-  isVerified: true,
-  views: true,
-  author: { select: { name: true, slug: true } },
-  category: { select: { name: true, slug: true } },
-  source: { select: { title: true, year: true } },
-  tags: {
-    select: {
-      tag: { select: { name: true } },
-    },
-    take: 6,
-  },
-} as const
-
-interface QuoteBrowseItem {
-  id: string
-  slug: string
-  content: string
-  authorName: string | null
-  isVerified: boolean
-  views: number
-  author: { name: string; slug: string } | null
-  category: { name: string; slug: string }
-  source: { title: string; year: number | null } | null
-  tags: Array<{ tag: { name: string } }>
-}
-
 interface FilterCategory {
   id: string
   name: string
@@ -57,35 +27,30 @@ interface FilterCategory {
   quoteCount: number
 }
 
-// In-memory cache for category filter pills
-let cachedFilterCategories: {
-  categories: FilterCategory[]
-  timestamp: number
-} | null = null
+const filterCategoriesCache = new BoundedMemoryCache<string, FilterCategory[]>({
+  maxSize: 1,
+  ttlMs: 15 * 60 * 1000,
+})
 
-// In-memory cache for default browse page (no query params, page 1)
-let cachedDefaultQuotesPage: {
-  quotes: QuoteBrowseItem[]
-  totalQuotes: number
-  timestamp: number
-} | null = null
-
-registerPublicDataInvalidator(() => {
-  cachedFilterCategories = null
-  cachedDefaultQuotesPage = null
+const defaultQuotesPageCache = new BoundedMemoryCache<
+  string,
+  { quotes: PublicQuoteCardItem[]; totalQuotes: number }
+>({
+  maxSize: 1,
+  ttlMs: 5 * 60 * 1000,
 })
 
 async function getFilterCategories(): Promise<FilterCategory[]> {
-  const now = Date.now()
-  if (cachedFilterCategories && now - cachedFilterCategories.timestamp < 15 * 60 * 1000) {
-    return cachedFilterCategories.categories
+  const cached = filterCategoriesCache.get("categories")
+  if (cached) {
+    return cached
   }
   const categories = await prisma.category.findMany({
     where: { quoteCount: { gt: 0 } },
     select: { id: true, name: true, slug: true, quoteCount: true },
     orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
   })
-  cachedFilterCategories = { categories, timestamp: now }
+  filterCategoriesCache.set("categories", categories)
   return categories
 }
 
@@ -101,14 +66,16 @@ async function loadQuotesBrowseData({
   selectedSort: string
 }) {
   const isDefaultBrowse = !searchQuery && !categorySlug && selectedSort === "trending" && currentPage === 1
-  const now = Date.now()
 
-  if (isDefaultBrowse && cachedDefaultQuotesPage && now - cachedDefaultQuotesPage.timestamp < 5 * 60 * 1000) {
-    const categories = await getFilterCategories()
-    return {
-      totalQuotes: cachedDefaultQuotesPage.totalQuotes,
-      quotes: cachedDefaultQuotesPage.quotes,
-      categories,
+  if (isDefaultBrowse) {
+    const cached = defaultQuotesPageCache.get("default-page-1")
+    if (cached) {
+      const categories = await getFilterCategories()
+      return {
+        totalQuotes: cached.totalQuotes,
+        quotes: cached.quotes,
+        categories,
+      }
     }
   }
 
@@ -169,16 +136,15 @@ async function loadQuotesBrowseData({
       orderBy,
       skip: (currentPage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      select: quoteBrowseSelect,
+      select: publicQuoteCardSelect,
     }),
   ])
 
   if (isDefaultBrowse) {
-    cachedDefaultQuotesPage = {
+    defaultQuotesPageCache.set("default-page-1", {
       quotes,
       totalQuotes,
-      timestamp: now,
-    }
+    })
   }
 
   return { totalQuotes, quotes, categories }

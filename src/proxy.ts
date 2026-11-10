@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
-import { enforceIpRateLimit } from "@/lib/api/rate-limit"
+import { enforceIpRateLimitAsync } from "@/lib/api/rate-limit"
 import { getSupabaseConfig } from "@/lib/security/env"
 
 function isAllowedRequestOrigin(request: NextRequest): boolean {
@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
 
   // ── Edge Rate Limiting on Scraping-Prone Dynamic Endpoints ──────────
   if (pathname === "/quotes/random") {
-    const rateLimited = enforceIpRateLimit(request, "randomQuote")
+    const rateLimited = await enforceIpRateLimitAsync(request, "randomQuote")
     if (rateLimited) {
       return rateLimited
     }

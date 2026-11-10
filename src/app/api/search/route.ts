@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sanitizeSearchQuery } from "@/lib/security/input"
-import { enforceIpRateLimit } from "@/lib/api/rate-limit"
+import { enforceIpRateLimitAsync } from "@/lib/api/rate-limit"
 import { searchPublicQuoteIds } from "@/lib/quotes/search"
 import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
 
@@ -21,7 +21,7 @@ const searchCache = new BoundedMemoryCache<string, SearchResultData>({
 
 export async function GET(req: NextRequest) {
   // IP-level rate limiting to prevent automated scraping and database resource exhaustion
-  const rateLimited = enforceIpRateLimit(req, "publicApi")
+  const rateLimited = await enforceIpRateLimitAsync(req, "publicApi")
   if (rateLimited) return rateLimited
 
   const { searchParams } = new URL(req.url)

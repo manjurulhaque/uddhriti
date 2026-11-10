@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { enforceIpRateLimit } from "@/lib/api/rate-limit"
+import { enforceIpRateLimitAsync } from "@/lib/api/rate-limit"
 import { isValidUuid } from "@/lib/api/route-helpers"
 import { sanitizeSlug } from "@/lib/security/input"
 
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     // IP-level rate limiting to prevent automated share inflation and DoS attacks
-    const rateLimited = enforceIpRateLimit(request, "quoteShare", rawIdentifier)
+    const rateLimited = await enforceIpRateLimitAsync(request, "quoteShare", rawIdentifier)
     if (rateLimited) return rateLimited
 
     const isUuid = isValidUuid(rawIdentifier)

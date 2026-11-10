@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server"
-import { enforceIpRateLimit } from "@/lib/api/rate-limit"
+import { enforceIpRateLimitAsync } from "@/lib/api/rate-limit"
 import { sanitizeSlug } from "@/lib/security/input"
 import {
   resolveQuoteForView,
@@ -26,7 +26,7 @@ export async function POST(
     }
 
     // IP-level rate limiting to prevent automated view inflation and DoS attacks
-    const rateLimited = enforceIpRateLimit(request, "quoteView", rawIdentifier)
+    const rateLimited = await enforceIpRateLimitAsync(request, "quoteView", rawIdentifier)
     if (rateLimited) return rateLimited
 
     // Ignore automated crawlers, search bots, and unfurl scrapers from inflating metrics

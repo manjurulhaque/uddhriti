@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { getClientIp, rateLimit, RATE_LIMITS } from "@/lib/api/rate-limit"
+import { getClientIp, rateLimitAsync, RATE_LIMITS } from "@/lib/api/rate-limit"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -46,7 +46,7 @@ async function fetchRandomQuote(): Promise<{ id: string; slug: string | null } |
 export default async function RandomQuotePage() {
   const headerList = await headers()
   const ip = getClientIp(headerList)
-  const rateLimitResult = rateLimit(`randomQuote:${ip}`, RATE_LIMITS.randomQuote)
+  const rateLimitResult = await rateLimitAsync(`randomQuote:${ip}`, RATE_LIMITS.randomQuote)
 
   if (!rateLimitResult.ok) {
     return (

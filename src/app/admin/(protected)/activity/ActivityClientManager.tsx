@@ -19,6 +19,11 @@ export type AuditLogEntry = {
   createdAt: string
 }
 
+export type OperatorInfo = {
+  email: string
+  name: string
+}
+
 interface ActivityResponse {
   logs: AuditLogEntry[]
   pagination: {
@@ -33,12 +38,15 @@ interface ActivityResponse {
     topActions: { action: string; count: number }[]
     topEntities: { entityType: string; count: number }[]
   }
+  operators?: OperatorInfo[]
 }
 
 interface ActivityClientManagerProps {
   adminRole: AdminRole
   adminId: string
 }
+
+type TimeframePreset = "all" | "today" | "7d" | "30d" | "custom"
 
 function formatRelativeTime(dateString: string): string {
   const diffMs = Date.now() - new Date(dateString).getTime()
@@ -143,17 +151,22 @@ function resolveEntityUrl(entityType: string, entityId: string | null): string |
 
 export function ActivityClientManager({ adminRole }: ActivityClientManagerProps) {
   const [data, setData] = useState<ActivityResponse | null>(null)
+  const [operators, setOperators] = useState<OperatorInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
 
   // Filters
   const [search, setSearch] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [selectedAction, setSelectedAction] = useState<string>("ALL")
   const [selectedEntity, setSelectedEntity] = useState<string>("ALL")
-  const [selectedTimeframe, setSelectedTimeframe] = useState<number>(0)
+  const [selectedAdmin, setSelectedAdmin] = useState<string>("ALL")
+  const [timeframePreset, setTimeframePreset] = useState<TimeframePreset>("all")
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(25)
 
   // Inspection modal
   const [inspectingLog, setInspectingLog] = useState<AuditLogEntry | null>(null)
@@ -178,11 +191,22 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
     try {
       const params = new URLSearchParams()
       params.set("page", String(page))
-      params.set("limit", "25")
+      params.set("limit", String(pageSize))
       if (debouncedSearch) params.set("search", debouncedSearch)
       if (selectedAction !== "ALL") params.set("action", selectedAction)
       if (selectedEntity !== "ALL") params.set("entityType", selectedEntity)
-      if (selectedTimeframe > 0) params.set("days", String(selectedTimeframe))
+      if (selectedAdmin !== "ALL") params.set("admin", selectedAdmin)
+
+      if (timeframePreset === "custom") {
+        if (startDate) params.set("startDate", startDate)
+        if (endDate) params.set("endDate", endDate)
+      } else if (timeframePreset === "today") {
+        params.set("days", "1")
+      } else if (timeframePreset === "7d") {
+        params.set("days", "7")
+      } else if (timeframePreset === "30d") {
+        params.set("days", "30")
+      }
 
       const res = await fetch(`/api/admin/activity?${params.toString()}`)
       if (!res.ok) {
@@ -190,12 +214,15 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
       }
       const json: ActivityResponse = await res.json()
       setData(json)
+      if (json.operators && json.operators.length > 0) {
+        setOperators(json.operators)
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error loading activity")
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, selectedAction, selectedEntity, selectedTimeframe])
+  }, [page, pageSize, debouncedSearch, selectedAction, selectedEntity, selectedAdmin, timeframePreset, startDate, endDate])
 
   useEffect(() => {
     startTransition(() => {
@@ -237,6 +264,15 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
       return inspectingLog.details
     }
   }, [inspectingLog])
+
+  const isFiltered =
+    selectedAction !== "ALL" ||
+    selectedEntity !== "ALL" ||
+    selectedAdmin !== "ALL" ||
+    timeframePreset !== "all" ||
+    Boolean(startDate) ||
+    Boolean(endDate) ||
+    Boolean(search)
 
   return (
     <div className="space-y-6">
@@ -320,7 +356,7 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="absolute right-2.5 top-2.5 text-stone-400 hover:text-stone-700 text-xs"
+                className="absolute right-2.5 top-2.5 text-stone-400 hover:text-stone-700 text-xs cursor-pointer"
               >
                 ✕
               </button>
@@ -334,7 +370,7 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
               variant="secondary"
               size="xs"
               onClick={fetchLogs}
-              isLoading={loading || isPending}
+              isLoading={loading}
             >
               Refresh
             </Button>
@@ -400,23 +436,44 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
             </select>
           </div>
 
+          {/* Operator Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-stone-500 font-medium text-[11px]">Operator:</span>
+            <select
+              value={selectedAdmin}
+              onChange={(e) => {
+                setSelectedAdmin(e.target.value)
+                setPage(1)
+              }}
+              className="rounded-lg border border-stone-200 bg-stone-50/70 px-2.5 py-1 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-stone-900 max-w-[170px] truncate"
+            >
+              <option value="ALL">All Operators</option>
+              {operators.map((op) => (
+                <option key={op.email} value={op.email}>
+                  {op.name || op.email}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Timeframe selector pills */}
           <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200/80">
             {[
-              { label: "All Time", value: 0 },
-              { label: "Today", value: 1 },
-              { label: "7 Days", value: 7 },
-              { label: "30 Days", value: 30 },
+              { id: "all", label: "All Time" },
+              { id: "today", label: "Today" },
+              { id: "7d", label: "7 Days" },
+              { id: "30d", label: "30 Days" },
+              { id: "custom", label: "Custom" },
             ].map((t) => (
               <button
-                key={t.value}
+                key={t.id}
                 type="button"
                 onClick={() => {
-                  setSelectedTimeframe(t.value)
+                  setTimeframePreset(t.id as TimeframePreset)
                   setPage(1)
                 }}
                 className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
-                  selectedTimeframe === t.value
+                  timeframePreset === t.id
                     ? "bg-white text-stone-900 shadow-2xs font-semibold"
                     : "text-stone-600 hover:text-stone-900"
                 }`}
@@ -426,13 +483,16 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
             ))}
           </div>
 
-          {(selectedAction !== "ALL" || selectedEntity !== "ALL" || selectedTimeframe > 0 || search) && (
+          {isFiltered && (
             <button
               type="button"
               onClick={() => {
                 setSelectedAction("ALL")
                 setSelectedEntity("ALL")
-                setSelectedTimeframe(0)
+                setSelectedAdmin("ALL")
+                setTimeframePreset("all")
+                setStartDate("")
+                setEndDate("")
                 setSearch("")
                 setPage(1)
               }}
@@ -442,6 +502,50 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
             </button>
           )}
         </div>
+
+        {/* Custom Date Range Row */}
+        {timeframePreset === "custom" && (
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-stone-100 text-xs text-stone-600 animate-in fade-in">
+            <span className="font-semibold text-stone-700 text-[11px] uppercase tracking-wider">Date Range:</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-stone-500">From</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setPage(1)
+                }}
+                className="rounded-lg border border-stone-200 bg-stone-50/70 px-2 py-1 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-stone-900"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-stone-500">To</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setPage(1)
+                }}
+                className="rounded-lg border border-stone-200 bg-stone-50/70 px-2 py-1 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-stone-900"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate("")
+                  setEndDate("")
+                  setPage(1)
+                }}
+                className="text-[11px] text-stone-500 hover:text-stone-800 underline underline-offset-2 cursor-pointer"
+              >
+                Clear dates
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Ledger Table */}
@@ -470,12 +574,42 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
         ) : data ? (
           <div>
             {/* Header info */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-stone-100 bg-stone-50/50 text-xs text-stone-600">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3 border-b border-stone-100 bg-stone-50/50 text-xs text-stone-600 gap-2">
               <span className="font-medium">
-                Showing <strong className="text-stone-900">{data.logs.length}</strong> of{" "}
-                <strong className="text-stone-900">{data.pagination.total}</strong> events
+                {data.pagination.total === 0 ? (
+                  "No events"
+                ) : (
+                  <>
+                    Showing{" "}
+                    <strong className="text-stone-900">
+                      {(data.pagination.page - 1) * data.pagination.limit + 1}–
+                      {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)}
+                    </strong>{" "}
+                    of <strong className="text-stone-900">{data.pagination.total}</strong> events
+                  </>
+                )}
               </span>
-              <span className="text-[11px] text-stone-400">Page {data.pagination.page} of {data.pagination.totalPages}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="text-stone-400">Per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setPage(1)
+                    }}
+                    className="rounded border border-stone-200 bg-white px-2 py-0.5 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-900"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                <span className="text-[11px] text-stone-400">
+                  Page {data.pagination.page} of {data.pagination.totalPages}
+                </span>
+              </div>
             </div>
 
             {/* Table */}
@@ -586,31 +720,82 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
 
             {/* Pagination Controls */}
             {data.pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-stone-100 bg-stone-50/40 text-xs">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  ← Previous
-                </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-stone-100 bg-stone-50/40 text-xs">
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    disabled={page <= 1}
+                    onClick={() => setPage(1)}
+                    title="First page"
+                  >
+                    « First
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    ← Previous
+                  </Button>
+                </div>
 
-                <span className="font-medium text-stone-600">
-                  Page <strong className="text-stone-900">{page}</strong> of{" "}
-                  <strong className="text-stone-900">{data.pagination.totalPages}</strong>
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-stone-600">
+                    Page <strong className="text-stone-900">{page}</strong> of{" "}
+                    <strong className="text-stone-900">{data.pagination.totalPages}</strong>
+                  </span>
+                  {data.pagination.totalPages > 2 && (
+                    <div className="hidden sm:flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, data.pagination.totalPages) }, (_, i) => {
+                        const total = data.pagination.totalPages
+                        let pNum = page - 2 + i
+                        if (page <= 2) pNum = i + 1
+                        else if (page >= total - 1) pNum = total - 4 + i
+                        if (pNum < 1 || pNum > total) return null
+                        return (
+                          <button
+                            key={pNum}
+                            type="button"
+                            onClick={() => setPage(pNum)}
+                            className={`w-7 h-7 rounded text-xs font-mono transition cursor-pointer ${
+                              page === pNum
+                                ? "bg-stone-900 text-white font-bold"
+                                : "text-stone-600 hover:bg-stone-200/70"
+                            }`}
+                          >
+                            {pNum}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  disabled={page >= data.pagination.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next →
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    disabled={page >= data.pagination.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next →
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    disabled={page >= data.pagination.totalPages}
+                    onClick={() => setPage(data.pagination.totalPages)}
+                    title="Last page"
+                  >
+                    Last »
+                  </Button>
+                </div>
               </div>
             )}
           </div>

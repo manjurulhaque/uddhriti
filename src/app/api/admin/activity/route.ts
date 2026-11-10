@@ -1,49 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin, requireSuperAdmin } from "@/lib/api/admin-auth"
-import { recordAuditLog } from "@/lib/audit"
-import type { AuditAction, AuditEntityType, Prisma } from "@prisma/client"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { recordAuditLog, buildActivityQueryWhere } from "@/lib/audit"
 
 export async function GET(req: NextRequest) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimitResponse = enforceAdminRateLimit(admin.id, "quoteView")
+  if (rateLimitResponse) return rateLimitResponse
 
   const { searchParams } = new URL(req.url)
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
   const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "25", 10)))
-  const actionParam = searchParams.get("action") as AuditAction | null
-  const entityTypeParam = searchParams.get("entityType") as AuditEntityType | null
-  const search = searchParams.get("search")?.trim() || ""
-  const daysParam = searchParams.get("days") ? parseInt(searchParams.get("days")!, 10) : null
 
-  const where: Prisma.AdminAuditLogWhereInput = {}
-
-  if (actionParam) {
-    where.action = actionParam
-  }
-
-  if (entityTypeParam) {
-    where.entityType = entityTypeParam
-  }
-
-  if (daysParam && daysParam > 0) {
-    const cutoff = new Date(Date.now() - daysParam * 24 * 60 * 60 * 1000)
-    where.createdAt = { gte: cutoff }
-  }
-
-  if (search) {
-    where.OR = [
-      { entityName: { contains: search, mode: "insensitive" } },
-      { adminEmail: { contains: search, mode: "insensitive" } },
-      { details: { contains: search, mode: "insensitive" } },
-    ]
-  }
+  const where = buildActivityQueryWhere(searchParams)
 
   try {
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
 
-    const [total, logs, todayCount, topActions, topEntities] = await Promise.all([
+    const [total, logs, todayCount, topActions, topEntities, registeredAdmins, distinctLogAdmins] = await Promise.all([
       prisma.adminAuditLog.count({ where }),
       prisma.adminAuditLog.findMany({
         where,
@@ -70,7 +48,33 @@ export async function GET(req: NextRequest) {
         orderBy: { _count: { entityType: "desc" } },
         take: 5,
       }),
+      prisma.admin.findMany({
+        select: { id: true, name: true, email: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.adminAuditLog.findMany({
+        select: { adminEmail: true, adminName: true },
+        distinct: ["adminEmail"],
+        where: { adminEmail: { not: null } },
+      }),
     ])
+
+    // Build unified operators list for admin filter dropdown
+    const knownAdmins = new Map<string, { email: string; name: string }>()
+    for (const a of registeredAdmins) {
+      if (a.email) {
+        knownAdmins.set(a.email.toLowerCase(), { email: a.email, name: a.name || a.email })
+      }
+    }
+    for (const a of distinctLogAdmins) {
+      if (a.adminEmail && !knownAdmins.has(a.adminEmail.toLowerCase())) {
+        knownAdmins.set(a.adminEmail.toLowerCase(), {
+          email: a.adminEmail,
+          name: a.adminName || a.adminEmail,
+        })
+      }
+    }
+    const operators = Array.from(knownAdmins.values()).sort((a, b) => a.name.localeCompare(b.name))
 
     const totalPages = Math.ceil(total / limit) || 1
 
@@ -88,6 +92,7 @@ export async function GET(req: NextRequest) {
         topActions: topActions.map((a) => ({ action: a.action, count: a._count.action })),
         topEntities: topEntities.map((e) => ({ entityType: e.entityType, count: e._count.entityType })),
       },
+      operators,
     })
   } catch (error) {
     console.error("[GET /api/admin/activity] Error:", error)
@@ -98,6 +103,9 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { admin, response } = await requireSuperAdmin()
   if (response) return response
+
+  const rateLimitResponse = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimitResponse) return rateLimitResponse
 
   const { searchParams } = new URL(req.url)
   const olderThanDays = Math.max(30, parseInt(searchParams.get("olderThanDays") || "90", 10))
@@ -134,4 +142,3 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Failed to purge audit logs" }, { status: 500 })
   }
 }
-

@@ -4,7 +4,12 @@ import assert from "node:assert/strict"
 (process.env as Record<string, string | undefined>).NODE_ENV = "test"
 
 import { prisma } from "../../src/lib/prisma"
-import { recordAuditLog } from "../../src/lib/audit"
+import {
+  recordAuditLog,
+  buildActivityQueryWhere,
+  VALID_AUDIT_ACTIONS,
+  VALID_AUDIT_ENTITY_TYPES,
+} from "../../src/lib/audit"
 
 type CapturedAuditData = {
   action?: string
@@ -239,3 +244,127 @@ describe("Admin Audit Logging (recordAuditLog)", () => {
     }
   })
 })
+
+describe("Activity Query Filters (buildActivityQueryWhere)", () => {
+  it("returns empty where clause when no filters or defaults are provided", () => {
+    const where = buildActivityQueryWhere({})
+    assert.deepEqual(where, {})
+  })
+
+  it("validates and filters by valid action, ignoring invalid action or ALL", () => {
+    for (const action of VALID_AUDIT_ACTIONS) {
+      const where = buildActivityQueryWhere({ action })
+      assert.equal(where.action, action)
+    }
+
+    const whereAll = buildActivityQueryWhere({ action: "ALL" })
+    assert.equal(whereAll.action, undefined)
+
+    const whereInvalid = buildActivityQueryWhere({ action: "INJECT_DROP_TABLE" })
+    assert.equal(whereInvalid.action, undefined)
+  })
+
+  it("validates and filters by valid entityType, ignoring invalid entityType or ALL", () => {
+    for (const entityType of VALID_AUDIT_ENTITY_TYPES) {
+      const where = buildActivityQueryWhere({ entityType })
+      assert.equal(where.entityType, entityType)
+    }
+
+    const whereAll = buildActivityQueryWhere({ entityType: "ALL" })
+    assert.equal(whereAll.entityType, undefined)
+
+    const whereInvalid = buildActivityQueryWhere({ entityType: "UNKNOWN_TABLE" })
+    assert.equal(whereInvalid.entityType, undefined)
+  })
+
+  it("filters by adminId when UUID is passed, and by adminEmail when email is passed", () => {
+    const uuid = "a1b2c3d4-e5f6-4a1b-8c2d-123456789abc"
+    const whereUuid = buildActivityQueryWhere({ admin: uuid })
+    assert.equal(whereUuid.adminId, uuid)
+    assert.equal(whereUuid.adminEmail, undefined)
+
+    const email = "curator@quotzen.com"
+    const whereEmail = buildActivityQueryWhere({ admin: email })
+    assert.equal(whereEmail.adminId, undefined)
+    assert.deepEqual(whereEmail.adminEmail, { equals: email, mode: "insensitive" })
+
+    const whereAll = buildActivityQueryWhere({ admin: "ALL" })
+    assert.equal(whereAll.adminId, undefined)
+    assert.equal(whereAll.adminEmail, undefined)
+  })
+
+  it("constructs custom date range with start-of-day and end-of-day normalization", () => {
+    const whereRange = buildActivityQueryWhere({
+      startDate: "2026-11-01",
+      endDate: "2026-11-10",
+    })
+
+    assert.ok(whereRange.createdAt)
+    const createdAtFilter = whereRange.createdAt as { gte?: Date; lte?: Date }
+    assert.ok(createdAtFilter.gte instanceof Date)
+    assert.ok(createdAtFilter.lte instanceof Date)
+
+    // Start date should be normalized to 00:00:00.000 local
+    assert.equal(createdAtFilter.gte?.getHours(), 0)
+    assert.equal(createdAtFilter.gte?.getMinutes(), 0)
+    assert.equal(createdAtFilter.gte?.getSeconds(), 0)
+
+    // End date should be normalized to 23:59:59.999 local
+    assert.equal(createdAtFilter.lte?.getHours(), 23)
+    assert.equal(createdAtFilter.lte?.getMinutes(), 59)
+    assert.equal(createdAtFilter.lte?.getSeconds(), 59)
+  })
+
+  it("falls back to relative days cutoff when custom date range is not specified", () => {
+    const beforeMs = Date.now()
+    const whereDays = buildActivityQueryWhere({ days: 7 })
+    const afterMs = Date.now()
+
+    assert.ok(whereDays.createdAt)
+    const filter = whereDays.createdAt as { gte: Date }
+    assert.ok(filter.gte instanceof Date)
+
+    const expectedCutoffMin = beforeMs - 7 * 24 * 60 * 60 * 1000
+    const expectedCutoffMax = afterMs - 7 * 24 * 60 * 60 * 1000
+    assert.ok(filter.gte.getTime() >= expectedCutoffMin)
+    assert.ok(filter.gte.getTime() <= expectedCutoffMax)
+  })
+
+  it("constructs multi-field OR search matching entityName, adminEmail, adminName, and details", () => {
+    const where = buildActivityQueryWhere({ search: "Marcus Aurelius" })
+
+    assert.ok(Array.isArray(where.AND))
+    assert.equal(where.AND?.length, 1)
+
+    const andClause = (where.AND as Array<{ OR: unknown[] }>)[0]
+    assert.ok(Array.isArray(andClause.OR))
+    assert.equal(andClause.OR.length, 4)
+
+    assert.deepEqual(andClause.OR, [
+      { entityName: { contains: "Marcus Aurelius", mode: "insensitive" } },
+      { adminEmail: { contains: "Marcus Aurelius", mode: "insensitive" } },
+      { adminName: { contains: "Marcus Aurelius", mode: "insensitive" } },
+      { details: { contains: "Marcus Aurelius", mode: "insensitive" } },
+    ])
+  })
+
+  it("works identically with both URLSearchParams and plain ActivityQueryParams object", () => {
+    const params = new URLSearchParams({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      admin: "admin@quotzen.com",
+      search: "Stoicism",
+    })
+
+    const fromParams = buildActivityQueryWhere(params)
+    const fromObject = buildActivityQueryWhere({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      admin: "admin@quotzen.com",
+      search: "Stoicism",
+    })
+
+    assert.deepEqual(fromParams, fromObject)
+  })
+})
+

@@ -1,8 +1,11 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { NextResponse, after } from "next/server"
 import { enforceIpRateLimit } from "@/lib/api/rate-limit"
-import { isValidUuid } from "@/lib/api/route-helpers"
 import { sanitizeSlug } from "@/lib/security/input"
+import {
+  resolveQuoteForView,
+  recordBufferedView,
+  scheduleViewFlush,
+} from "@/lib/quotes/view-counter-buffer"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -36,66 +39,26 @@ export async function POST(
       })
     }
 
-    const isUuid = isValidUuid(rawIdentifier)
-
-    // Lookup published quote by UUID or slug
-    const quote = await prisma.quote.findFirst({
-      where: {
-        OR: [{ slug: rawIdentifier }, ...(isUuid ? [{ id: rawIdentifier }] : [])],
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-      },
-    })
-
-    if (!quote) {
+    // Fast lookup from resolution cache / Prisma
+    const target = await resolveQuoteForView(rawIdentifier)
+    if (!target) {
       return NextResponse.json(
         { error: "Quote not found" },
         { status: 404 }
       )
     }
 
-    // Normalizing to UTC date at 00:00:00 for daily stat aggregations
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
+    // Record view in memory buffer without database row lock contention
+    const currentViews = recordBufferedView(target.id, target.views)
 
-    const [updatedQuote] = await prisma.$transaction([
-      prisma.quote.update({
-        where: { id: quote.id },
-        data: {
-          views: { increment: 1 },
-          popularityScore: { increment: 1 },
-          trendingViews24h: { increment: 1 },
-          trendingScore: { increment: 1 },
-        },
-        select: {
-          id: true,
-          views: true,
-        },
-      }),
-      prisma.quoteDailyStat.upsert({
-        where: {
-          quoteId_date: {
-            quoteId: quote.id,
-            date: today,
-          },
-        },
-        update: {
-          views: { increment: 1 },
-        },
-        create: {
-          quoteId: quote.id,
-          date: today,
-          views: 1,
-        },
-      }),
-    ])
+    // Schedule background batched flush after response is dispatched
+    after(() => {
+      scheduleViewFlush()
+    })
 
     return NextResponse.json({
       success: true,
-      views: updatedQuote.views,
+      views: currentViews,
     })
   } catch (error) {
     console.error("Failed to record quote view:", error)

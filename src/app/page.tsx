@@ -19,6 +19,7 @@ import {
   HomeTrendingSection,
   HomeLatestQuotes,
   type DynamicMoodQuote,
+  type TrendingQuote,
 } from "@/components"
 
 export const revalidate = 3600
@@ -400,9 +401,25 @@ export default async function HomePage() {
   })
 
   // 7. Trending quotes (distinct from all prior sections)
-  const dedupedTrendingQuotes = trendingQuotes
+  const dedupedTrendingQuotes: TrendingQuote[] = trendingQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 4)
+
+  // Resilient fallback: If strict exclusion left fewer than 4 quotes, backfill from unused latest quotes,
+  // or remaining trending quotes as a last resort so the UI grid is never starved.
+  if (dedupedTrendingQuotes.length < 4) {
+    const candidateQuotes: TrendingQuote[] = [
+      ...latestQuotes.filter((q) => !usedQuoteIds.has(q.id)),
+      ...trendingQuotes.filter((q) => !dedupedTrendingQuotes.some((d) => d.id === q.id)),
+    ]
+    for (const q of candidateQuotes) {
+      if (!dedupedTrendingQuotes.some((d) => d.id === q.id)) {
+        dedupedTrendingQuotes.push(q)
+        if (dedupedTrendingQuotes.length === 4) break
+      }
+    }
+  }
+
   dedupedTrendingQuotes.forEach((q) => {
     if (q.id) usedQuoteIds.add(q.id)
   })
@@ -411,6 +428,17 @@ export default async function HomePage() {
   const remainingLatestQuotes = latestQuotes
     .filter((q) => !usedQuoteIds.has(q.id))
     .slice(0, 8)
+
+  if (remainingLatestQuotes.length < 8 && latestQuotes.length >= 8) {
+    const includedIds = new Set(remainingLatestQuotes.map((q) => q.id))
+    for (const q of latestQuotes) {
+      if (!includedIds.has(q.id)) {
+        remainingLatestQuotes.push(q)
+        includedIds.add(q.id)
+        if (remainingLatestQuotes.length === 8) break
+      }
+    }
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -509,7 +537,7 @@ export default async function HomePage() {
 // Module-level cached handler
 const getCachedHomePageData = unstable_cache(
   async (todayStr: string) => fetchHomePageDataInternal(todayStr),
-  ["home-page-data-v3"],
+  ["home-page-data-v4"],
   {
     tags: [HOME_PAGE_CACHE_TAG, HOME_TAXONOMIES_CACHE_TAG, "quotes"],
     revalidate: 3600,
@@ -622,13 +650,13 @@ async function fetchHomePageDataInternal(todayStr: string) {
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
-        take: 16,
+        take: 24,
         select: quoteCardSelect,
       }),
       prisma.quote.findMany({
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: [{ trendingScore: "desc" }, { views: "desc" }, { id: "asc" }],
-        take: 8,
+        take: 32,
         select: {
           ...quoteCardSelect,
           trendingScore: true,

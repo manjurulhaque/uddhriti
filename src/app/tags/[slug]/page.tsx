@@ -111,11 +111,33 @@ interface TagTaxonomy {
   siblingTypeTags: TagTaxonomySibling[]
 }
 
+interface TagQuotesItem {
+  id: string
+  slug: string | null
+  content: string
+  authorName: string | null
+  isVerified: boolean
+  views: number
+  author: { id: string; name: string; slug: string } | null
+  category: { id: string; name: string; slug: string }
+  source: { title: string; year: number | null } | null
+  tags: Array<{ tag: { name: string; slug: string } }>
+}
+
+interface TagDefaultPageCache {
+  quotes: TagQuotesItem[]
+  totalQuotes: number
+  timestamp: number
+}
+
 const tagTaxonomyCache = new Map<string, { data: TagTaxonomy; timestamp: number }>()
+const tagPage1Cache = new Map<string, TagDefaultPageCache>()
 const TAXONOMY_TTL_MS = 15 * 60 * 1000 // 15 mins
+const MAX_TAG_CACHE_ENTRIES = 80
 
 registerPublicDataInvalidator(() => {
   tagTaxonomyCache.clear()
+  tagPage1Cache.clear()
 })
 
 async function loadTagTaxonomy(tagId: string, tagType: TagType): Promise<TagTaxonomy> {
@@ -255,6 +277,10 @@ async function loadTagTaxonomy(tagId: string, tagType: TagType): Promise<TagTaxo
     siblingTypeTags,
   }
 
+  if (tagTaxonomyCache.size >= MAX_TAG_CACHE_ENTRIES) {
+    const oldest = tagTaxonomyCache.keys().next().value
+    if (oldest) tagTaxonomyCache.delete(oldest)
+  }
   tagTaxonomyCache.set(tagId, { data, timestamp: now })
   return data
 }
@@ -368,34 +394,65 @@ export default async function TagDetailPage({
     orderByClause = [{ views: "desc" }, { id: "asc" }]
   }
 
-  const isDefaultBrowse = !selectedAuthor && !selectedCategory && currentSort !== "verified"
+  const isDefaultBrowse = !selectedAuthor && !selectedCategory && currentSort === "popular" && currentPage === 1
+  const now = Date.now()
 
-  const [totalQuotes, quotes, taxonomy] = await Promise.all([
-    isDefaultBrowse ? Promise.resolve(tag.quoteCount) : prisma.quote.count({ where: whereClause }),
-    prisma.quote.findMany({
-      where: whereClause,
-      orderBy: orderByClause,
-      skip: (currentPage - 1) * QUOTES_PER_PAGE,
-      take: QUOTES_PER_PAGE,
-      select: {
-        id: true,
-        slug: true,
-        content: true,
-        authorName: true,
-        isVerified: true,
-        views: true,
-        author: { select: { id: true, name: true, slug: true } },
-        category: { select: { id: true, name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: {
-          select: {
-            tag: { select: { name: true, slug: true } },
+  let totalQuotes: number
+  let quotes: TagQuotesItem[]
+  let taxonomy: TagTaxonomy
+
+  const cachedPage = isDefaultBrowse ? tagPage1Cache.get(tag.id) : null
+
+  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
+    totalQuotes = cachedPage.totalQuotes
+    quotes = cachedPage.quotes
+    taxonomy = await loadTagTaxonomy(tag.id, tag.type)
+  } else {
+    const isDefaultCount = !selectedAuthor && !selectedCategory && currentSort !== "verified"
+
+    const [fetchedTotal, fetchedQuotes, fetchedTaxonomy] = await Promise.all([
+      isDefaultCount ? Promise.resolve(tag.quoteCount) : prisma.quote.count({ where: whereClause }),
+      prisma.quote.findMany({
+        where: whereClause,
+        orderBy: orderByClause,
+        skip: (currentPage - 1) * QUOTES_PER_PAGE,
+        take: QUOTES_PER_PAGE,
+        select: {
+          id: true,
+          slug: true,
+          content: true,
+          authorName: true,
+          isVerified: true,
+          views: true,
+          author: { select: { id: true, name: true, slug: true } },
+          category: { select: { id: true, name: true, slug: true } },
+          source: { select: { title: true, year: true } },
+          tags: {
+            select: {
+              tag: { select: { name: true, slug: true } },
+            },
           },
         },
-      },
-    }),
-    loadTagTaxonomy(tag.id, tag.type),
-  ])
+      }),
+      loadTagTaxonomy(tag.id, tag.type),
+    ])
+
+    totalQuotes = fetchedTotal
+    quotes = fetchedQuotes
+    taxonomy = fetchedTaxonomy
+
+    if (isDefaultBrowse) {
+      if (tagPage1Cache.size >= MAX_TAG_CACHE_ENTRIES) {
+        const oldest = tagPage1Cache.keys().next().value
+        if (oldest) tagPage1Cache.delete(oldest)
+      }
+      tagPage1Cache.set(tag.id, {
+        quotes,
+        totalQuotes,
+        timestamp: now,
+      })
+    }
+  }
 
   const { topAuthors, affiliatedCategories, cooccurringTags, siblingTypeTags } = taxonomy
 
@@ -643,7 +700,7 @@ export default async function TagDetailPage({
                 <QuoteCard
                   key={quote.id}
                   id={quote.id}
-                  slug={quote.slug}
+                  slug={quote.slug ?? undefined}
                   content={quote.content}
                   authorName={quote.author?.name || quote.authorName}
                   authorSlug={quote.author?.slug}

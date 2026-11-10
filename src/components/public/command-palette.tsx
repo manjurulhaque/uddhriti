@@ -239,7 +239,7 @@ export function CommandPalette() {
         .finally(() => {
           setIsLoading(false)
         })
-    }, 180)
+    }, 240)
 
     return () => {
       clearTimeout(timeoutId)

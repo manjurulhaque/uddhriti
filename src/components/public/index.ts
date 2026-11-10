@@ -1,4 +1,5 @@
 export * from "./quote-card"
+export * from "./quote-bookmark-button"
 export * from "./quote-meta"
 export * from "./tag-badge"
 export * from "./home-hero"

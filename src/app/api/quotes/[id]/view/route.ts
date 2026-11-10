@@ -26,6 +26,16 @@ export async function POST(
     const rateLimited = enforceIpRateLimit(request, "quoteView", rawIdentifier)
     if (rateLimited) return rateLimited
 
+    // Ignore automated crawlers, search bots, and unfurl scrapers from inflating metrics
+    const userAgent = request.headers.get("user-agent") || ""
+    const isBot = /bot|spider|crawl|slurp|facebookexternalhit|twitterbot|whatsapp|telegrambot|preview|embed/i.test(userAgent)
+    if (isBot) {
+      return NextResponse.json({
+        success: true,
+        ignored: true,
+      })
+    }
+
     const isUuid = isValidUuid(rawIdentifier)
 
     // Lookup published quote by UUID or slug

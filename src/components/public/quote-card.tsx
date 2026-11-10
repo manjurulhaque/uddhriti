@@ -1,11 +1,8 @@
-"use client"
-
 import * as React from "react"
 import Link from "next/link"
-import { BookmarkIcon } from "@/components/ui"
 import { QuoteMeta } from "./quote-meta"
+import { QuoteBookmarkButton } from "./quote-bookmark-button"
 import { formatScore, formatCountWithNoun } from "@/lib/formatters"
-import { useSavedQuotes } from "@/lib/saved-quotes"
 
 export interface QuoteCardProps {
   id?: string
@@ -54,48 +51,21 @@ export function QuoteCard({
   const isFeatured = variant === "featured"
   const quoteHref = slug ? `/quotes/${slug}` : id ? `/quotes/${id}` : undefined
 
-  const { isSaved, toggleSave } = useSavedQuotes()
-  const quoteKey = id || slug || content
-  const saved = isSaved(quoteKey)
-
-  function handleBookmark(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    toggleSave({
-      id: quoteKey,
-      slug,
-      content,
-      authorName,
-      authorSlug,
-      category,
-      categorySlug,
-      sourceTitle,
-      year,
-      tags,
-      isVerified,
-    })
-  }
-
   const bookmarkButton = (
-    <button
-      type="button"
-      onClick={handleBookmark}
-      aria-label={saved ? "Remove from saved quotes" : "Save quote for offline reading"}
-      className={`p-1.5 rounded-full transition-all cursor-pointer ${
-        saved
-          ? isDark || isFeatured
-            ? "text-[var(--accent-gold)] bg-white/15"
-            : "text-[var(--accent-rust)] bg-[#c76b3e]/15 shadow-2xs"
-          : isDark || isFeatured
-          ? "text-white/40 hover:text-white hover:bg-white/10"
-          : "text-amber-800/35 hover:text-amber-900 hover:bg-amber-800/10"
-      }`}
-    >
-      <BookmarkIcon
-        filled={saved}
-        className="h-4 w-4 transition-transform active:scale-125"
-      />
-    </button>
+    <QuoteBookmarkButton
+      id={id}
+      slug={slug}
+      content={content}
+      authorName={authorName}
+      authorSlug={authorSlug}
+      category={category}
+      categorySlug={categorySlug}
+      sourceTitle={sourceTitle}
+      year={year}
+      tags={tags}
+      isVerified={isVerified}
+      variant={variant}
+    />
   )
 
   if (isFeatured) {

@@ -95,11 +95,32 @@ interface CategoryTaxonomy {
   siblingCategories: CategoryTaxonomySibling[]
 }
 
+interface CategoryQuotesItem {
+  id: string
+  slug: string | null
+  content: string
+  authorName: string | null
+  isVerified: boolean
+  views: number
+  author: { id: string; name: string; slug: string } | null
+  source: { title: string; year: number | null } | null
+  tags: Array<{ tag: { name: string; slug: string } }>
+}
+
+interface CategoryDefaultPageCache {
+  quotes: CategoryQuotesItem[]
+  totalQuotes: number
+  timestamp: number
+}
+
 const taxonomyCache = new Map<string, { data: CategoryTaxonomy; timestamp: number }>()
+const categoryPage1Cache = new Map<string, CategoryDefaultPageCache>()
 const TAXONOMY_TTL_MS = 15 * 60 * 1000 // 15 mins
+const MAX_TAXONOMY_CACHE_ENTRIES = 80
 
 registerPublicDataInvalidator(() => {
   taxonomyCache.clear()
+  categoryPage1Cache.clear()
 })
 
 async function loadCategoryTaxonomy(categoryId: string): Promise<CategoryTaxonomy> {
@@ -207,6 +228,10 @@ async function loadCategoryTaxonomy(categoryId: string): Promise<CategoryTaxonom
     siblingCategories,
   }
 
+  if (taxonomyCache.size >= MAX_TAXONOMY_CACHE_ENTRIES) {
+    const oldest = taxonomyCache.keys().next().value
+    if (oldest) taxonomyCache.delete(oldest)
+  }
   taxonomyCache.set(categoryId, { data, timestamp: now })
   return data
 }
@@ -304,33 +329,64 @@ export default async function CategoryDetailPage({
     orderByClause = [{ views: "desc" }, { id: "asc" }]
   }
 
-  const isDefaultCount = !selectedAuthor && currentSort !== "verified"
+  const isDefaultBrowse = !selectedAuthor && currentSort === "popular" && currentPage === 1
+  const now = Date.now()
 
-  const [totalQuotes, quotes, taxonomy] = await Promise.all([
-    isDefaultCount ? Promise.resolve(category.quoteCount) : prisma.quote.count({ where: whereClause }),
-    prisma.quote.findMany({
-      where: whereClause,
-      orderBy: orderByClause,
-      skip: (currentPage - 1) * QUOTES_PER_PAGE,
-      take: QUOTES_PER_PAGE,
-      select: {
-        id: true,
-        slug: true,
-        content: true,
-        authorName: true,
-        isVerified: true,
-        views: true,
-        author: { select: { id: true, name: true, slug: true } },
-        source: { select: { title: true, year: true } },
-        tags: {
-          select: {
-            tag: { select: { name: true, slug: true } },
+  let totalQuotes: number
+  let quotes: CategoryQuotesItem[]
+  let taxonomy: CategoryTaxonomy
+
+  const cachedPage = isDefaultBrowse ? categoryPage1Cache.get(category.id) : null
+
+  if (cachedPage && now - cachedPage.timestamp < TAXONOMY_TTL_MS) {
+    totalQuotes = cachedPage.totalQuotes
+    quotes = cachedPage.quotes
+    taxonomy = await loadCategoryTaxonomy(category.id)
+  } else {
+    const isDefaultCount = !selectedAuthor && currentSort !== "verified"
+
+    const [fetchedTotal, fetchedQuotes, fetchedTaxonomy] = await Promise.all([
+      isDefaultCount ? Promise.resolve(category.quoteCount) : prisma.quote.count({ where: whereClause }),
+      prisma.quote.findMany({
+        where: whereClause,
+        orderBy: orderByClause,
+        skip: (currentPage - 1) * QUOTES_PER_PAGE,
+        take: QUOTES_PER_PAGE,
+        select: {
+          id: true,
+          slug: true,
+          content: true,
+          authorName: true,
+          isVerified: true,
+          views: true,
+          author: { select: { id: true, name: true, slug: true } },
+          source: { select: { title: true, year: true } },
+          tags: {
+            select: {
+              tag: { select: { name: true, slug: true } },
+            },
           },
         },
-      },
-    }),
-    loadCategoryTaxonomy(category.id),
-  ])
+      }),
+      loadCategoryTaxonomy(category.id),
+    ])
+
+    totalQuotes = fetchedTotal
+    quotes = fetchedQuotes
+    taxonomy = fetchedTaxonomy
+
+    if (isDefaultBrowse) {
+      if (categoryPage1Cache.size >= MAX_TAXONOMY_CACHE_ENTRIES) {
+        const oldest = categoryPage1Cache.keys().next().value
+        if (oldest) categoryPage1Cache.delete(oldest)
+      }
+      categoryPage1Cache.set(category.id, {
+        quotes,
+        totalQuotes,
+        timestamp: now,
+      })
+    }
+  }
 
   const { topAuthors, topTags, siblingCategories } = taxonomy
 
@@ -526,7 +582,7 @@ export default async function CategoryDetailPage({
                 <QuoteCard
                   key={quote.id}
                   id={quote.id}
-                  slug={quote.slug}
+                  slug={quote.slug ?? undefined}
                   content={quote.content}
                   authorName={quote.author?.name || quote.authorName}
                   authorSlug={quote.author?.slug}

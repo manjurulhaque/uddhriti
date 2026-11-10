@@ -3,8 +3,27 @@ import { prisma } from "@/lib/prisma"
 import { sanitizeSearchQuery } from "@/lib/security/input"
 import { enforceIpRateLimit } from "@/lib/api/rate-limit"
 import { searchPublicQuoteIds } from "@/lib/quotes/search"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 export const dynamic = "force-dynamic"
+
+interface SearchCacheEntry {
+  data: {
+    quotes: unknown[]
+    authors: unknown[]
+    categories: unknown[]
+    tags: unknown[]
+  }
+  expiresAt: number
+}
+
+const searchCache = new Map<string, SearchCacheEntry>()
+const MAX_SEARCH_CACHE_ENTRIES = 150
+const SEARCH_CACHE_TTL_MS = 60 * 1000 // 60 seconds
+
+registerPublicDataInvalidator(() => {
+  searchCache.clear()
+})
 
 export async function GET(req: NextRequest) {
   // IP-level rate limiting to prevent automated scraping and database resource exhaustion
@@ -24,8 +43,20 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  const normalizedQuery = query.toLowerCase().trim()
+
+  // Fast in-memory cache lookup
+  const cached = searchCache.get(normalizedQuery)
+  if (cached && cached.expiresAt > Date.now()) {
+    return NextResponse.json(cached.data, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        "X-Cache": "HIT",
+      },
+    })
+  }
+
   try {
-    const normalizedQuery = query.toLowerCase().trim()
 
     const [matchingQuoteIds, authors, categories, tags] = await Promise.all([
       // 1. Full-text search quote matches leveraging searchVector GIN index
@@ -250,16 +281,29 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    const result = {
+      quotes,
+      authors,
+      categories,
+      tags,
+    }
+
+    // Store in bounded LRU memory cache
+    if (searchCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+      const oldestKey = searchCache.keys().next().value
+      if (oldestKey) searchCache.delete(oldestKey)
+    }
+    searchCache.set(normalizedQuery, {
+      data: result,
+      expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+    })
+
     return NextResponse.json(
-      {
-        quotes,
-        authors,
-        categories,
-        tags,
-      },
+      result,
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+          "X-Cache": "MISS",
         },
       }
     )

@@ -18,8 +18,32 @@ import {
 import { getSiteUrl } from "@/lib/site"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { parseSafePageNumber, sanitizeSlug, isSafeExternalUrl, isValidWikidataId } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 const QUOTES_PER_PAGE = 12
+const MAX_AUTHOR_CACHE_ENTRIES = 120
+const CACHE_TTL_MS = 15 * 60 * 1000
+
+interface AuthorQuotesCacheEntry {
+  quotes: Array<{
+    id: string
+    slug: string | null
+    content: string
+    authorName: string | null
+    isVerified: boolean
+    views: number
+    category: { id: string; name: string; slug: string }
+    source: { title: string; year: number | null } | null
+    tags: Array<{ tag: { name: string; slug: string } }>
+  }>
+  timestamp: number
+}
+
+const authorPage1Cache = new Map<string, AuthorQuotesCacheEntry>()
+
+registerPublicDataInvalidator(() => {
+  authorPage1Cache.clear()
+})
 
 interface AuthorDetailPageProps {
   params: Promise<{ slug: string }>
@@ -119,25 +143,49 @@ export async function generateMetadata({
   }
 }
 
-export default async function AuthorDetailPage({
-  params,
+function AuthorQuotesSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse" aria-hidden="true">
+      <div className="border-b border-stone-900/10 pb-4 flex items-center justify-between">
+        <div className="h-7 w-48 bg-stone-200/80 rounded-lg" />
+        <div className="h-4 w-24 bg-stone-200/80 rounded" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-56 rounded-[1.6rem] bg-stone-100/80 border border-stone-200/80" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+async function AuthorQuotesSection({
+  authorId,
+  authorName,
+  authorSlug,
+  totalQuotes,
   searchParams,
-}: AuthorDetailPageProps) {
-  const { slug: rawSlug } = await params
-  const slug = sanitizeSlug(rawSlug, 150)
+}: {
+  authorId: string
+  authorName: string
+  authorSlug: string
+  totalQuotes: number
+  searchParams: Promise<{ page?: string }>
+}) {
   const { page } = await searchParams
   const currentPage = parseSafePageNumber(page, 500)
+  const isPage1 = currentPage === 1
+  const now = Date.now()
 
-  const author = await getAuthorBySlug(slug)
+  let quotes: AuthorQuotesCacheEntry["quotes"]
+  const cached = isPage1 ? authorPage1Cache.get(authorId) : null
 
-  if (!author) {
-    notFound()
-  }
-
-  const [quotes, relatedAuthors] = await Promise.all([
-    prisma.quote.findMany({
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    quotes = cached.quotes
+  } else {
+    quotes = await prisma.quote.findMany({
       where: {
-        authorId: author.id,
+        authorId,
         status: "PUBLISHED",
         deletedAt: null,
       },
@@ -159,6 +207,97 @@ export default async function AuthorDetailPage({
           },
         },
       },
+    })
+
+    if (isPage1) {
+      if (authorPage1Cache.size >= MAX_AUTHOR_CACHE_ENTRIES) {
+        const oldest = authorPage1Cache.keys().next().value
+        if (oldest) authorPage1Cache.delete(oldest)
+      }
+      authorPage1Cache.set(authorId, { quotes, timestamp: now })
+    }
+  }
+
+  const totalPages = Math.ceil(totalQuotes / QUOTES_PER_PAGE)
+
+  function buildHref(newPage: number) {
+    return `/authors/${authorSlug}${newPage > 1 ? `?page=${newPage}` : ""}`
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="border-b border-stone-900/10 pb-4 flex items-center justify-between">
+        <h2 className="font-serif text-2xl font-bold tracking-tight text-[var(--ink-900)]">
+          Quotations &amp; Wisdom
+        </h2>
+        <span className="text-xs text-stone-500 font-mono">
+          Showing {quotes.length} of {totalQuotes}
+        </span>
+      </div>
+
+      {quotes.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {quotes.map((quote) => (
+            <QuoteCard
+              key={quote.id}
+              id={quote.id}
+              slug={quote.slug ?? undefined}
+              content={quote.content}
+              authorName={authorName}
+              authorSlug={authorSlug}
+              category={quote.category.name}
+              categorySlug={quote.category.slug}
+              sourceTitle={quote.source?.title}
+              year={quote.source?.year ? String(quote.source.year) : undefined}
+              tags={quote.tags.map((t) => t.tag.name)}
+              views={quote.views}
+              variant="paper"
+              isVerified={quote.isVerified}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center text-stone-500">
+          No quotes published yet for this author.
+        </div>
+      )}
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalQuotes}
+        pageSize={QUOTES_PER_PAGE}
+        buildHref={buildHref}
+      />
+    </div>
+  )
+}
+
+export default async function AuthorDetailPage({
+  params,
+  searchParams,
+}: AuthorDetailPageProps) {
+  const { slug: rawSlug } = await params
+  const slug = sanitizeSlug(rawSlug, 150)
+
+  const author = await getAuthorBySlug(slug)
+
+  if (!author) {
+    notFound()
+  }
+
+  const [topCategoriesRaw, relatedAuthors] = await Promise.all([
+    prisma.quote.findMany({
+      where: {
+        authorId: author.id,
+        status: "PUBLISHED",
+        deletedAt: null,
+      },
+      select: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
+      take: 24,
     }),
     prisma.author.findMany({
       where: {
@@ -189,9 +328,9 @@ export default async function AuthorDetailPage({
     }),
   ])
 
-  // Aggregate active thematic domains directly from quotes
+  // Aggregate active thematic domains directly from distinct categories
   const categoryCountMap = new Map<string, { id: string; name: string; slug: string; quoteCount: number }>()
-  for (const q of quotes) {
+  for (const q of topCategoriesRaw) {
     if (q.category) {
       const existing = categoryCountMap.get(q.category.id)
       if (existing) {
@@ -506,53 +645,16 @@ export default async function AuthorDetailPage({
           </section>
         )}
 
-        {/* Quotes Section */}
-        <div className="space-y-6">
-          <div className="border-b border-stone-900/10 pb-4 flex items-center justify-between">
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-[var(--ink-900)]">
-              Quotations &amp; Wisdom
-            </h2>
-            <span className="text-xs text-stone-500 font-mono">
-              Showing {quotes.length} of {totalQuotes}
-            </span>
-          </div>
-
-          {quotes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quotes.map((quote) => (
-                <QuoteCard
-                  key={quote.id}
-                  id={quote.id}
-                  slug={quote.slug}
-                  content={quote.content}
-                  authorName={author.name}
-                  authorSlug={author.slug}
-                  category={quote.category.name}
-                  categorySlug={quote.category.slug}
-                  sourceTitle={quote.source?.title}
-                  year={quote.source?.year ? String(quote.source.year) : undefined}
-                  tags={quote.tags.map((t) => t.tag.name)}
-                  views={quote.views}
-                  variant="paper"
-                  isVerified={quote.isVerified}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center text-stone-500">
-              No quotes published yet for this author.
-            </div>
-          )}
-
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalQuotes}
-            pageSize={QUOTES_PER_PAGE}
-            buildHref={buildHref}
+        {/* Quotes Section (Suspense-isolated to preserve static generation of author profile) */}
+        <React.Suspense fallback={<AuthorQuotesSkeleton />}>
+          <AuthorQuotesSection
+            authorId={author.id}
+            authorName={author.name}
+            authorSlug={author.slug}
+            totalQuotes={totalQuotes}
+            searchParams={searchParams}
           />
-        </div>
+        </React.Suspense>
 
         {/* Related Thinkers & Contemporary Voices */}
         {relatedAuthors.length > 0 && (

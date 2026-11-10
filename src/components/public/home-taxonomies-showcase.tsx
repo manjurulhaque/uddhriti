@@ -91,6 +91,7 @@ export function HomeTaxonomiesShowcase({
                     imageUrl={author.imageUrl}
                     size="md"
                     priority={index < 4}
+                    loading="eager"
                     className="group-hover:border-[var(--accent-rust)]/40 transition-colors"
                   />
 

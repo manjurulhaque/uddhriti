@@ -1,22 +1,7 @@
 import type { NextConfig } from "next";
+import { buildCspHeader } from "./src/lib/security/csp";
 
-const isDev = process.env.NODE_ENV !== "production";
-
-const cspHeader = `
-  default-src 'self';
-  script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://va.vercel-scripts.com;
-  style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob: https://commons.wikimedia.org https://upload.wikimedia.org https://thumb.wikimedia.org https://*.wikimedia.org https://*.wikipedia.org https:;
-  font-src 'self' data:;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com https://*.vercel-analytics.com;
-  frame-ancestors 'none';
-  base-uri 'self';
-  form-action 'self';
-  object-src 'none';
-  upgrade-insecure-requests;
-`
-  .replace(/\s{2,}/g, " ")
-  .trim();
+const cspHeader = buildCspHeader();
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,

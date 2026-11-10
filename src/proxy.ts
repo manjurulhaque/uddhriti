@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { enforceIpRateLimitAsync } from "@/lib/api/rate-limit"
 import { getSupabaseConfig } from "@/lib/security/env"
+import { buildCspHeader } from "@/lib/security/csp"
 
 function isAllowedRequestOrigin(request: NextRequest): boolean {
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
@@ -67,6 +68,7 @@ export async function proxy(request: NextRequest) {
     "max-age=63072000; includeSubDomains; preload"
   )
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin")
+  response.headers.set("Content-Security-Policy", buildCspHeader())
 
   // ── Cache-Control for Sensitive & Admin Surfaces ───────────────────
   const isAdminSurface =

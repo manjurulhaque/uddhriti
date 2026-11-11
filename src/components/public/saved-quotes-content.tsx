@@ -201,14 +201,6 @@ export function SavedQuotesContent() {
               Explore Quotes
             </Link>
             <Link
-              href="/quotes/random"
-              prefetch={false}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 transition-colors shadow-2xs"
-            >
-              <span aria-hidden="true">🎲</span>
-              <span>Random Quote</span>
-            </Link>
-            <Link
               href="/authors"
               className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 transition-colors shadow-2xs"
             >

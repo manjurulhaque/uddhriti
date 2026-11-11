@@ -138,18 +138,6 @@ export function PublicHeader() {
               </svg>
             </button>
 
-            {/* Random Quote Action */}
-            <Link
-              href="/quotes/random"
-              prefetch={false}
-              className="inline-flex items-center gap-1.5 rounded-full border border-stone-300/80 bg-white/80 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:border-stone-400 hover:bg-white hover:text-stone-900 shadow-2xs transition-all"
-              title="Discover a random quotation from the archive"
-              aria-label="Discover a random quotation"
-            >
-              <span className="text-sm" aria-hidden="true">🎲</span>
-              <span className="hidden sm:inline">Random</span>
-            </Link>
-
             {/* Saved Notebook Quick Access */}
             <Link
               href="/saved"
@@ -237,15 +225,6 @@ export function PublicHeader() {
                   </Link>
                 )
               })}
-              <Link
-                href="/quotes/random"
-                prefetch={false}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-900/5 transition-colors"
-              >
-                <span className="text-base" aria-hidden="true">🎲</span>
-                <span>Random Quote</span>
-              </Link>
               <div className="pt-2 mt-2 border-t border-stone-200/70 text-center text-xs text-stone-500 px-1">
                 <span>Timeless Quotes &amp; Ideas</span>
               </div>

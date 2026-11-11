@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Button } from "./button"
+import { CloseIcon } from "./icons"
 
 export interface ModalProps {
   isOpen: boolean
@@ -86,9 +87,7 @@ export function Modal({
             className="rounded-full p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition"
             aria-label="Close modal"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 

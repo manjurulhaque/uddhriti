@@ -1,4 +1,5 @@
 import * as React from "react"
+import { ChevronDownIcon } from "./icons"
 
 export interface SelectOption {
   value: string
@@ -68,15 +69,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </select>
 
           <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-700)]/60">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDownIcon className="h-4 w-4" />
           </div>
         </div>
 

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookmarkIcon } from "../ui/bookmark-icon"
+import { BookmarkIcon, CloseIcon, MenuIcon, SearchIcon } from "@/components/ui/icons"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { useOnlineStatus } from "@/hooks"
 import { openCommandPalette } from "./command-palette"
@@ -95,20 +95,7 @@ export function PublicHeader() {
               className="hidden sm:flex items-center gap-2.5 rounded-full border border-stone-300/80 bg-white/80 px-3.5 py-1.5 text-xs text-stone-500 shadow-2xs hover:border-stone-400 hover:bg-white hover:text-stone-800 transition-all cursor-pointer"
               aria-label="Quick search quotes"
             >
-              <svg
-                className="h-3.5 w-3.5 text-stone-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <SearchIcon className="h-3.5 w-3.5 text-stone-400" />
               <span>Search quotes, authors...</span>
               <kbd className="hidden lg:inline-flex items-center gap-0.5 rounded border border-stone-200 bg-stone-100 px-1.5 py-0.5 text-[10px] font-mono text-stone-500">
                 {isMac ? "⌘K" : "Ctrl+K"}
@@ -122,20 +109,7 @@ export function PublicHeader() {
               className="flex sm:hidden h-9 w-9 items-center justify-center rounded-full border border-stone-300/80 bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50"
               aria-label="Search"
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <SearchIcon className="h-4 w-4" />
             </button>
 
             {/* Saved Notebook Quick Access */}
@@ -172,27 +146,9 @@ export function PublicHeader() {
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? (
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CloseIcon className="h-4 w-4" />
               ) : (
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <MenuIcon className="h-4 w-4" />
               )}
             </button>
           </div>

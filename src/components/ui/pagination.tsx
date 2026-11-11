@@ -1,5 +1,6 @@
 import * as React from "react"
 import Link from "next/link"
+import { ChevronLeftIcon, ChevronRightIcon } from "./icons"
 
 export interface PaginationProps {
   currentPage: number
@@ -94,17 +95,9 @@ export function Pagination({
 
     const content = (
       <>
-        {direction === "prev" && (
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        )}
+        {direction === "prev" && <ChevronLeftIcon className="h-3.5 w-3.5" />}
         <span>{label}</span>
-        {direction === "next" && (
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        )}
+        {direction === "next" && <ChevronRightIcon className="h-3.5 w-3.5" />}
       </>
     )
 

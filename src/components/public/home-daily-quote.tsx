@@ -3,7 +3,7 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { BookmarkIcon } from "@/components/ui"
+import { BookmarkIcon, CheckIcon, CopyIcon } from "@/components/ui/icons"
 import { useSavedQuotes } from "@/lib/saved-quotes"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { formatLifespan } from "@/lib/formatters"
@@ -311,24 +311,11 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
                 className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs sm:text-sm font-medium text-stone-800 transition hover:bg-stone-50 hover:border-stone-400 shadow-2xs cursor-pointer"
                 title="Copy citation to clipboard"
               >
-                <svg
-                  className="h-4 w-4 text-stone-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                >
-                  {copied ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  )}
-                </svg>
+                {copied ? (
+                  <CheckIcon className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <CopyIcon className="h-4 w-4 text-stone-600" />
+                )}
                 <span>{copied ? "Copied!" : "Copy"}</span>
               </button>
             </div>

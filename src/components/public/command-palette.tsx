@@ -4,6 +4,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
+import { CloseIcon, SearchIcon, SpinnerIcon } from "@/components/ui/icons"
 import { QUICK_ACTIONS, CURATED_PATHWAYS } from "@/data/command-palette"
 
 export interface SearchResultQuote {
@@ -344,30 +345,9 @@ export function CommandPalette() {
         <div className="relative flex items-center border-b border-stone-200 bg-white px-4 py-3.5 sm:px-6">
           <div className="flex items-center text-stone-400 mr-3">
             {isLoading ? (
-              <svg
-                className="h-5 w-5 animate-spin text-[var(--accent-rust)]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
+              <SpinnerIcon className="h-5 w-5 animate-spin text-[var(--accent-rust)]" />
             ) : (
-              <svg
-                className="h-5 w-5 text-stone-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+              <SearchIcon className="h-5 w-5 text-stone-400" />
             )}
           </div>
 
@@ -396,12 +376,10 @@ export function CommandPalette() {
                   setSelectedIndex(0)
                   inputRef.current?.focus()
                 }}
-                className="rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition"
+                className="rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition cursor-pointer"
                 aria-label="Clear query"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CloseIcon className="h-4 w-4" />
               </button>
             ) : (
               <kbd className="hidden sm:inline-block rounded border border-stone-200 bg-stone-50 px-2 py-0.5 font-mono text-[11px] text-stone-500">

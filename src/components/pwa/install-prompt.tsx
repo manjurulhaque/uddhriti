@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronDownIcon, CloseIcon, DownloadIcon } from "@/components/ui/icons";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -172,19 +173,7 @@ export function InstallPrompt() {
             aria-label="Dismiss install prompt"
             className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer flex-shrink-0 -mt-1 -mr-1"
           >
-            <svg
-              className="w-4 h-4"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <CloseIcon className="w-4 h-4" />
           </button>
         </div>
 
@@ -204,21 +193,7 @@ export function InstallPrompt() {
               disabled={isInstalling}
               className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
+              <DownloadIcon className="w-3.5 h-3.5" />
               {isInstalling ? "Installing..." : "Install"}
             </button>
           </div>
@@ -237,19 +212,7 @@ export function InstallPrompt() {
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
                   <span>How to Add</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
+                  <ChevronDownIcon className="w-3 h-3" />
                 </button>
               </div>
             ) : (

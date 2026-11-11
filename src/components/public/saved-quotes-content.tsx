@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { BookmarkIcon } from "@/components/ui"
+import { BookmarkIcon, DownloadIcon, SearchIcon } from "@/components/ui/icons"
 import { QuoteCard, Breadcrumb } from "@/components/public"
 import { useSavedQuotes, exportSavedQuotesAsMarkdown } from "@/lib/saved-quotes"
 
@@ -105,19 +105,7 @@ export function SavedQuotesContent() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-stone-200/80 shadow-2xs">
           {/* Search within saved */}
           <div className="relative flex-1 max-w-md">
-            <svg
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
             <input
               type="text"
               value={searchQuery}
@@ -146,21 +134,7 @@ export function SavedQuotesContent() {
               onClick={handleDownloadMarkdown}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--ink-900)] text-white hover:bg-black transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
+              <DownloadIcon className="w-3 h-3" />
               <span>Export .md</span>
             </button>
 

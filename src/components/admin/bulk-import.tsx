@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
+import { CloseIcon } from "@/components/ui/icons"
 
 export interface BulkImportResultData {
   received?: number
@@ -70,12 +71,10 @@ export function BulkImportResultCard({
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-lg p-1.5 text-stone-400 hover:bg-black/5 hover:text-stone-700 transition-colors"
+            className="rounded-lg p-1.5 text-stone-400 hover:bg-black/5 hover:text-stone-700 transition-colors cursor-pointer"
             aria-label="Dismiss results"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon className="h-4 w-4" />
           </button>
         )}
       </div>

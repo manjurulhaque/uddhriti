@@ -4,6 +4,24 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { refreshDashboardAction } from "@/app/admin/(protected)/dashboard/actions"
+import {
+  AuthorsIcon,
+  CategoriesIcon,
+  CollectionsIcon,
+  DashboardIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  FaqsIcon,
+  FilterIcon,
+  PlusIcon,
+  QuotesIcon,
+  RefreshIcon,
+  SearchIcon,
+  SourcesIcon,
+  TagsIcon,
+  TrashIcon,
+  UploadIcon,
+} from "@/components/ui/icons"
 
 export interface AdminCommandItem {
   id: string
@@ -26,135 +44,6 @@ export function openAdminCommandPalette() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("open-admin-command-palette"))
   }
-}
-
-// Built-in minimalist icons for command palette items
-function IconSearch({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-  )
-}
-
-function IconPlus({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-    </svg>
-  )
-}
-
-function IconUpload({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-    </svg>
-  )
-}
-
-function IconDownload({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-  )
-}
-
-function IconQuotes({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 4h8M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
-    </svg>
-  )
-}
-
-function IconDashboard({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-  )
-}
-
-function IconAuthors({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  )
-}
-
-function IconCategories({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-    </svg>
-  )
-}
-
-function IconTags({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-    </svg>
-  )
-}
-
-function IconCollections({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-    </svg>
-  )
-}
-
-function IconSources({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  )
-}
-
-function IconFaqs({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  )
-}
-
-function IconTrash({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-  )
-}
-
-function IconRefresh({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-    </svg>
-  )
-}
-
-function IconExternal({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
-  )
-}
-
-function IconFilter({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-    </svg>
-  )
 }
 
 // Complete static catalog of admin commands, actions, and routes
@@ -606,22 +495,22 @@ export function AdminCommandPalette() {
   }
 
   function getItemIcon(item: AdminCommandItem) {
-    if (item.id.includes("export")) return <IconDownload />
-    if (item.id.includes("new-quote") || item.id.includes("new-")) return <IconPlus />
-    if (item.id.includes("bulk") || item.id.includes("import")) return <IconUpload />
-    if (item.id.includes("refresh")) return <IconRefresh className={isRefreshing ? "animate-spin" : ""} />
-    if (item.id.includes("deleted")) return <IconTrash />
+    if (item.id.includes("export")) return <DownloadIcon />
+    if (item.id.includes("new-quote") || item.id.includes("new-")) return <PlusIcon />
+    if (item.id.includes("bulk") || item.id.includes("import")) return <UploadIcon />
+    if (item.id.includes("refresh")) return <RefreshIcon className={isRefreshing ? "animate-spin" : ""} />
+    if (item.id.includes("deleted")) return <TrashIcon />
     if (item.id.includes("filter") || item.id.includes("unattributed") || item.id.includes("missing"))
-      return <IconFilter />
-    if (item.id.includes("authors")) return <IconAuthors />
-    if (item.id.includes("categories")) return <IconCategories />
-    if (item.id.includes("tags")) return <IconTags />
-    if (item.id.includes("collections")) return <IconCollections />
-    if (item.id.includes("sources")) return <IconSources />
-    if (item.id.includes("faqs")) return <IconFaqs />
-    if (item.id.includes("dashboard")) return <IconDashboard />
-    if (item.id.includes("public")) return <IconExternal />
-    return <IconQuotes />
+      return <FilterIcon />
+    if (item.id.includes("authors")) return <AuthorsIcon />
+    if (item.id.includes("categories")) return <CategoriesIcon />
+    if (item.id.includes("tags")) return <TagsIcon />
+    if (item.id.includes("collections")) return <CollectionsIcon />
+    if (item.id.includes("sources")) return <SourcesIcon />
+    if (item.id.includes("faqs")) return <FaqsIcon />
+    if (item.id.includes("dashboard")) return <DashboardIcon />
+    if (item.id.includes("public")) return <ExternalLinkIcon />
+    return <QuotesIcon />
   }
 
   if (!isMounted || !isOpen) return null
@@ -640,7 +529,7 @@ export function AdminCommandPalette() {
       >
         {/* Search Input Bar */}
         <div className="flex items-center px-4 border-b border-stone-100 bg-white">
-          <IconSearch className="w-5 h-5 text-stone-400 shrink-0" />
+          <SearchIcon className="w-5 h-5 text-stone-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -668,7 +557,7 @@ export function AdminCommandPalette() {
         {statusMessage ? (
           <div className="bg-stone-900 text-white text-xs px-4 py-2 flex items-center justify-between">
             <span>{statusMessage}</span>
-            {isRefreshing && <IconRefresh className="w-3.5 h-3.5 animate-spin" />}
+            {isRefreshing && <RefreshIcon className="w-3.5 h-3.5 animate-spin" />}
           </div>
         ) : null}
 

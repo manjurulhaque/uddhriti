@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui"
+import { ExternalLinkIcon, SearchIcon, WikipediaIcon } from "@/components/ui/icons"
 import type { WikipediaCandidate } from "@/app/api/admin/authors/search-wikipedia/route"
 
 export interface ImportedAuthorProfile {
@@ -107,9 +108,7 @@ export function AuthorWikipediaQuickSync({
         onClick={handleOpen}
         className="inline-flex items-center gap-1.5 shadow-2xs font-medium"
       >
-        <svg className="w-3.5 h-3.5 text-stone-600" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12.09 13.124l-2.003 5.437h-1.63L4.81 7.21h2.155l2.42 8.163 1.956-5.45-.968-2.713h2.124l1.986 5.467 2.37-8.167h2.138l-3.626 11.35h-1.618l-1.657-4.896z" />
-        </svg>
+        <WikipediaIcon className="w-3.5 h-3.5 text-stone-600" />
         <span>Wikipedia Quick-Sync</span>
       </Button>
 
@@ -157,15 +156,7 @@ export function AuthorWikipediaQuickSync({
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-stone-300 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition"
                     autoFocus
                   />
-                  <svg
-                    className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <SearchIcon className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                 </div>
 
                 <Button
@@ -255,9 +246,7 @@ export function AuthorWikipediaQuickSync({
                             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/70 transition"
                             title="Open Wikipedia page in new tab"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
+                            <ExternalLinkIcon className="w-3.5 h-3.5" />
                           </a>
                           <Button
                             type="button"

@@ -4,6 +4,7 @@ import * as React from "react"
 import { Input } from "../ui/input"
 import { Select } from "../ui/select"
 import { Button } from "../ui/button"
+import { SearchIcon } from "../ui/icons"
 
 export interface FilterToolbarProps {
   searchValue: string
@@ -49,16 +50,7 @@ export function FilterToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
             onClear={() => onSearchChange("")}
             placeholder={searchPlaceholder}
-            leftIcon={
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            }
+            leftIcon={<SearchIcon className="h-4 w-4" />}
           />
         </div>
 

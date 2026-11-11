@@ -1,4 +1,5 @@
 import * as React from "react"
+import { CloseIcon } from "./icons"
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -71,18 +72,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={onClear}
-              className="absolute right-3 flex h-5 w-5 items-center justify-center rounded-full text-[var(--ink-700)]/50 hover:bg-black/5 hover:text-[var(--ink-900)]"
+              className="absolute right-3 flex h-5 w-5 items-center justify-center rounded-full text-[var(--ink-700)]/50 hover:bg-black/5 hover:text-[var(--ink-900)] cursor-pointer"
               aria-label="Clear input"
             >
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <CloseIcon className="h-3.5 w-3.5" />
             </button>
           )}
 

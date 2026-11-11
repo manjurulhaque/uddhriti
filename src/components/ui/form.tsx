@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Button } from "./button"
+import { AlertCircleIcon, CloseIcon } from "./icons"
 
 export interface FormFieldProps {
   label?: string
@@ -186,19 +187,7 @@ export function FormErrorBanner({
       role="alert"
     >
       <div className="flex items-center gap-2">
-        <svg
-          className="h-4 w-4 text-red-600 shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <AlertCircleIcon className="h-4 w-4 text-red-600 shrink-0" />
         <span className="font-medium">{error}</span>
       </div>
 
@@ -206,12 +195,10 @@ export function FormErrorBanner({
         <button
           type="button"
           onClick={onDismiss}
-          className="rounded-md p-1 text-red-500 hover:bg-red-100 hover:text-red-800"
+          className="rounded-md p-1 text-red-500 hover:bg-red-100 hover:text-red-800 cursor-pointer"
           aria-label="Dismiss error"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <CloseIcon className="h-4 w-4" />
         </button>
       )}
     </div>

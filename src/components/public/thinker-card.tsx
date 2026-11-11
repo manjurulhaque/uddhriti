@@ -1,5 +1,6 @@
 import * as React from "react"
 import Link from "next/link"
+import { ExternalLinkIcon } from "@/components/ui/icons"
 import { AuthorAvatar } from "./author-avatar"
 import { cleanProfession, formatCountWithNoun, formatLifespan } from "@/lib/formatters"
 
@@ -82,14 +83,7 @@ export function ThinkerCard({
         className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-900 transition-colors"
         title={`View full profile of ${thinker.name}`}
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-          />
-        </svg>
+        <ExternalLinkIcon className="h-4 w-4" />
       </Link>
     </div>
   )

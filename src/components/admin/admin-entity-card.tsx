@@ -1,5 +1,6 @@
 import * as React from "react"
 import Link from "next/link"
+import { ChevronRightIcon } from "../ui/icons"
 
 export interface AdminEntityCardProps {
   title: React.ReactNode
@@ -124,15 +125,7 @@ export function AdminEntityCard({
 
         {isClickable && !actions && variant === "row" && (
           <div className="shrink-0 hidden sm:flex items-center self-center text-stone-400 group-hover:text-stone-700 transition-colors pl-1">
-            <svg
-              className="h-4 w-4 transform group-hover:translate-x-0.5 transition-transform"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-0.5 transition-transform" />
           </div>
         )}
       </div>

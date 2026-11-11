@@ -1,6 +1,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { Button } from "../ui/button"
+import { ArrowLeftIcon } from "../ui/icons"
 
 export interface PageHeaderActionItem {
   label: string
@@ -42,15 +43,7 @@ export function PageHeader({
             href={backHref}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors"
           >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
             <span>{backLabel}</span>
           </Link>
         </div>

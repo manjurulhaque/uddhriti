@@ -5,7 +5,9 @@ import { getCachedDashboardMetrics } from "@/lib/dashboard/metrics"
 import { formatDateInAppTimeZone, formatShortDateInAppTimeZone } from "@/lib/datetime"
 import { formatNumber } from "@/lib/formatters"
 import { RefreshMetricsButton } from "./RefreshMetricsButton"
+import { Button, Badge } from "@/components/ui"
 import {
+  PageHeader,
   StatCard,
   KpiCard,
   AttentionCard,
@@ -135,33 +137,32 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-6 py-8 md:px-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <span className="inline-flex items-center rounded-full border border-stone-300 bg-stone-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-stone-700">
+      <PageHeader
+        title="Dashboard"
+        description="Operations, quality, and publishing health across all quotation surfaces."
+        badge={
+          <Badge variant="neutral" size="sm">
             Admin Overview
-          </span>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">Dashboard</h1>
-            <p className="text-sm text-stone-600">Operations, quality, and publishing health</p>
+          </Badge>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <RefreshMetricsButton />
+            <Button href="/admin/quotes/new" variant="primary" size="sm">
+              + New Quote
+            </Button>
+            <Button href="/admin/quotes/import" variant="outline" size="sm">
+              Import Quotes
+            </Button>
+            <Button href="/admin/authors/bulk" variant="outline" size="sm">
+              Import Authors
+            </Button>
+            <Button href="/admin/sources/bulk" variant="outline" size="sm">
+              Import Sources
+            </Button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <RefreshMetricsButton />
-          <Link href="/admin/quotes/new" className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800">
-            + New Quote
-          </Link>
-          <Link href="/admin/quotes/import" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:bg-stone-50">
-            Import Quotes
-          </Link>
-          <Link href="/admin/authors/bulk" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:bg-stone-50">
-            Import Authors
-          </Link>
-          <Link href="/admin/sources/bulk" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:bg-stone-50">
-            Import Sources
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       <section className="overflow-hidden rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,23,42,0.08),_transparent_24%),linear-gradient(180deg,_#ffffff_0%,_#fafaf9_100%)] p-5 shadow-[0_18px_50px_rgba(28,25,23,0.08)]">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-8">
@@ -171,7 +172,7 @@ export default async function DashboardPage() {
           <StatCard title="Categories" value={totalCategories} subtitle={categoriesTrendLabel} href="/admin/categories" />
           <StatCard title="Tags" value={totalTags} subtitle={tagsTrendLabel} href="/admin/tags" />
           <StatCard title="Sources" value={totalSources} subtitle={sourcesTrendLabel} href="/admin/sources" />
-          <StatCard title="Collections" value={totalCollections} href="#" />
+          <StatCard title="Collections" value={totalCollections} href="/admin/collections" />
           <StatCard title="Trash" value={deletedQuotes} subtitle={deletedTrendLabel} href="/admin/quotes/deleted" />
         </div>
       </section>
@@ -354,6 +355,7 @@ export default async function DashboardPage() {
             <DashboardLink href="/admin/authors/bulk" label="Bulk Import Authors" />
             <DashboardLink href="/admin/sources/bulk" label="Bulk Import Sources" />
             <DashboardLink href="/admin/quotes/import" label="Bulk Import Quotes" />
+            <DashboardLink href="/admin/faqs/bulk" label="Bulk Import FAQs" />
             <DashboardPostAction action="/api/admin/tools/recalculate-counts" label="Recalculate Quote Counts" />
           </div>
         </DashboardCard>

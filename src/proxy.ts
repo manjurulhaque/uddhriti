@@ -117,7 +117,11 @@ export async function proxy(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     // ── Edge Defense-in-Depth for Protected API Endpoints ─────────────
-    if (pathname.startsWith("/api/admin/") || pathname.startsWith("/api/users")) {
+    const isPublicAdminApi = pathname === "/api/admin/auth/login"
+    if (
+      (pathname.startsWith("/api/admin/") && !isPublicAdminApi) ||
+      pathname.startsWith("/api/users")
+    ) {
       if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       }

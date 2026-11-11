@@ -10,6 +10,8 @@ export const VALID_AUDIT_ACTIONS: readonly AuditAction[] = [
   "BULK_DELETE",
   "IMPORT",
   "REPAIR",
+  "LOGIN",
+  "LOGOUT",
 ] as const
 
 export const VALID_AUDIT_ENTITY_TYPES: readonly AuditEntityType[] = [

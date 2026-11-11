@@ -6,7 +6,7 @@ import type { AdminRole } from "@prisma/client"
 
 export type AuditLogEntry = {
   id: string
-  action: "CREATE" | "UPDATE" | "DELETE" | "RESTORE" | "BULK_UPDATE" | "BULK_DELETE" | "IMPORT" | "REPAIR"
+  action: "CREATE" | "UPDATE" | "DELETE" | "RESTORE" | "BULK_UPDATE" | "BULK_DELETE" | "IMPORT" | "REPAIR" | "LOGIN" | "LOGOUT"
   entityType: "QUOTE" | "AUTHOR" | "SOURCE" | "CATEGORY" | "TAG" | "COLLECTION" | "FAQ" | "SYSTEM"
   entityId: string | null
   entityName: string | null
@@ -116,6 +116,20 @@ function ActionBadge({ action }: { action: AuditLogEntry["action"] }) {
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
           <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
           Repaired
+        </span>
+      )
+    case "LOGIN":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+          Logged In
+        </span>
+      )
+    case "LOGOUT":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-stone-500" />
+          Logged Out
         </span>
       )
     default:
@@ -410,6 +424,8 @@ export function ActivityClientManager({ adminRole }: ActivityClientManagerProps)
               <option value="BULK_DELETE">BULK_DELETE</option>
               <option value="IMPORT">IMPORT</option>
               <option value="REPAIR">REPAIR</option>
+              <option value="LOGIN">LOGIN</option>
+              <option value="LOGOUT">LOGOUT</option>
             </select>
           </div>
 

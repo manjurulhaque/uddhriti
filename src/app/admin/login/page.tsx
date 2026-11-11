@@ -22,14 +22,27 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       password,
     });
 
     if (error) {
       const nextAttempts = attempts + 1;
       setAttempts(nextAttempts);
+
+      // Best-effort audit logging for failed login attempts
+      fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          status: "FAILED",
+          error: error.message,
+        }),
+      }).catch(() => {});
 
       // Progressive delay against automated credential-stuffing
       if (nextAttempts >= 5) {
@@ -50,7 +63,22 @@ export default function AdminLoginPage() {
       return;
     }
 
+    // Record successful admin login event in the audit trail
+    try {
+      await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          status: "SUCCESS",
+        }),
+      });
+    } catch {
+      // Non-blocking: prevent audit log network failure from stopping legitimate admin access
+    }
+
     router.push("/admin/dashboard");
+    router.refresh();
   }
 
   return (

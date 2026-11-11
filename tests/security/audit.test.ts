@@ -243,6 +243,103 @@ describe("Admin Audit Logging (recordAuditLog)", () => {
       prisma.adminAuditLog.create = originalCreate
     }
   })
+
+  it("records successful admin LOGIN audit log with operator session metadata", async () => {
+    const captured: { data: CapturedAuditData | null } = { data: null }
+    const originalCreate = prisma.adminAuditLog.create
+    // @ts-expect-error Mocking Prisma create for test isolation
+    prisma.adminAuditLog.create = async ({ data }: { data: Record<string, unknown> }) => {
+      captured.data = data as CapturedAuditData
+      return { id: "audit-login-success", ...data, createdAt: new Date() }
+    }
+
+    try {
+      const req = new Request("https://example.com/api/admin/auth/login", {
+        headers: {
+          "x-forwarded-for": "198.51.100.12",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        },
+      })
+
+      const result = await recordAuditLog({
+        action: "LOGIN",
+        entityType: "SYSTEM",
+        entityName: "Admin Session (admin@quotzen.com)",
+        adminId: "32f7b57c-970b-43f7-a703-a27f50ef34a4",
+        adminEmail: "admin@quotzen.com",
+        adminName: "Chief Curator",
+        details: {
+          status: "SUCCESS",
+          role: "SUPER_ADMIN",
+          method: "password",
+        },
+        req,
+      })
+
+      assert.ok(result !== null)
+      assert.equal(captured.data?.action, "LOGIN")
+      assert.equal(captured.data?.entityType, "SYSTEM")
+      assert.equal(captured.data?.entityName, "Admin Session (admin@quotzen.com)")
+      assert.equal(captured.data?.adminId, "32f7b57c-970b-43f7-a703-a27f50ef34a4")
+      assert.equal(captured.data?.adminEmail, "admin@quotzen.com")
+      assert.equal(captured.data?.adminName, "Chief Curator")
+      assert.equal(captured.data?.ipAddress, "198.51.100.12")
+      assert.equal(captured.data?.userAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+      assert.deepEqual(JSON.parse(captured.data?.details || "{}"), {
+        status: "SUCCESS",
+        role: "SUPER_ADMIN",
+        method: "password",
+      })
+    } finally {
+      prisma.adminAuditLog.create = originalCreate
+    }
+  })
+
+  it("records failed admin LOGIN audit log with reason and IP metadata", async () => {
+    const captured: { data: CapturedAuditData | null } = { data: null }
+    const originalCreate = prisma.adminAuditLog.create
+    // @ts-expect-error Mocking Prisma create for test isolation
+    prisma.adminAuditLog.create = async ({ data }: { data: Record<string, unknown> }) => {
+      captured.data = data as CapturedAuditData
+      return { id: "audit-login-fail", ...data, createdAt: new Date() }
+    }
+
+    try {
+      const req = new Request("https://example.com/api/admin/auth/login", {
+        headers: {
+          "x-real-ip": "203.0.113.88",
+          "user-agent": "UnknownBot/2.0",
+        },
+      })
+
+      const result = await recordAuditLog({
+        action: "LOGIN",
+        entityType: "SYSTEM",
+        entityName: "Failed Login (attacker@example.com)",
+        adminEmail: "attacker@example.com",
+        details: {
+          status: "FAILED",
+          reason: "Invalid login credentials",
+        },
+        req,
+      })
+
+      assert.ok(result !== null)
+      assert.equal(captured.data?.action, "LOGIN")
+      assert.equal(captured.data?.entityType, "SYSTEM")
+      assert.equal(captured.data?.entityName, "Failed Login (attacker@example.com)")
+      assert.equal(captured.data?.adminEmail, "attacker@example.com")
+      assert.equal(captured.data?.adminId, null)
+      assert.equal(captured.data?.ipAddress, "203.0.113.88")
+      assert.equal(captured.data?.userAgent, "UnknownBot/2.0")
+      assert.deepEqual(JSON.parse(captured.data?.details || "{}"), {
+        status: "FAILED",
+        reason: "Invalid login credentials",
+      })
+    } finally {
+      prisma.adminAuditLog.create = originalCreate
+    }
+  })
 })
 
 describe("Activity Query Filters (buildActivityQueryWhere)", () => {

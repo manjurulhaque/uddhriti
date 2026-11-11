@@ -3,6 +3,8 @@ import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { getSiteUrl } from "@/lib/site"
 import { getSupabaseConfig } from "@/lib/security/env"
+import { prisma } from "@/lib/prisma"
+import { recordAuditLog } from "@/lib/audit"
 
 async function handleLogout() {
   const cookieStore = await cookies()
@@ -45,6 +47,36 @@ async function handleLogout() {
       },
     },
   })
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      const admin = await prisma.admin.findUnique({
+        where: { id: user.id },
+        select: { id: true, name: true, email: true, role: true },
+      })
+
+      if (admin) {
+        await recordAuditLog({
+          action: "LOGOUT",
+          entityType: "SYSTEM",
+          entityName: `Admin Session (${admin.email})`,
+          adminId: admin.id,
+          adminEmail: admin.email,
+          adminName: admin.name,
+          details: {
+            role: admin.role,
+            status: "SUCCESS",
+          },
+        })
+      }
+    }
+  } catch (err) {
+    console.warn("[AdminLogout] Failed to record logout audit log:", err)
+  }
 
   await supabase.auth.signOut()
 

@@ -204,9 +204,21 @@ export default async function QuotesBrowsePage({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-stone-500 bg-white/70 rounded-full px-4 py-2 border border-stone-200 shadow-2xs self-start md:self-end">
-            <span>Archive:</span>
-            <span className="font-bold text-stone-900">{formatCountWithNoun(totalQuotes, "quotation")}</span>
+          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-end">
+            <Link
+              href="/quotes/random"
+              prefetch={false}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-rust)]/30 bg-[#c76b3e]/10 px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-rust)] transition hover:bg-[#c76b3e]/20 hover:border-[var(--accent-rust)]/50 hover:scale-[1.02] active:scale-[0.98] shadow-2xs"
+              title="Discover a random quotation from the archive"
+            >
+              <span className="text-sm" aria-hidden="true">🎲</span>
+              <span>Random Quote</span>
+            </Link>
+
+            <div className="flex items-center gap-2 text-xs font-mono text-stone-500 bg-white/70 rounded-full px-4 py-2 border border-stone-200 shadow-2xs">
+              <span>Archive:</span>
+              <span className="font-bold text-stone-900">{formatCountWithNoun(totalQuotes, "quotation")}</span>
+            </div>
           </div>
         </div>
 

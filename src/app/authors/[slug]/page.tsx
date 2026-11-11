@@ -394,27 +394,39 @@ export default async function AuthorDetailPage({
             {/* Author Information */}
             <div className="space-y-4 flex-1">
               <div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                  {cleanedProfession && (
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)]">
-                      {cleanedProfession}
-                    </span>
-                  )}
-                  {author.nationality && (
-                    <span className="text-xs font-medium text-stone-500">
-                      {cleanedProfession ? "• " : ""}{author.nationality}
-                    </span>
-                  )}
-                  {lifespan && (
-                    <span className="text-xs font-mono font-medium text-stone-500">
-                      • {lifespan}
-                    </span>
-                  )}
-                  {epoch && (
-                    <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
-                      {epoch}
-                    </span>
-                  )}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    {cleanedProfession && (
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)]">
+                        {cleanedProfession}
+                      </span>
+                    )}
+                    {author.nationality && (
+                      <span className="text-xs font-medium text-stone-500">
+                        {cleanedProfession ? "• " : ""}{author.nationality}
+                      </span>
+                    )}
+                    {lifespan && (
+                      <span className="text-xs font-mono font-medium text-stone-500">
+                        • {lifespan}
+                      </span>
+                    )}
+                    {epoch && (
+                      <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+                        {epoch}
+                      </span>
+                    )}
+                  </div>
+
+                  <Link
+                    href="/quotes/random"
+                    prefetch={false}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-300/80 bg-white/90 px-3 py-1 text-xs font-semibold text-stone-700 hover:border-stone-400 hover:bg-white hover:text-stone-900 transition-all shadow-2xs"
+                    title="Discover a random quotation from the archive"
+                  >
+                    <span className="text-sm" aria-hidden="true">🎲</span>
+                    <span>Random Quote</span>
+                  </Link>
                 </div>
 
                 <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">

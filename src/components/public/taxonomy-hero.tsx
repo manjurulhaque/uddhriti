@@ -16,6 +16,7 @@ export interface TaxonomyHeroProps {
   border?: string
   description?: string | null
   stats?: TaxonomyHeroStat[]
+  action?: React.ReactNode
   children?: React.ReactNode
   className?: string
 }
@@ -30,6 +31,7 @@ export function TaxonomyHero({
   border = "border-stone-200/90",
   description,
   stats,
+  action,
   children,
   className = "",
 }: TaxonomyHeroProps) {
@@ -55,20 +57,26 @@ export function TaxonomyHero({
 
         <div className="space-y-4 flex-1">
           <div className="space-y-2">
-            {(kicker || badgeLabel) && (
-              <div className="flex flex-wrap items-center gap-2.5">
-                {kicker && (
-                  <span className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-rust)]">
-                    {kicker}
-                  </span>
-                )}
-                {badgeLabel && (
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${badgeClass}`}>
-                    {badgeLabel}
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {(kicker || badgeLabel) ? (
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {kicker && (
+                    <span className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-rust)]">
+                      {kicker}
+                    </span>
+                  )}
+                  {badgeLabel && (
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${badgeClass}`}>
+                      {badgeLabel}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div />
+              )}
+
+              {action && <div>{action}</div>}
+            </div>
 
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
               {title}

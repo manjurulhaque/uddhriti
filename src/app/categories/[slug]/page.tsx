@@ -467,6 +467,17 @@ export default async function CategoryDetailPage({
           icon={meta.icon}
           gradient={meta.gradient}
           border={meta.border}
+          action={
+            <Link
+              href="/quotes/random"
+              prefetch={false}
+              className="inline-flex items-center gap-1.5 rounded-full border border-stone-300/80 bg-white/90 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:border-stone-400 hover:bg-white hover:text-stone-900 transition-all shadow-2xs"
+              title="Discover a random quotation from the archive"
+            >
+              <span className="text-sm" aria-hidden="true">🎲</span>
+              <span>Random Quote</span>
+            </Link>
+          }
           description={
             category.description ||
             `A curated treasury of philosophical passages, timeless maxims, and contemplative insights exploring ${category.name.toLowerCase()}.`

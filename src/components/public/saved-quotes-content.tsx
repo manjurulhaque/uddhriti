@@ -71,19 +71,33 @@ export function SavedQuotesContent() {
       />
 
       {/* Hero Banner */}
-      <div className="border-b border-stone-200/80 pb-8 space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)] bg-[#c76b3e]/10 border border-[#c76b3e]/20">
-          <span>✦ Personal Notebook</span>
-          <span>•</span>
-          <span>100% Offline Accessible</span>
+      <div className="border-b border-stone-200/80 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div className="space-y-4 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)] bg-[#c76b3e]/10 border border-[#c76b3e]/20">
+            <span>✦ Personal Notebook</span>
+            <span>•</span>
+            <span>100% Offline Accessible</span>
+          </div>
+
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
+            Saved Reflections
+          </h1>
+          <p className="max-w-2xl text-sm sm:text-base text-stone-600 leading-relaxed">
+            Words you have collected to ponder. Stored securely on your device, these reflections remain available anytime—even on flights, commutes, or when totally disconnected.
+          </p>
         </div>
 
-        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
-          Saved Reflections
-        </h1>
-        <p className="max-w-2xl text-sm sm:text-base text-stone-600 leading-relaxed">
-          Words you have collected to ponder. Stored securely on your device, these reflections remain available anytime—even on flights, commutes, or when totally disconnected.
-        </p>
+        <div className="self-start md:self-end">
+          <Link
+            href="/quotes/random"
+            prefetch={false}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-rust)]/30 bg-[#c76b3e]/10 px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-rust)] transition hover:bg-[#c76b3e]/20 hover:border-[var(--accent-rust)]/50 hover:scale-[1.02] active:scale-[0.98] shadow-2xs"
+            title="Discover a random quotation from the archive"
+          >
+            <span className="text-sm" aria-hidden="true">🎲</span>
+            <span>Random Quote</span>
+          </Link>
+        </div>
       </div>
 
       {/* Controls Toolbar */}
@@ -179,12 +193,20 @@ export function SavedQuotesContent() {
             Whenever you encounter an idea or quotation that resonates with you, tap the bookmark icon to collect it here. Your saved quotes are always available offline.
           </p>
 
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/quotes"
               className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-sm"
             >
               Explore Quotes
+            </Link>
+            <Link
+              href="/quotes/random"
+              prefetch={false}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 transition-colors shadow-2xs"
+            >
+              <span aria-hidden="true">🎲</span>
+              <span>Random Quote</span>
             </Link>
             <Link
               href="/authors"

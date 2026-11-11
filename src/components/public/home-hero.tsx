@@ -57,6 +57,7 @@ export function HomeHero({
               <div className="flex items-center gap-2">
                 <Link
                   href="/quotes/random"
+                  prefetch={false}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-gold)]/40 bg-[var(--accent-gold)]/15 px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-gold)] transition hover:bg-[var(--accent-gold)]/25 hover:border-[var(--accent-gold)]/60 hover:scale-[1.02] active:scale-[0.98] shadow-xs"
                   title="Discover a random quotation from the archive"
                 >

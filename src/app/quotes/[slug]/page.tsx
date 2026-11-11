@@ -295,11 +295,23 @@ export default async function IndividualQuotePage({
               </span>
             </div>
 
-            {quote.language && quote.language !== "en" && (
-              <span className="rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 font-mono text-[11px] uppercase text-stone-500">
-                {quote.language}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {quote.language && quote.language !== "en" && (
+                <span className="rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 font-mono text-[11px] uppercase text-stone-500">
+                  {quote.language}
+                </span>
+              )}
+
+              <Link
+                href="/quotes/random"
+                prefetch={false}
+                className="inline-flex items-center gap-1.5 rounded-full border border-stone-300/80 bg-white px-3 py-1 text-xs font-semibold text-stone-700 hover:border-stone-400 hover:bg-stone-50 hover:text-stone-900 transition-all shadow-2xs"
+                title="Discover another random quotation from the archive"
+              >
+                <span className="text-sm" aria-hidden="true">🎲</span>
+                <span>Random Quote</span>
+              </Link>
+            </div>
           </div>
 
           {/* Primary Quotation Statement */}

@@ -1,16 +1,37 @@
 "use client"
 
-import { useEffect } from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { getRowValue, readItemsFromJsonOrCsv } from "@/lib/import/clientFile"
+import {
+  PageHeader,
+  BulkImportResultCard,
+  BulkImportFormatGuide,
+  BulkFileUploadInput,
+  type BulkImportResultData,
+} from "@/components/admin"
+import {
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  Input,
+  Select,
+  Textarea,
+  Button,
+  Badge,
+  TabSwitcher,
+  type TabItem,
+} from "@/components/ui"
 
-type Result = {
-  received: number
-  created: number
-  skipped: number
-  failed: number
-  errors: string[]
-}
+type ImportTab = "manual" | "wikidata" | "crossref" | "googlebooks" | "openlibrary" | "loc"
+
+const tabs: TabItem<ImportTab>[] = [
+  { id: "manual", label: "File & Line Import" },
+  { id: "wikidata", label: "Wikidata" },
+  { id: "crossref", label: "Crossref" },
+  { id: "googlebooks", label: "Google Books" },
+  { id: "openlibrary", label: "Open Library" },
+  { id: "loc", label: "Library of Congress" },
+]
 
 type AutoImportResult = {
   preview?: boolean
@@ -79,6 +100,10 @@ function parseLines(input: string) {
 }
 
 export default function BulkImportSourcesPage() {
+  const [activeTab, setActiveTab] = useState<ImportTab>("manual")
+  const [authors, setAuthors] = useState<Author[]>([])
+
+  // Manual File/Text batch state
   const [input, setInput] = useState("")
   const [uploadedItems, setUploadedItems] = useState<
     {
@@ -95,25 +120,19 @@ export default function BulkImportSourcesPage() {
     }[] | null
   >(null)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState("")
-  const [result, setResult] = useState<Result | null>(null)
-  const [authors, setAuthors] = useState<Author[]>([])
+  const [manualError, setManualError] = useState("")
+  const [manualResult, setManualResult] = useState<BulkImportResultData | null>(null)
+
+  // Wikidata auto-import state
   const [autoAuthorId, setAutoAuthorId] = useState("")
   const [autoWikidataId, setAutoWikidataId] = useState("")
   const [autoWikipediaUrl, setAutoWikipediaUrl] = useState("")
   const [autoLimit, setAutoLimit] = useState("25")
   const [autoLoading, setAutoLoading] = useState(false)
   const [autoError, setAutoError] = useState("")
-  const [autoResult, setAutoResult] = useState<AutoImportResult | null>(null)
-  const [openLibraryAuthorId, setOpenLibraryAuthorId] = useState("")
-  const [openLibraryAuthorName, setOpenLibraryAuthorName] = useState("")
-  const [openLibraryTitle, setOpenLibraryTitle] = useState("")
-  const [openLibraryIsbn, setOpenLibraryIsbn] = useState("")
-  const [openLibraryLimit, setOpenLibraryLimit] = useState("25")
-  const [openLibraryLoading, setOpenLibraryLoading] = useState(false)
-  const [openLibraryPreviewLoading, setOpenLibraryPreviewLoading] = useState(false)
-  const [openLibraryError, setOpenLibraryError] = useState("")
-  const [openLibraryResult, setOpenLibraryResult] = useState<AutoImportResult | null>(null)
+  const [autoResult, setAutoResult] = useState<BulkImportResultData | null>(null)
+
+  // Crossref state
   const [crossrefAuthorId, setCrossrefAuthorId] = useState("")
   const [crossrefAuthorName, setCrossrefAuthorName] = useState("")
   const [crossrefQuery, setCrossrefQuery] = useState("")
@@ -124,6 +143,8 @@ export default function BulkImportSourcesPage() {
   const [crossrefPreviewLoading, setCrossrefPreviewLoading] = useState(false)
   const [crossrefError, setCrossrefError] = useState("")
   const [crossrefResult, setCrossrefResult] = useState<AutoImportResult | null>(null)
+
+  // Google Books state
   const [googleBooksAuthorId, setGoogleBooksAuthorId] = useState("")
   const [googleBooksAuthorName, setGoogleBooksAuthorName] = useState("")
   const [googleBooksQuery, setGoogleBooksQuery] = useState("")
@@ -134,6 +155,19 @@ export default function BulkImportSourcesPage() {
   const [googleBooksPreviewLoading, setGoogleBooksPreviewLoading] = useState(false)
   const [googleBooksError, setGoogleBooksError] = useState("")
   const [googleBooksResult, setGoogleBooksResult] = useState<AutoImportResult | null>(null)
+
+  // Open Library state
+  const [openLibraryAuthorId, setOpenLibraryAuthorId] = useState("")
+  const [openLibraryAuthorName, setOpenLibraryAuthorName] = useState("")
+  const [openLibraryTitle, setOpenLibraryTitle] = useState("")
+  const [openLibraryIsbn, setOpenLibraryIsbn] = useState("")
+  const [openLibraryLimit, setOpenLibraryLimit] = useState("25")
+  const [openLibraryLoading, setOpenLibraryLoading] = useState(false)
+  const [openLibraryPreviewLoading, setOpenLibraryPreviewLoading] = useState(false)
+  const [openLibraryError, setOpenLibraryError] = useState("")
+  const [openLibraryResult, setOpenLibraryResult] = useState<AutoImportResult | null>(null)
+
+  // Library of Congress state
   const [locAuthorId, setLocAuthorId] = useState("")
   const [locAuthorName, setLocAuthorName] = useState("")
   const [locQuery, setLocQuery] = useState("")
@@ -152,7 +186,12 @@ export default function BulkImportSourcesPage() {
       .catch(() => setAuthors([]))
   }, [])
 
+  const authorSelectOptions = [
+    { value: "", label: "No linked author" },
+    ...authors.map((a) => ({ value: a.id, label: a.name })),
+  ]
 
+  // File upload handler for manual batch
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -172,22 +211,23 @@ export default function BulkImportSourcesPage() {
         authorId: getRowValue(row, "authorId").trim() || null,
       }))
       setUploadedItems(items)
-      setError("")
+      setManualError("")
     } catch {
       setUploadedItems(null)
-      setError("Could not parse file. Upload valid JSON or CSV.")
+      setManualError("Could not parse file. Upload valid JSON or CSV.")
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Manual import submission
+  async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
-    setError("")
-    setResult(null)
+    setManualError("")
+    setManualResult(null)
 
     const items = uploadedItems ?? parseLines(input)
     if (items.length === 0) {
-      setError("Please enter at least one line.")
+      setManualError("Please enter at least one source row or upload a file.")
       setSubmitting(false)
       return
     }
@@ -200,15 +240,16 @@ export default function BulkImportSourcesPage() {
 
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      setError(data?.error || "Bulk import failed")
+      setManualError(data?.error || "Bulk import failed")
       setSubmitting(false)
       return
     }
 
-    setResult(data)
+    setManualResult(data)
     setSubmitting(false)
   }
 
+  // Wikidata auto-import submission
   async function handleAutoImport(e: React.FormEvent) {
     e.preventDefault()
     setAutoLoading(true)
@@ -233,72 +274,23 @@ export default function BulkImportSourcesPage() {
       return
     }
 
-    setAutoResult(data)
+    setAutoResult({
+      totalReceived: data.resolved,
+      created: data.created,
+      skipped: data.skipped,
+      failed: data.failed,
+      errors: data.errors,
+    })
     setAutoLoading(false)
   }
 
-  async function handleOpenLibraryImport(e: React.FormEvent) {
-    e.preventDefault()
-    setOpenLibraryLoading(true)
-    setOpenLibraryError("")
-    setOpenLibraryResult(null)
-
-    const res = await fetch("/api/admin/sources/openlibrary-import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        authorId: openLibraryAuthorId || undefined,
-        authorName: openLibraryAuthorName || undefined,
-        title: openLibraryTitle || undefined,
-        isbn: openLibraryIsbn || undefined,
-        limit: Number(openLibraryLimit || 25),
-      }),
-    })
-
-    const data = await res.json().catch(() => null)
-    if (!res.ok) {
-      setOpenLibraryError(data?.error || "Open Library import failed")
-      setOpenLibraryLoading(false)
-      return
+  // Crossref import & preview
+  async function handleCrossref(isPreview: boolean) {
+    if (isPreview) {
+      setCrossrefPreviewLoading(true)
+    } else {
+      setCrossrefLoading(true)
     }
-
-    setOpenLibraryResult(data)
-    setOpenLibraryLoading(false)
-  }
-
-  async function handleOpenLibraryPreview(e: React.FormEvent) {
-    e.preventDefault()
-    setOpenLibraryPreviewLoading(true)
-    setOpenLibraryError("")
-    setOpenLibraryResult(null)
-
-    const res = await fetch("/api/admin/sources/openlibrary-import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        authorId: openLibraryAuthorId || undefined,
-        authorName: openLibraryAuthorName || undefined,
-        title: openLibraryTitle || undefined,
-        isbn: openLibraryIsbn || undefined,
-        limit: Number(openLibraryLimit || 25),
-        preview: true,
-      }),
-    })
-
-    const data = await res.json().catch(() => null)
-    if (!res.ok) {
-      setOpenLibraryError(data?.error || "Open Library preview failed")
-      setOpenLibraryPreviewLoading(false)
-      return
-    }
-
-    setOpenLibraryResult(data)
-    setOpenLibraryPreviewLoading(false)
-  }
-
-  async function handleCrossrefImport(e: React.FormEvent) {
-    e.preventDefault()
-    setCrossrefLoading(true)
     setCrossrefError("")
     setCrossrefResult(null)
 
@@ -312,54 +304,30 @@ export default function BulkImportSourcesPage() {
         title: crossrefTitle || undefined,
         doi: crossrefDoi || undefined,
         limit: Number(crossrefLimit || 25),
+        preview: isPreview,
       }),
     })
 
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      setCrossrefError(data?.error || "Crossref import failed")
+      setCrossrefError(data?.error || `Crossref ${isPreview ? "preview" : "import"} failed`)
+      setCrossrefPreviewLoading(false)
       setCrossrefLoading(false)
       return
     }
 
     setCrossrefResult(data)
+    setCrossrefPreviewLoading(false)
     setCrossrefLoading(false)
   }
 
-  async function handleCrossrefPreview(e: React.FormEvent) {
-    e.preventDefault()
-    setCrossrefPreviewLoading(true)
-    setCrossrefError("")
-    setCrossrefResult(null)
-
-    const res = await fetch("/api/admin/sources/crossref-import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        authorId: crossrefAuthorId || undefined,
-        authorName: crossrefAuthorName || undefined,
-        query: crossrefQuery || undefined,
-        title: crossrefTitle || undefined,
-        doi: crossrefDoi || undefined,
-        limit: Number(crossrefLimit || 25),
-        preview: true,
-      }),
-    })
-
-    const data = await res.json().catch(() => null)
-    if (!res.ok) {
-      setCrossrefError(data?.error || "Crossref preview failed")
-      setCrossrefPreviewLoading(false)
-      return
+  // Google Books import & preview
+  async function handleGoogleBooks(isPreview: boolean) {
+    if (isPreview) {
+      setGoogleBooksPreviewLoading(true)
+    } else {
+      setGoogleBooksLoading(true)
     }
-
-    setCrossrefResult(data)
-    setCrossrefPreviewLoading(false)
-  }
-
-  async function handleGoogleBooksImport(e: React.FormEvent) {
-    e.preventDefault()
-    setGoogleBooksLoading(true)
     setGoogleBooksError("")
     setGoogleBooksResult(null)
 
@@ -373,54 +341,66 @@ export default function BulkImportSourcesPage() {
         title: googleBooksTitle || undefined,
         isbn: googleBooksIsbn || undefined,
         limit: Number(googleBooksLimit || 25),
+        preview: isPreview,
       }),
     })
 
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      setGoogleBooksError(data?.error || "Google Books import failed")
+      setGoogleBooksError(data?.error || `Google Books ${isPreview ? "preview" : "import"} failed`)
+      setGoogleBooksPreviewLoading(false)
       setGoogleBooksLoading(false)
       return
     }
 
     setGoogleBooksResult(data)
+    setGoogleBooksPreviewLoading(false)
     setGoogleBooksLoading(false)
   }
 
-  async function handleGoogleBooksPreview(e: React.FormEvent) {
-    e.preventDefault()
-    setGoogleBooksPreviewLoading(true)
-    setGoogleBooksError("")
-    setGoogleBooksResult(null)
+  // Open Library import & preview
+  async function handleOpenLibrary(isPreview: boolean) {
+    if (isPreview) {
+      setOpenLibraryPreviewLoading(true)
+    } else {
+      setOpenLibraryLoading(true)
+    }
+    setOpenLibraryError("")
+    setOpenLibraryResult(null)
 
-    const res = await fetch("/api/admin/sources/googlebooks-import", {
+    const res = await fetch("/api/admin/sources/openlibrary-import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        authorId: googleBooksAuthorId || undefined,
-        authorName: googleBooksAuthorName || undefined,
-        query: googleBooksQuery || undefined,
-        title: googleBooksTitle || undefined,
-        isbn: googleBooksIsbn || undefined,
-        limit: Number(googleBooksLimit || 25),
-        preview: true,
+        authorId: openLibraryAuthorId || undefined,
+        authorName: openLibraryAuthorName || undefined,
+        title: openLibraryTitle || undefined,
+        isbn: openLibraryIsbn || undefined,
+        limit: Number(openLibraryLimit || 25),
+        preview: isPreview,
       }),
     })
 
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      setGoogleBooksError(data?.error || "Google Books preview failed")
-      setGoogleBooksPreviewLoading(false)
+      setOpenLibraryError(data?.error || `Open Library ${isPreview ? "preview" : "import"} failed`)
+      setOpenLibraryPreviewLoading(false)
+      setOpenLibraryLoading(false)
       return
     }
 
-    setGoogleBooksResult(data)
-    setGoogleBooksPreviewLoading(false)
+    setOpenLibraryResult(data)
+    setOpenLibraryPreviewLoading(false)
+    setOpenLibraryLoading(false)
   }
 
-  async function handleLocImport(e: React.FormEvent) {
-    e.preventDefault()
-    setLocLoading(true)
+  // Library of Congress import & preview
+  async function handleLoc(isPreview: boolean) {
+    if (isPreview) {
+      setLocPreviewLoading(true)
+    } else {
+      setLocLoading(true)
+    }
     setLocError("")
     setLocResult(null)
 
@@ -434,763 +414,603 @@ export default function BulkImportSourcesPage() {
         title: locTitle || undefined,
         isbn: locIsbn || undefined,
         limit: Number(locLimit || 25),
+        preview: isPreview,
       }),
     })
 
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      setLocError(data?.error || "Library of Congress import failed")
+      setLocError(data?.error || `Library of Congress ${isPreview ? "preview" : "import"} failed`)
+      setLocPreviewLoading(false)
       setLocLoading(false)
       return
     }
 
     setLocResult(data)
-    setLocLoading(false)
-  }
-
-  async function handleLocPreview(e: React.FormEvent) {
-    e.preventDefault()
-    setLocPreviewLoading(true)
-    setLocError("")
-    setLocResult(null)
-
-    const res = await fetch("/api/admin/sources/loc-import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        authorId: locAuthorId || undefined,
-        authorName: locAuthorName || undefined,
-        query: locQuery || undefined,
-        title: locTitle || undefined,
-        isbn: locIsbn || undefined,
-        limit: Number(locLimit || 25),
-        preview: true,
-      }),
-    })
-
-    const data = await res.json().catch(() => null)
-    if (!res.ok) {
-      setLocError(data?.error || "Library of Congress preview failed")
-      setLocPreviewLoading(false)
-      return
-    }
-
-    setLocResult(data)
     setLocPreviewLoading(false)
+    setLocLoading(false)
   }
 
   return (
     <div className="p-8 max-w-4xl space-y-6">
-      <h1 className="text-2xl font-bold">Bulk Import Sources</h1>
+      <PageHeader
+        title="Bulk Import Sources"
+        description="Ingest bibliographic records in batch or harvest publication metadata from Wikidata, Crossref, Google Books, Open Library, and Library of Congress."
+        backHref="/admin/sources"
+        backLabel="Back to Sources"
+      />
 
-      <div className="border rounded p-4 bg-white space-y-4">
-        <h2 className="text-lg font-semibold">Auto Import from Wikidata</h2>
-        <p className="text-sm text-gray-600">
-          Import works for one author automatically using author selection, Wikidata ID,
-          or Wikipedia URL.
-        </p>
+      <TabSwitcher<ImportTab>
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        label="Source Importer Modes"
+      />
 
-        <form onSubmit={handleAutoImport} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Author (optional)</label>
-            <select
-              className="border w-full p-2 rounded"
-              value={autoAuthorId}
-              onChange={(e) => setAutoAuthorId(e.target.value)}
+      {/* TAB 1: MANUAL FILE & LINE IMPORT */}
+      {activeTab === "manual" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <FormErrorBanner error={manualError} onDismiss={() => setManualError("")} />
+
+          <BulkImportResultCard result={manualResult} onDismiss={() => setManualResult(null)} />
+
+          <BulkImportFormatGuide
+            format="title|slug|type|year|yearApproximate|publisher|location|description|externalUrl|authorId"
+            notes={
+              <p>
+                Only <strong className="text-stone-900">title</strong> is required. Types: BOOK, SPEECH, ARTICLE, INTERVIEW, SCRIPTURE, LETTER, OTHER.
+              </p>
+            }
+          />
+
+          <form onSubmit={handleManualSubmit} className="space-y-6">
+            <FormSection
+              title="Data Input"
+              description="Upload a CSV/JSON file or paste raw source lines"
             >
-              <option value="">No linked author</option>
-              {authors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Wikidata ID (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={autoWikidataId}
-                onChange={(e) => setAutoWikidataId(e.target.value)}
-                placeholder="Q937"
+              <BulkFileUploadInput
+                onFileChange={onFileChange}
+                loadedCount={uploadedItems?.length}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Wikipedia URL (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={autoWikipediaUrl}
-                onChange={(e) => setAutoWikipediaUrl(e.target.value)}
-                placeholder="https://en.wikipedia.org/wiki/..."
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Import limit</label>
-            <input
-              type="number"
-              min={1}
-              max={200}
-              className="border w-full p-2 rounded max-w-xs"
-              value={autoLimit}
-              onChange={(e) => setAutoLimit(e.target.value)}
+              <Textarea
+                label="Raw Input Rows"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                  setUploadedItems(null)
+                }}
+                rows={12}
+                className="font-mono text-xs leading-relaxed"
+                placeholder={`Meditations|meditations|BOOK|180|true|Penguin Classics|Rome|Stoic writings||\nLetter from Birmingham Jail||LETTER|1963|false|||Open letter text|https://example.com|`}
+                hint={
+                  uploadedItems
+                    ? "File upload loaded. Editing text overrides uploaded file."
+                    : "Type or paste multiple lines above."
+                }
+              />
+            </FormSection>
+
+            <FormActions
+              submitLabel="Import Sources"
+              submittingLabel="Importing Sources..."
+              isSubmitting={submitting}
+              cancelHref="/admin/sources"
             />
-          </div>
-
-          {autoError && <p className="text-sm text-red-600">{autoError}</p>}
-
-          <button
-            disabled={autoLoading}
-            className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {autoLoading ? "Importing..." : "Auto Import Sources"}
-          </button>
-        </form>
-
-        {autoResult && (
-          <div className="border rounded p-3 bg-gray-50 space-y-1 text-sm">
-            <div>
-              Resolved: <b>{autoResult.resolved}</b>
-            </div>
-            <div>
-              Created: <b>{autoResult.created}</b>
-            </div>
-            <div>
-              Skipped: <b>{autoResult.skipped}</b>
-            </div>
-            <div>
-              Failed: <b>{autoResult.failed}</b>
-            </div>
-            {autoResult.errors.length > 0 && (
-              <ul className="text-red-700 list-disc pl-5">
-                {autoResult.errors.map((msg) => (
-                  <li key={msg}>{msg}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="border rounded p-4 bg-white space-y-4">
-        <h2 className="text-lg font-semibold">Auto Import from Crossref</h2>
-        <p className="text-sm text-gray-600">
-          Import article/book metadata from Crossref using author, title, free query, or DOI.
-        </p>
-
-        <form onSubmit={handleCrossrefImport} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Author (optional)</label>
-            <select
-              className="border w-full p-2 rounded"
-              value={crossrefAuthorId}
-              onChange={(e) => setCrossrefAuthorId(e.target.value)}
-            >
-              <option value="">No linked author</option>
-              {authors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Author Name (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={crossrefAuthorName}
-                onChange={(e) => setCrossrefAuthorName(e.target.value)}
-                placeholder="Albert Einstein"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Title (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={crossrefTitle}
-                onChange={(e) => setCrossrefTitle(e.target.value)}
-                placeholder="Relativity"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Query (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={crossrefQuery}
-                onChange={(e) => setCrossrefQuery(e.target.value)}
-                placeholder="quantum theory"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">DOI (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={crossrefDoi}
-                onChange={(e) => setCrossrefDoi(e.target.value)}
-                placeholder="10.1038/s41586-020-2649-2"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Import limit</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              className="border w-full p-2 rounded max-w-xs"
-              value={crossrefLimit}
-              onChange={(e) => setCrossrefLimit(e.target.value)}
-            />
-          </div>
-
-          {crossrefError && <p className="text-sm text-red-600">{crossrefError}</p>}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={crossrefPreviewLoading}
-              onClick={handleCrossrefPreview}
-              className="border px-4 py-2 rounded disabled:opacity-50"
-            >
-              {crossrefPreviewLoading ? "Previewing..." : "Preview Crossref"}
-            </button>
-            <button
-              disabled={crossrefLoading}
-              className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-            >
-              {crossrefLoading ? "Importing..." : "Auto Import Crossref"}
-            </button>
-          </div>
-        </form>
-
-        {crossrefResult && (
-          <div className="border rounded p-3 bg-gray-50 space-y-1 text-sm">
-            {crossrefResult.preview && (
-              <div className="font-medium text-gray-700">Preview only (no records created)</div>
-            )}
-            <div>
-              Resolved: <b>{crossrefResult.resolved}</b>
-            </div>
-            <div>
-              Created: <b>{crossrefResult.created}</b>
-            </div>
-            <div>
-              Skipped: <b>{crossrefResult.skipped}</b>
-            </div>
-            <div>
-              Failed: <b>{crossrefResult.failed}</b>
-            </div>
-            {crossrefResult.errors.length > 0 && (
-              <ul className="text-red-700 list-disc pl-5">
-                {crossrefResult.errors.map((msg) => (
-                  <li key={msg}>{msg}</li>
-                ))}
-              </ul>
-            )}
-            {crossrefResult.preview && crossrefResult.items && crossrefResult.items.length > 0 && (
-              <div className="mt-3 max-h-64 overflow-auto border rounded bg-white p-2 space-y-1">
-                {crossrefResult.items.map((item) => (
-                  <div key={`${item.title}|${item.externalUrl}`} className="text-xs">
-                    <div className="font-medium">
-                      {item.title} {item.duplicate ? "(duplicate)" : ""}
-                    </div>
-                    <div className="text-gray-600">
-                      {item.year || "-"} • {item.publisher || "-"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="border rounded p-4 bg-white space-y-4">
-        <h2 className="text-lg font-semibold">Auto Import from Google Books</h2>
-        <p className="text-sm text-gray-600">
-          Import book metadata from Google Books using author, title, free query, or ISBN.
-        </p>
-
-        <form onSubmit={handleGoogleBooksImport} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Author (optional)</label>
-            <select
-              className="border w-full p-2 rounded"
-              value={googleBooksAuthorId}
-              onChange={(e) => setGoogleBooksAuthorId(e.target.value)}
-            >
-              <option value="">No linked author</option>
-              {authors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Author Name (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={googleBooksAuthorName}
-                onChange={(e) => setGoogleBooksAuthorName(e.target.value)}
-                placeholder="Paulo Coelho"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Title (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={googleBooksTitle}
-                onChange={(e) => setGoogleBooksTitle(e.target.value)}
-                placeholder="The Alchemist"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Query (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={googleBooksQuery}
-                onChange={(e) => setGoogleBooksQuery(e.target.value)}
-                placeholder="mindfulness"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">ISBN (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={googleBooksIsbn}
-                onChange={(e) => setGoogleBooksIsbn(e.target.value)}
-                placeholder="9780061122415"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Import limit</label>
-            <input
-              type="number"
-              min={1}
-              max={40}
-              className="border w-full p-2 rounded max-w-xs"
-              value={googleBooksLimit}
-              onChange={(e) => setGoogleBooksLimit(e.target.value)}
-            />
-          </div>
-
-          {googleBooksError && <p className="text-sm text-red-600">{googleBooksError}</p>}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={googleBooksPreviewLoading}
-              onClick={handleGoogleBooksPreview}
-              className="border px-4 py-2 rounded disabled:opacity-50"
-            >
-              {googleBooksPreviewLoading ? "Previewing..." : "Preview Google Books"}
-            </button>
-            <button
-              disabled={googleBooksLoading}
-              className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-            >
-              {googleBooksLoading ? "Importing..." : "Auto Import Google Books"}
-            </button>
-          </div>
-        </form>
-
-        {googleBooksResult && (
-          <div className="border rounded p-3 bg-gray-50 space-y-1 text-sm">
-            {googleBooksResult.preview && (
-              <div className="font-medium text-gray-700">Preview only (no records created)</div>
-            )}
-            <div>
-              Resolved: <b>{googleBooksResult.resolved}</b>
-            </div>
-            <div>
-              Created: <b>{googleBooksResult.created}</b>
-            </div>
-            <div>
-              Skipped: <b>{googleBooksResult.skipped}</b>
-            </div>
-            <div>
-              Failed: <b>{googleBooksResult.failed}</b>
-            </div>
-            {googleBooksResult.errors.length > 0 && (
-              <ul className="text-red-700 list-disc pl-5">
-                {googleBooksResult.errors.map((msg) => (
-                  <li key={msg}>{msg}</li>
-                ))}
-              </ul>
-            )}
-            {googleBooksResult.preview &&
-              googleBooksResult.items &&
-              googleBooksResult.items.length > 0 && (
-                <div className="mt-3 max-h-64 overflow-auto border rounded bg-white p-2 space-y-1">
-                  {googleBooksResult.items.map((item) => (
-                    <div key={`${item.title}|${item.externalUrl}`} className="text-xs">
-                      <div className="font-medium">
-                        {item.title} {item.duplicate ? "(duplicate)" : ""}
-                      </div>
-                      <div className="text-gray-600">
-                        {item.year || "-"} • {item.publisher || "-"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-          </div>
-        )}
-      </div>
-
-      <div className="border rounded p-4 bg-white space-y-4">
-        <h2 className="text-lg font-semibold">Auto Import from Open Library</h2>
-        <p className="text-sm text-gray-600">
-          Import book sources by author, title, or ISBN from Open Library metadata.
-        </p>
-
-        <form onSubmit={handleOpenLibraryImport} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Author (optional)</label>
-            <select
-              className="border w-full p-2 rounded"
-              value={openLibraryAuthorId}
-              onChange={(e) => setOpenLibraryAuthorId(e.target.value)}
-            >
-              <option value="">No linked author</option>
-              {authors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Author Name (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={openLibraryAuthorName}
-                onChange={(e) => setOpenLibraryAuthorName(e.target.value)}
-                placeholder="Rabindranath Tagore"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Title (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={openLibraryTitle}
-                onChange={(e) => setOpenLibraryTitle(e.target.value)}
-                placeholder="Gitanjali"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">ISBN (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={openLibraryIsbn}
-                onChange={(e) => setOpenLibraryIsbn(e.target.value)}
-                placeholder="9780140449181"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Import limit</label>
-              <input
-                type="number"
-                min={1}
-                max={200}
-                className="border w-full p-2 rounded"
-                value={openLibraryLimit}
-                onChange={(e) => setOpenLibraryLimit(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {openLibraryError && <p className="text-sm text-red-600">{openLibraryError}</p>}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={openLibraryPreviewLoading}
-              onClick={handleOpenLibraryPreview}
-              className="border px-4 py-2 rounded disabled:opacity-50"
-            >
-              {openLibraryPreviewLoading ? "Previewing..." : "Preview Open Library"}
-            </button>
-            <button
-              disabled={openLibraryLoading}
-              className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-            >
-              {openLibraryLoading ? "Importing..." : "Auto Import Open Library"}
-            </button>
-          </div>
-        </form>
-
-        {openLibraryResult && (
-          <div className="border rounded p-3 bg-gray-50 space-y-1 text-sm">
-            {openLibraryResult.preview && (
-              <div className="font-medium text-gray-700">Preview only (no records created)</div>
-            )}
-            <div>
-              Resolved: <b>{openLibraryResult.resolved}</b>
-            </div>
-            <div>
-              Created: <b>{openLibraryResult.created}</b>
-            </div>
-            <div>
-              Skipped: <b>{openLibraryResult.skipped}</b>
-            </div>
-            <div>
-              Failed: <b>{openLibraryResult.failed}</b>
-            </div>
-            {openLibraryResult.errors.length > 0 && (
-              <ul className="text-red-700 list-disc pl-5">
-                {openLibraryResult.errors.map((msg) => (
-                  <li key={msg}>{msg}</li>
-                ))}
-              </ul>
-            )}
-            {openLibraryResult.preview && openLibraryResult.items && openLibraryResult.items.length > 0 && (
-              <div className="mt-3 max-h-64 overflow-auto border rounded bg-white p-2 space-y-1">
-                {openLibraryResult.items.map((item) => (
-                  <div key={`${item.title}|${item.externalUrl}`} className="text-xs">
-                    <div className="font-medium">
-                      {item.title} {item.duplicate ? "(duplicate)" : ""}
-                    </div>
-                    <div className="text-gray-600">
-                      {item.year || "-"} • {item.publisher || "-"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="border rounded p-4 bg-white space-y-4">
-        <h2 className="text-lg font-semibold">Auto Import from Library of Congress</h2>
-        <p className="text-sm text-gray-600">
-          Import book metadata from LoC using title, author, query, or ISBN.
-        </p>
-
-        <form onSubmit={handleLocImport} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Author (optional)</label>
-            <select
-              className="border w-full p-2 rounded"
-              value={locAuthorId}
-              onChange={(e) => setLocAuthorId(e.target.value)}
-            >
-              <option value="">No linked author</option>
-              {authors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Author Name (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={locAuthorName}
-                onChange={(e) => setLocAuthorName(e.target.value)}
-                placeholder="James Baldwin"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Title (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={locTitle}
-                onChange={(e) => setLocTitle(e.target.value)}
-                placeholder="Go Tell It on the Mountain"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-1">Query (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={locQuery}
-                onChange={(e) => setLocQuery(e.target.value)}
-                placeholder="civil rights"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">ISBN (optional)</label>
-              <input
-                className="border w-full p-2 rounded"
-                value={locIsbn}
-                onChange={(e) => setLocIsbn(e.target.value)}
-                placeholder="9780802140883"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Import limit</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              className="border w-full p-2 rounded max-w-xs"
-              value={locLimit}
-              onChange={(e) => setLocLimit(e.target.value)}
-            />
-          </div>
-
-          {locError && <p className="text-sm text-red-600">{locError}</p>}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={locPreviewLoading}
-              onClick={handleLocPreview}
-              className="border px-4 py-2 rounded disabled:opacity-50"
-            >
-              {locPreviewLoading ? "Previewing..." : "Preview LoC"}
-            </button>
-            <button
-              disabled={locLoading}
-              className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-            >
-              {locLoading ? "Importing..." : "Auto Import LoC"}
-            </button>
-          </div>
-        </form>
-
-        {locResult && (
-          <div className="border rounded p-3 bg-gray-50 space-y-1 text-sm">
-            {locResult.preview && (
-              <div className="font-medium text-gray-700">Preview only (no records created)</div>
-            )}
-            <div>
-              Resolved: <b>{locResult.resolved}</b>
-            </div>
-            <div>
-              Created: <b>{locResult.created}</b>
-            </div>
-            <div>
-              Skipped: <b>{locResult.skipped}</b>
-            </div>
-            <div>
-              Failed: <b>{locResult.failed}</b>
-            </div>
-            {locResult.errors.length > 0 && (
-              <ul className="text-red-700 list-disc pl-5">
-                {locResult.errors.map((msg) => (
-                  <li key={msg}>{msg}</li>
-                ))}
-              </ul>
-            )}
-            {locResult.preview && locResult.items && locResult.items.length > 0 && (
-              <div className="mt-3 max-h-64 overflow-auto border rounded bg-white p-2 space-y-1">
-                {locResult.items.map((item) => (
-                  <div key={`${item.title}|${item.externalUrl}`} className="text-xs">
-                    <div className="font-medium">
-                      {item.title} {item.duplicate ? "(duplicate)" : ""}
-                    </div>
-                    <div className="text-gray-600">
-                      {item.year || "-"} • {item.publisher || "-"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <p className="text-sm text-gray-600">
-        One source per line. Format:
-        <br />
-        <code>
-          title|slug|type|year|yearApproximate|publisher|location|description|externalUrl|authorId
-        </code>
-        <br />
-        Only <code>title</code> is required. Types: BOOK, SPEECH, ARTICLE, INTERVIEW,
-        SCRIPTURE, LETTER, OTHER.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Upload JSON/CSV (optional)</label>
-          <input type="file" accept=".json,.csv,application/json,text/csv" onChange={onFileChange} />
-          {uploadedItems && (
-            <p className="text-xs text-gray-500 mt-1">
-              Loaded {uploadedItems.length} row(s) from file.
-            </p>
-          )}
-        </div>
-
-        <textarea
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            setUploadedItems(null)
-          }}
-          rows={16}
-          className="border w-full p-3 rounded font-mono text-sm"
-          placeholder={`Meditations|meditations|BOOK|180|true|Penguin Classics|Rome|Stoic writings||\nLetter from Birmingham Jail||LETTER|1963|false|||Open letter text|https://example.com|`}
-        />
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
-        >
-          {submitting ? "Importing..." : "Import Sources"}
-        </button>
-      </form>
-
-      {result && (
-        <div className="border rounded p-4 bg-white space-y-2">
-          <div className="text-sm">
-            Received: <b>{result.received}</b>
-          </div>
-          <div className="text-sm">
-            Created: <b>{result.created}</b>
-          </div>
-          <div className="text-sm">
-            Skipped: <b>{result.skipped}</b>
-          </div>
-          <div className="text-sm">
-            Failed: <b>{result.failed}</b>
-          </div>
-
-          {result.errors.length > 0 && (
-            <ul className="text-sm text-red-700 list-disc pl-5">
-              {result.errors.map((msg) => (
-                <li key={msg}>{msg}</li>
-              ))}
-            </ul>
-          )}
+          </form>
         </div>
       )}
 
+      {/* TAB 2: WIKIDATA AUTO-IMPORT */}
+      {activeTab === "wikidata" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <FormErrorBanner error={autoError} onDismiss={() => setAutoError("")} />
+
+          <BulkImportResultCard result={autoResult} onDismiss={() => setAutoResult(null)} />
+
+          <form onSubmit={handleAutoImport} className="space-y-6">
+            <FormSection
+              title="Wikidata / Wikipedia Metadata Harvest"
+              description="Import published works for an author automatically using author selection, Wikidata ID, or Wikipedia URL"
+            >
+              <Select
+                label="Linked Author (optional)"
+                value={autoAuthorId}
+                onChange={(e) => setAutoAuthorId(e.target.value)}
+                options={authorSelectOptions}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Wikidata ID (optional)"
+                  placeholder="e.g. Q937"
+                  value={autoWikidataId}
+                  onChange={(e) => setAutoWikidataId(e.target.value)}
+                  hint="Identifier from Wikidata (e.g. Q937 for Albert Einstein)"
+                />
+
+                <Input
+                  label="Wikipedia URL (optional)"
+                  placeholder="https://en.wikipedia.org/wiki/..."
+                  value={autoWikipediaUrl}
+                  onChange={(e) => setAutoWikipediaUrl(e.target.value)}
+                />
+              </div>
+
+              <Input
+                type="number"
+                min={1}
+                max={200}
+                label="Import Limit"
+                value={autoLimit}
+                onChange={(e) => setAutoLimit(e.target.value)}
+                className="max-w-xs"
+                hint="Maximum number of bibliographic records to ingest"
+              />
+            </FormSection>
+
+            <FormActions
+              submitLabel="Auto Import Sources"
+              submittingLabel="Harvesting from Wikidata..."
+              isSubmitting={autoLoading}
+              cancelHref="/admin/sources"
+            />
+          </form>
+        </div>
+      )}
+
+      {/* TAB 3: CROSSREF AUTO-IMPORT */}
+      {activeTab === "crossref" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <FormErrorBanner error={crossrefError} onDismiss={() => setCrossrefError("")} />
+
+          {crossrefResult && (
+            <BulkImportResultCard
+              result={{
+                totalReceived: crossrefResult.resolved,
+                created: crossrefResult.created,
+                skipped: crossrefResult.skipped,
+                failed: crossrefResult.failed,
+                errors: crossrefResult.errors,
+              }}
+              onDismiss={() => setCrossrefResult(null)}
+            />
+          )}
+
+          {crossrefResult?.preview && crossrefResult.items && crossrefResult.items.length > 0 && (
+            <PreviewItemsList items={crossrefResult.items} />
+          )}
+
+          <div className="space-y-6">
+            <FormSection
+              title="Crossref Scholarly & Book Metadata"
+              description="Import article and book records from Crossref using author name, title, free query, or DOI"
+            >
+              <Select
+                label="Linked Author (optional)"
+                value={crossrefAuthorId}
+                onChange={(e) => setCrossrefAuthorId(e.target.value)}
+                options={authorSelectOptions}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Author Name (optional)"
+                  placeholder="e.g. Albert Einstein"
+                  value={crossrefAuthorName}
+                  onChange={(e) => setCrossrefAuthorName(e.target.value)}
+                />
+
+                <Input
+                  label="Title (optional)"
+                  placeholder="e.g. Relativity"
+                  value={crossrefTitle}
+                  onChange={(e) => setCrossrefTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Free Query (optional)"
+                  placeholder="e.g. quantum theory"
+                  value={crossrefQuery}
+                  onChange={(e) => setCrossrefQuery(e.target.value)}
+                />
+
+                <Input
+                  label="DOI (optional)"
+                  placeholder="e.g. 10.1038/s41586-020-2649-2"
+                  value={crossrefDoi}
+                  onChange={(e) => setCrossrefDoi(e.target.value)}
+                />
+              </div>
+
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                label="Import Limit"
+                value={crossrefLimit}
+                onChange={(e) => setCrossrefLimit(e.target.value)}
+                className="max-w-xs"
+              />
+            </FormSection>
+
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-stone-200/80">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleCrossref(true)}
+                isLoading={crossrefPreviewLoading}
+                disabled={crossrefLoading || crossrefPreviewLoading}
+              >
+                {crossrefPreviewLoading ? "Previewing..." : "Preview Crossref"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => handleCrossref(false)}
+                isLoading={crossrefLoading}
+                disabled={crossrefLoading || crossrefPreviewLoading}
+              >
+                {crossrefLoading ? "Importing..." : "Auto Import Crossref"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: GOOGLE BOOKS AUTO-IMPORT */}
+      {activeTab === "googlebooks" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <FormErrorBanner error={googleBooksError} onDismiss={() => setGoogleBooksError("")} />
+
+          {googleBooksResult && (
+            <BulkImportResultCard
+              result={{
+                totalReceived: googleBooksResult.resolved,
+                created: googleBooksResult.created,
+                skipped: googleBooksResult.skipped,
+                failed: googleBooksResult.failed,
+                errors: googleBooksResult.errors,
+              }}
+              onDismiss={() => setGoogleBooksResult(null)}
+            />
+          )}
+
+          {googleBooksResult?.preview && googleBooksResult.items && googleBooksResult.items.length > 0 && (
+            <PreviewItemsList items={googleBooksResult.items} />
+          )}
+
+          <div className="space-y-6">
+            <FormSection
+              title="Google Books Catalog Search"
+              description="Import book volumes from Google Books using author name, title, free query, or ISBN"
+            >
+              <Select
+                label="Linked Author (optional)"
+                value={googleBooksAuthorId}
+                onChange={(e) => setGoogleBooksAuthorId(e.target.value)}
+                options={authorSelectOptions}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Author Name (optional)"
+                  placeholder="e.g. Paulo Coelho"
+                  value={googleBooksAuthorName}
+                  onChange={(e) => setGoogleBooksAuthorName(e.target.value)}
+                />
+
+                <Input
+                  label="Title (optional)"
+                  placeholder="e.g. The Alchemist"
+                  value={googleBooksTitle}
+                  onChange={(e) => setGoogleBooksTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Free Query (optional)"
+                  placeholder="e.g. mindfulness"
+                  value={googleBooksQuery}
+                  onChange={(e) => setGoogleBooksQuery(e.target.value)}
+                />
+
+                <Input
+                  label="ISBN (optional)"
+                  placeholder="e.g. 9780061122415"
+                  value={googleBooksIsbn}
+                  onChange={(e) => setGoogleBooksIsbn(e.target.value)}
+                />
+              </div>
+
+              <Input
+                type="number"
+                min={1}
+                max={40}
+                label="Import Limit"
+                value={googleBooksLimit}
+                onChange={(e) => setGoogleBooksLimit(e.target.value)}
+                className="max-w-xs"
+              />
+            </FormSection>
+
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-stone-200/80">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleGoogleBooks(true)}
+                isLoading={googleBooksPreviewLoading}
+                disabled={googleBooksLoading || googleBooksPreviewLoading}
+              >
+                {googleBooksPreviewLoading ? "Previewing..." : "Preview Google Books"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => handleGoogleBooks(false)}
+                isLoading={googleBooksLoading}
+                disabled={googleBooksLoading || googleBooksPreviewLoading}
+              >
+                {googleBooksLoading ? "Importing..." : "Auto Import Google Books"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: OPEN LIBRARY AUTO-IMPORT */}
+      {activeTab === "openlibrary" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <FormErrorBanner error={openLibraryError} onDismiss={() => setOpenLibraryError("")} />
+
+          {openLibraryResult && (
+            <BulkImportResultCard
+              result={{
+                totalReceived: openLibraryResult.resolved,
+                created: openLibraryResult.created,
+                skipped: openLibraryResult.skipped,
+                failed: openLibraryResult.failed,
+                errors: openLibraryResult.errors,
+              }}
+              onDismiss={() => setOpenLibraryResult(null)}
+            />
+          )}
+
+          {openLibraryResult?.preview && openLibraryResult.items && openLibraryResult.items.length > 0 && (
+            <PreviewItemsList items={openLibraryResult.items} />
+          )}
+
+          <div className="space-y-6">
+            <FormSection
+              title="Open Library Universal Catalog"
+              description="Import book sources by author name, title, or ISBN from the Open Library open catalog"
+            >
+              <Select
+                label="Linked Author (optional)"
+                value={openLibraryAuthorId}
+                onChange={(e) => setOpenLibraryAuthorId(e.target.value)}
+                options={authorSelectOptions}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Author Name (optional)"
+                  placeholder="e.g. Rabindranath Tagore"
+                  value={openLibraryAuthorName}
+                  onChange={(e) => setOpenLibraryAuthorName(e.target.value)}
+                />
+
+                <Input
+                  label="Title (optional)"
+                  placeholder="e.g. Gitanjali"
+                  value={openLibraryTitle}
+                  onChange={(e) => setOpenLibraryTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="ISBN (optional)"
+                  placeholder="e.g. 9780140449181"
+                  value={openLibraryIsbn}
+                  onChange={(e) => setOpenLibraryIsbn(e.target.value)}
+                />
+
+                <Input
+                  type="number"
+                  min={1}
+                  max={200}
+                  label="Import Limit"
+                  value={openLibraryLimit}
+                  onChange={(e) => setOpenLibraryLimit(e.target.value)}
+                  className="max-w-xs"
+                />
+              </div>
+            </FormSection>
+
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-stone-200/80">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenLibrary(true)}
+                isLoading={openLibraryPreviewLoading}
+                disabled={openLibraryLoading || openLibraryPreviewLoading}
+              >
+                {openLibraryPreviewLoading ? "Previewing..." : "Preview Open Library"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => handleOpenLibrary(false)}
+                isLoading={openLibraryLoading}
+                disabled={openLibraryLoading || openLibraryPreviewLoading}
+              >
+                {openLibraryLoading ? "Importing..." : "Auto Import Open Library"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: LIBRARY OF CONGRESS AUTO-IMPORT */}
+      {activeTab === "loc" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <FormErrorBanner error={locError} onDismiss={() => setLocError("")} />
+
+          {locResult && (
+            <BulkImportResultCard
+              result={{
+                totalReceived: locResult.resolved,
+                created: locResult.created,
+                skipped: locResult.skipped,
+                failed: locResult.failed,
+                errors: locResult.errors,
+              }}
+              onDismiss={() => setLocResult(null)}
+            />
+          )}
+
+          {locResult?.preview && locResult.items && locResult.items.length > 0 && (
+            <PreviewItemsList items={locResult.items} />
+          )}
+
+          <div className="space-y-6">
+            <FormSection
+              title="Library of Congress Public Catalog"
+              description="Import book records from the Library of Congress using author name, title, query, or ISBN"
+            >
+              <Select
+                label="Linked Author (optional)"
+                value={locAuthorId}
+                onChange={(e) => setLocAuthorId(e.target.value)}
+                options={authorSelectOptions}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Author Name (optional)"
+                  placeholder="e.g. James Baldwin"
+                  value={locAuthorName}
+                  onChange={(e) => setLocAuthorName(e.target.value)}
+                />
+
+                <Input
+                  label="Title (optional)"
+                  placeholder="e.g. Go Tell It on the Mountain"
+                  value={locTitle}
+                  onChange={(e) => setLocTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Query (optional)"
+                  placeholder="e.g. civil rights"
+                  value={locQuery}
+                  onChange={(e) => setLocQuery(e.target.value)}
+                />
+
+                <Input
+                  label="ISBN (optional)"
+                  placeholder="e.g. 9780802140883"
+                  value={locIsbn}
+                  onChange={(e) => setLocIsbn(e.target.value)}
+                />
+              </div>
+
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                label="Import Limit"
+                value={locLimit}
+                onChange={(e) => setLocLimit(e.target.value)}
+                className="max-w-xs"
+              />
+            </FormSection>
+
+            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-stone-200/80">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleLoc(true)}
+                isLoading={locPreviewLoading}
+                disabled={locLoading || locPreviewLoading}
+              >
+                {locPreviewLoading ? "Previewing..." : "Preview LoC"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => handleLoc(false)}
+                isLoading={locLoading}
+                disabled={locLoading || locPreviewLoading}
+              >
+                {locLoading ? "Importing..." : "Auto Import LoC"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PreviewItemsList({
+  items,
+}: {
+  items: Array<{
+    title: string
+    year: number | null
+    publisher: string | null
+    externalUrl: string
+    duplicate: boolean
+  }>
+}) {
+  return (
+    <div className="rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs space-y-3 font-sans">
+      <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-stone-900">
+            Preview Items ({items.length} Candidates)
+          </h4>
+          <p className="text-xs text-stone-500">
+            Previewing remote catalog records without modifying the database.
+          </p>
+        </div>
+        <Badge variant="neutral" size="xs">
+          Dry Run
+        </Badge>
+      </div>
+
+      <div className="max-h-72 overflow-y-auto space-y-2 divide-y divide-stone-100">
+        {items.map((item, idx) => (
+          <div key={`${idx}-${item.title}`} className="pt-2 flex items-start justify-between gap-3 text-xs">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-stone-900">{item.title}</span>
+                {item.duplicate && (
+                  <Badge variant="warning" size="xs">
+                    Duplicate
+                  </Badge>
+                )}
+              </div>
+              <p className="text-stone-500">
+                {[item.year || null, item.publisher || null, item.externalUrl || null]
+                  .filter(Boolean)
+                  .join(" • ")}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

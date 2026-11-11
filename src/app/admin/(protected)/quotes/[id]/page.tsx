@@ -3,6 +3,7 @@ import { getAdmin } from "@/lib/auth/getAdmin"
 import { formatDateTimeLocalInAppTimeZone } from "@/lib/datetime"
 import { prisma } from "@/lib/prisma"
 import { getQuoteEditorOptions } from "@/lib/quotes/editorOptions"
+import { PageHeader } from "@/components/admin"
 import QuoteEditorForm from "../QuoteEditorForm"
 
 export default async function EditQuotePage({
@@ -54,8 +55,13 @@ export default async function EditQuotePage({
   const { authors, categories, sources, tags } = options
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
-      <h1 className="mb-6 text-2xl font-bold">Edit Quote</h1>
+    <div className="mx-auto max-w-6xl p-8 space-y-6">
+      <PageHeader
+        title="Edit Quote"
+        description="Modify quote content, citations, taxonomies, and publication status."
+        backHref="/admin/quotes"
+        backLabel="Back to Quotes"
+      />
       <QuoteEditorForm
         mode="edit"
         quoteId={quote.id}

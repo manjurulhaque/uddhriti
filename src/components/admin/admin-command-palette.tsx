@@ -221,6 +221,15 @@ const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
     keywords: ["no tags", "untagged", "tags", "quotes"],
   },
   {
+    id: "nav-quotes-no-context",
+    title: "Quotes Without Interpretation & Context",
+    description: "Quotes missing literary meaning, historical context, or relevance",
+    href: "/admin/quotes?filter=no-context",
+    section: "Content",
+    badge: "Audit",
+    keywords: ["no context", "missing context", "interpretation", "meaning", "history", "quotes"],
+  },
+  {
     id: "nav-quotes-orphaned",
     title: "Orphaned Quotes",
     description: "Quotes missing author, source, or tags",

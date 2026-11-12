@@ -22,6 +22,7 @@ type QuoteItem = {
   hasCategory: boolean
   hasSource: boolean
   hasTags: boolean
+  hasContext?: boolean
 }
 
 type Option = {
@@ -45,7 +46,16 @@ type BulkActionType =
   | "setStatus"
   | "setVerification"
 
-type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
+type QuoteFilter =
+  | "all"
+  | "draft"
+  | "archived"
+  | "unverified"
+  | "unattributed"
+  | "missing-source"
+  | "no-tags"
+  | "no-context"
+  | "orphaned"
 
 function buildQuotesListHref(
   filter: QuoteFilter,
@@ -691,6 +701,11 @@ export function QuotesListManager({
                   {!quote.hasTags && (
                     <Badge variant="neutral" size="xs">
                       Missing tags
+                    </Badge>
+                  )}
+                  {quote.hasContext === false && (
+                    <Badge variant="neutral" size="xs">
+                      No context
                     </Badge>
                   )}
                   <span className="text-[11px] text-stone-400">

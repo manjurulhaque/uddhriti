@@ -10,7 +10,16 @@ import { searchQuoteIds } from "@/lib/quotes/search"
 import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
 import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
-type QuoteFilter = "all" | "draft" | "archived" | "unverified" | "unattributed" | "missing-source" | "no-tags" | "orphaned"
+type QuoteFilter =
+  | "all"
+  | "draft"
+  | "archived"
+  | "unverified"
+  | "unattributed"
+  | "missing-source"
+  | "no-tags"
+  | "no-context"
+  | "orphaned"
 
 const PAGE_SIZE = 50
 
@@ -26,6 +35,9 @@ const quoteSelect = {
   categoryId: true,
   categorySlug: true,
   sourceId: true,
+  meaning: true,
+  historicalContext: true,
+  modernRelevance: true,
   author: { select: { name: true } },
   category: { select: { name: true, slug: true } },
   source: { select: { title: true } },
@@ -40,6 +52,7 @@ type QuoteFilterCounts = {
   unattributed: number
   missingSource: number
   noTags: number
+  noContext: number
   orphaned: number
 }
 
@@ -67,6 +80,11 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
         COUNT(*) FILTER (WHERE "sourceId" IS NULL)::int AS "missingSource",
         COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM "QuoteTag" qt WHERE qt."quoteId" = q.id))::int AS "noTags",
         COUNT(*) FILTER (
+          WHERE ("meaning" IS NULL OR TRIM("meaning") = '')
+            AND ("historicalContext" IS NULL OR TRIM("historicalContext") = '')
+            AND ("modernRelevance" IS NULL OR TRIM("modernRelevance") = '')
+        )::int AS "noContext",
+        COUNT(*) FILTER (
           WHERE "authorId" IS NULL 
              OR "authorName" IS NULL 
              OR "sourceId" IS NULL 
@@ -83,6 +101,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       unattributed: 0,
       missingSource: 0,
       noTags: 0,
+      noContext: 0,
       orphaned: 0,
     }
     cachedQuoteFilterCounts = { counts, timestamp: now }
@@ -97,6 +116,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       unattributed: 0,
       missingSource: 0,
       noTags: 0,
+      noContext: 0,
       orphaned: 0,
     }
   }
@@ -110,6 +130,7 @@ const filterLabels: Record<QuoteFilter, string> = {
   unattributed: "Unattributed",
   "missing-source": "Missing Source",
   "no-tags": "No Tags",
+  "no-context": "No Interpretation & Context",
   orphaned: "Orphaned",
 }
 
@@ -121,6 +142,16 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
   if (value === "unattributed") return "unattributed"
   if (value === "missing-source") return "missing-source"
   if (value === "no-tags") return "no-tags"
+  if (
+    value === "no-context" ||
+    value === "missing-context" ||
+    value === "without-context" ||
+    value === "no-interpretation" ||
+    value === "missing-interpretation" ||
+    value === "without-interpretation"
+  ) {
+    return "no-context"
+  }
   if (value === "orphaned") return "orphaned"
   return "all"
 }
@@ -151,11 +182,22 @@ function buildQuoteWhere(
     baseWhere = { deletedAt: null, sourceId: null }
   } else if (activeFilter === "no-tags") {
     baseWhere = { deletedAt: null, tags: { none: {} } }
-  } else {
+  } else if (activeFilter === "no-context") {
+    baseWhere = {
+      deletedAt: null,
+      AND: [
+        { OR: [{ meaning: null }, { meaning: "" }] },
+        { OR: [{ historicalContext: null }, { historicalContext: "" }] },
+        { OR: [{ modernRelevance: null }, { modernRelevance: "" }] },
+      ],
+    }
+  } else if (activeFilter === "orphaned") {
     baseWhere = {
       deletedAt: null,
       OR: [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }],
     }
+  } else {
+    baseWhere = { deletedAt: null }
   }
 
   const query = search?.trim()
@@ -248,6 +290,11 @@ export default async function QuotesPage({
     hasCategory: Boolean(quote.categoryId && (quote.category?.name || quote.categorySlug)),
     hasSource: Boolean(quote.sourceId),
     hasTags: quote.tags.length > 0,
+    hasContext: Boolean(
+      (quote.meaning && quote.meaning.trim()) ||
+      (quote.historicalContext && quote.historicalContext.trim()) ||
+      (quote.modernRelevance && quote.modernRelevance.trim())
+    ),
   }))
 
   const exportParams = new URLSearchParams({ format: "csv" })
@@ -305,6 +352,7 @@ export default async function QuotesPage({
           { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed"), count: filterCounts.unattributed },
           { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source"), count: filterCounts.missingSource },
           { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags"), count: filterCounts.noTags },
+          { value: "no-context", label: filterLabels["no-context"], href: buildFilterHref("no-context"), count: filterCounts.noContext },
           { value: "orphaned", label: filterLabels.orphaned, href: buildFilterHref("orphaned"), count: filterCounts.orphaned },
         ]}
       />

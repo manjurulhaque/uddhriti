@@ -44,6 +44,22 @@ export async function GET(req: Request) {
       where.sourceId = null
     } else if (filter === "no-tags") {
       where.tags = { none: {} }
+    } else if (
+      filter === "no-context" ||
+      filter === "missing-context" ||
+      filter === "without-context" ||
+      filter === "no-interpretation" ||
+      filter === "missing-interpretation" ||
+      filter === "without-interpretation"
+    ) {
+      const noContextCondition: Prisma.QuoteWhereInput = {
+        AND: [
+          { OR: [{ meaning: null }, { meaning: "" }] },
+          { OR: [{ historicalContext: null }, { historicalContext: "" }] },
+          { OR: [{ modernRelevance: null }, { modernRelevance: "" }] },
+        ],
+      }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, noContextCondition] : [noContextCondition]
     } else if (filter === "orphaned") {
       where.OR = [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }]
     }
@@ -63,7 +79,7 @@ export async function GET(req: Request) {
             { source: { title: { contains: searchQuery, mode: "insensitive" } } },
           ],
         }
-        where.AND = [searchCondition]
+        where.AND = Array.isArray(where.AND) ? [...where.AND, searchCondition] : [searchCondition]
       }
     }
   }

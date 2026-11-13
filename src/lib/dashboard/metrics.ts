@@ -36,6 +36,8 @@ type QuoteCountMetricsRow = {
   publishedLast30Days: number
   publishedPrevious7Days: number
   featuredPublishedQuotes: number
+  noContextQuotes: number
+  hasContextQuotes: number
 }
 
 type EntityCountMetricsRow = {
@@ -120,6 +122,8 @@ export type DashboardMetrics = {
   activeCategories: number
   activeTags: number
   featuredPublishedQuotes: number
+  noContextQuotes: number
+  hasContextQuotes: number
 }
 
 async function fetchQuoteCountMetrics({
@@ -208,7 +212,21 @@ async function fetchQuoteCountMetrics({
         WHERE "deletedAt" IS NULL
           AND status = 'PUBLISHED'
           AND "isFeatured" = true
-      )::int AS "featuredPublishedQuotes"
+      )::int AS "featuredPublishedQuotes",
+      COUNT(*) FILTER (
+        WHERE "deletedAt" IS NULL
+          AND ("meaning" IS NULL OR TRIM("meaning") = '')
+          AND ("historicalContext" IS NULL OR TRIM("historicalContext") = '')
+          AND ("modernRelevance" IS NULL OR TRIM("modernRelevance") = '')
+      )::int AS "noContextQuotes",
+      COUNT(*) FILTER (
+        WHERE "deletedAt" IS NULL
+          AND (
+            ("meaning" IS NOT NULL AND TRIM("meaning") <> '')
+            OR ("historicalContext" IS NOT NULL AND TRIM("historicalContext") <> '')
+            OR ("modernRelevance" IS NOT NULL AND TRIM("modernRelevance") <> '')
+          )
+      )::int AS "hasContextQuotes"
     FROM "Quote"
   `
 
@@ -562,7 +580,22 @@ export async function getCachedDashboardMetrics(): Promise<DashboardMetrics> {
     return inMemoryDashboardCache.data
   }
 
-  const data = await getUnstableCachedDashboardMetrics()
-  inMemoryDashboardCache = { data, timestamp: now }
-  return data
+  try {
+    const data = await getUnstableCachedDashboardMetrics()
+    inMemoryDashboardCache = { data, timestamp: now }
+    return data
+  } catch {
+    // Graceful fallback when invoked outside Next.js request/page context (e.g. tests or CLI)
+    const sevenDaysAgo = subtractDays(new Date(), 7)
+    const fourteenDaysAgo = subtractDays(new Date(), 14)
+    const thirtyDaysAgo = subtractDays(new Date(), 30)
+
+    const data = await getDashboardMetrics({
+      sevenDaysAgo,
+      fourteenDaysAgo,
+      thirtyDaysAgo,
+    })
+    inMemoryDashboardCache = { data, timestamp: now }
+    return data
+  }
 }

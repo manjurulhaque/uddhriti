@@ -86,6 +86,8 @@ export default async function DashboardPage() {
     activeCategories,
     activeTags,
     featuredPublishedQuotes,
+    noContextQuotes,
+    hasContextQuotes,
   } = await getCachedDashboardMetrics()
 
   const publishRate = totalQuotes === 0 ? 0 : Math.round((publishedQuotes / totalQuotes) * 100)
@@ -122,6 +124,7 @@ export default async function DashboardPage() {
   const authorCoveragePct = totalAuthors === 0 ? 0 : Math.round((activeAuthors / totalAuthors) * 100)
   const categoryCoveragePct = totalCategories === 0 ? 0 : Math.round((activeCategories / totalCategories) * 100)
   const tagCoveragePct = totalTags === 0 ? 0 : Math.round((activeTags / totalTags) * 100)
+  const curatedCoveragePct = totalQuotes === 0 ? 0 : Math.round((hasContextQuotes / totalQuotes) * 100)
   const featuredPublishedPct = publishedQuotes === 0 ? 0 : Math.round((featuredPublishedQuotes / publishedQuotes) * 100)
   const engagementPerPublished7d = publishedLast7Days === 0 ? 0 : Math.round(engagementNow / publishedLast7Days)
   const published30dTotal = publishedDailySeries.reduce((sum, entry) => sum + entry.count, 0)
@@ -178,7 +181,7 @@ export default async function DashboardPage() {
       </section>
 
       <DashboardCard title="Needs Attention">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <AttentionCard
             title="Moderation Backlog"
             value={moderationBacklogQuotes}
@@ -187,11 +190,25 @@ export default async function DashboardPage() {
             tone={staleModerationQuotes > 0 ? "danger" : "warning"}
           />
           <AttentionCard
+            title="Attribution Risk"
+            value={attributionRiskQuotes}
+            subtitle="Disputed or misattributed quotes"
+            href="/admin/quotes?filter=disputed"
+            tone={attributionRiskQuotes > 0 ? "danger" : "neutral"}
+          />
+          <AttentionCard
             title="Unattributed Quotes"
             value={unattributedQuotes}
             subtitle="Missing author relation or author name"
             href="/admin/quotes?filter=unattributed"
             tone={unattributedQuotes > 0 ? "danger" : "neutral"}
+          />
+          <AttentionCard
+            title="Missing Context"
+            value={noContextQuotes}
+            subtitle="Quotes lacking meaning & context"
+            href="/admin/quotes?filter=no-context"
+            tone={noContextQuotes > 0 ? "warning" : "neutral"}
           />
           <AttentionCard
             title="Missing Sources"
@@ -206,13 +223,6 @@ export default async function DashboardPage() {
             subtitle="Quotes that need tag coverage"
             href="/admin/quotes?filter=no-tags"
             tone={noTagQuotes > 0 ? "warning" : "neutral"}
-          />
-          <AttentionCard
-            title="Trash"
-            value={deletedQuotes}
-            subtitle="Soft-deleted quotes waiting in recycle bin"
-            href="/admin/quotes/deleted"
-            tone={deletedQuotes > 0 ? "warning" : "neutral"}
           />
         </div>
       </DashboardCard>
@@ -271,11 +281,11 @@ export default async function DashboardPage() {
           title="Attribution Risk"
           value={formatNumber(attributionRiskQuotes)}
           subtitle={`${attributionRiskPct}% disputed/misattributed`}
-          href="/admin/quotes"
+          href={attributionRiskQuotes > 0 ? "/admin/quotes?filter=disputed" : "/admin/quotes"}
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           title="Author Coverage"
           value={`${authorCoveragePct}%`}
@@ -295,10 +305,16 @@ export default async function DashboardPage() {
           href="/admin/tags"
         />
         <KpiCard
+          title="Curated Context"
+          value={`${curatedCoveragePct}%`}
+          subtitle={`${formatNumber(hasContextQuotes)} curated with meaning/context`}
+          href="/admin/quotes?filter=has-context"
+        />
+        <KpiCard
           title="Featured Published"
           value={`${featuredPublishedPct}%`}
           subtitle={`${formatNumber(featuredPublishedQuotes)} featured | ${formatNumber(engagementPerPublished7d)} engagement/7d publish`}
-          href="/admin/quotes"
+          href="/admin/quotes?filter=featured"
         />
       </div>
 
@@ -329,20 +345,31 @@ export default async function DashboardPage() {
             <Metric label="Featured" value={featuredQuotes} />
             <Metric label="Publish Rate" value={`${publishRate}%`} />
           </div>
+          <div className="grid gap-2 text-sm mt-3 pt-3 border-t border-stone-100">
+            <DashboardLink href="/admin/quotes?filter=draft" label="View Draft & Review Quotes" />
+            <DashboardLink href="/admin/quotes?filter=featured" label="View Featured Quotes" />
+            <DashboardLink href="/admin/quotes?filter=archived" label="View Archived Quotes" />
+          </div>
         </DashboardCard>
 
         <DashboardCard title="Data Quality">
           <div className="grid grid-cols-2 gap-3">
             <Metric label="Attributed" value={attributedQuotes} />
             <Metric label="Unattributed" value={unattributedQuotes} />
+            <Metric label="Curated Context" value={hasContextQuotes} />
+            <Metric label="Missing Context" value={noContextQuotes} />
             <Metric label="Orphaned" value={orphanedQuotes} />
+            <Metric label="Curated Rate" value={`${curatedCoveragePct}%`} />
           </div>
-          <p className="text-xs text-gray-500 mt-3">
-            Unattributed quotes are missing author relation or author name.
+          <p className="text-xs text-stone-500 mt-3">
+            Editorial and quality health across attribution, contextual enrichment, and relationships.
           </p>
           <div className="grid gap-2 text-sm mt-3">
-            <DashboardLink href="/admin/quotes?filter=orphaned" label="View Orphaned Quotes" />
+            <DashboardLink href="/admin/quotes?filter=no-context" label="View Quotes Missing Context" />
+            <DashboardLink href="/admin/quotes?filter=has-context" label="View Curated Quotes (With Context)" />
+            <DashboardLink href="/admin/quotes?filter=disputed" label="View Disputed Quotes" />
             <DashboardLink href="/admin/quotes?filter=unattributed" label="View Unattributed Quotes" />
+            <DashboardLink href="/admin/quotes?filter=orphaned" label="View Orphaned Quotes" />
             <DashboardLink href="/admin/quotes?filter=missing-source" label="View Missing Source Quotes" />
             <DashboardLink href="/admin/quotes?filter=no-tags" label="View No-tag Quotes" />
           </div>

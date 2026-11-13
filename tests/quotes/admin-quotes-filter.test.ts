@@ -374,4 +374,88 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
       assert.equal(q.isFeatured, true)
     }
   })
+
+  it("filters quotes by author slug and author UUID", async () => {
+    // Find an author that has active quotes
+    const author = await prisma.author.findFirst({
+      where: {
+        quotes: {
+          some: {
+            deletedAt: null,
+          },
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+      },
+    })
+
+    assert.ok(author, "Should find at least one author with active quotes")
+    assert.ok(isValidUuid(author.id), "Author id must be a valid UUID")
+
+    // 1. Filter by author slug
+    const quotesBySlug = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { authorSlug: author.slug },
+          { author: { slug: author.slug } },
+        ],
+      },
+      select: {
+        id: true,
+        authorId: true,
+        authorSlug: true,
+        author: { select: { slug: true } },
+      },
+    })
+
+    assert.ok(quotesBySlug.length > 0, "Should return quotes for author slug")
+    for (const q of quotesBySlug) {
+      assert.equal(q.authorId, author.id, "Quote authorId must match author id")
+      const matchesSlug = q.authorSlug === author.slug || q.author?.slug === author.slug
+      assert.ok(matchesSlug, `Quote ${q.id} must match author slug`)
+    }
+
+    // 2. Filter by author UUID
+    const quotesById = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        authorId: author.id,
+      },
+      select: {
+        id: true,
+        authorId: true,
+      },
+    })
+
+    assert.equal(
+      quotesById.length,
+      quotesBySlug.length,
+      "Quotes filtered by author UUID must match quotes filtered by author slug"
+    )
+
+    // 3. Combined filter: Author + Status or isFeatured
+    const authorQuotesPublished = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { authorId: author.id },
+          { status: "PUBLISHED" },
+        ],
+      },
+      select: {
+        id: true,
+        authorId: true,
+        status: true,
+      },
+    })
+
+    for (const q of authorQuotesPublished) {
+      assert.equal(q.authorId, author.id)
+      assert.equal(q.status, "PUBLISHED")
+    }
+  })
 })

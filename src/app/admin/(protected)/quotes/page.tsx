@@ -38,13 +38,14 @@ const quoteSelect = {
   publishedAt: true,
   authorId: true,
   authorName: true,
+  authorSlug: true,
   categoryId: true,
   categorySlug: true,
   sourceId: true,
   meaning: true,
   historicalContext: true,
   modernRelevance: true,
-  author: { select: { name: true } },
+  author: { select: { name: true, slug: true } },
   category: { select: { name: true, slug: true } },
   source: { select: { title: true } },
   tags: { select: { tagId: true } },
@@ -201,7 +202,8 @@ function buildQuoteWhere(
   activeFilter: QuoteFilter,
   search?: string,
   searchIds?: string[] | null,
-  categorySlugOrId?: string | null
+  categorySlugOrId?: string | null,
+  authorSlugOrId?: string | null
 ): Prisma.QuoteWhereInput {
   let baseWhere: Prisma.QuoteWhereInput
 
@@ -261,6 +263,20 @@ function buildQuoteWhere(
     }
   }
 
+  const trimmedAuthor = authorSlugOrId?.trim()
+  if (trimmedAuthor && trimmedAuthor !== "all") {
+    if (isValidUuid(trimmedAuthor)) {
+      conditions.push({ authorId: trimmedAuthor })
+    } else {
+      conditions.push({
+        OR: [
+          { authorSlug: trimmedAuthor },
+          { author: { slug: trimmedAuthor } },
+        ],
+      })
+    }
+  }
+
   const query = search?.trim()
   if (query) {
     // If GIN full-text index returned matching quote IDs, filter directly by PK id
@@ -308,6 +324,12 @@ export default async function QuotesPage({
       : typeof resolvedSearchParams.categoryId === "string"
       ? resolvedSearchParams.categoryId.trim()
       : "all"
+  const activeAuthor =
+    typeof resolvedSearchParams.author === "string"
+      ? resolvedSearchParams.author.trim()
+      : typeof resolvedSearchParams.authorId === "string"
+      ? resolvedSearchParams.authorId.trim()
+      : ""
   const searchQuery =
     typeof resolvedSearchParams.search === "string"
       ? resolvedSearchParams.search.trim()
@@ -315,9 +337,18 @@ export default async function QuotesPage({
       ? resolvedSearchParams.q.trim()
       : ""
   const searchMatchingIds = searchQuery ? await searchQuoteIds(searchQuery) : null
-  const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds, activeCategory)
+  const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds, activeCategory, activeAuthor)
   const orderBy = buildQuoteOrderBy(activeSort)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
+
+  let activeAuthorName: string | null = null
+  if (activeAuthor && activeAuthor !== "all") {
+    const authorRecord = await prisma.author.findFirst({
+      where: isValidUuid(activeAuthor) ? { id: activeAuthor } : { slug: activeAuthor },
+      select: { name: true, slug: true },
+    })
+    activeAuthorName = authorRecord?.name ?? activeAuthor
+  }
 
   const [total, initialQuotes, filterCounts, categories] = await Promise.all([
     prisma.quote.count({ where }),
@@ -358,7 +389,9 @@ export default async function QuotesPage({
     attributionStatus: quote.attributionStatus,
     createdAt: quote.createdAt.toISOString(),
     publishedAt: quote.publishedAt?.toISOString() ?? null,
+    authorId: quote.authorId ?? null,
     authorName: quote.author?.name ?? quote.authorName ?? null,
+    authorSlug: quote.author?.slug ?? quote.authorSlug ?? null,
     categoryName: quote.category?.name ?? null,
     categorySlug: quote.category?.slug ?? quote.categorySlug ?? null,
     sourceTitle: quote.source?.title ?? null,
@@ -376,6 +409,7 @@ export default async function QuotesPage({
   const exportParams = new URLSearchParams({ format: "csv" })
   if (activeFilter !== "all") exportParams.set("filter", activeFilter)
   if (activeCategory !== "all") exportParams.set("category", activeCategory)
+  if (activeAuthor && activeAuthor !== "all") exportParams.set("author", activeAuthor)
   if (activeSort !== "newest") exportParams.set("sort", activeSort)
   if (searchQuery) exportParams.set("search", searchQuery)
   const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
@@ -384,6 +418,7 @@ export default async function QuotesPage({
     const params = new URLSearchParams()
     if (filterValue !== "all") params.set("filter", filterValue)
     if (activeCategory !== "all") params.set("category", activeCategory)
+    if (activeAuthor && activeAuthor !== "all") params.set("author", activeAuthor)
     if (activeSort !== "newest") params.set("sort", activeSort)
     if (searchQuery) params.set("search", searchQuery)
     const qs = params.toString()
@@ -449,6 +484,8 @@ export default async function QuotesPage({
         initialSort={activeSort}
         initialCategory={activeCategory}
         categoryOptions={categories}
+        initialAuthor={activeAuthor}
+        initialAuthorName={activeAuthorName}
       />
     </div>
   )

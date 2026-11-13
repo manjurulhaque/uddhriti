@@ -270,9 +270,21 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
                   subtitle={subtitle || undefined}
                   badge={<AdminEntityCountBadge count={author.quoteCount} />}
                   meta={
-                    <span className="text-[11px] text-stone-400">
-                      Added {formatDateInAppTimeZone(author.createdAt)}
-                    </span>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-[11px] text-stone-400">
+                        Added {formatDateInAppTimeZone(author.createdAt)}
+                      </span>
+                      {author.quoteCount > 0 && (
+                        <a
+                          href={`/admin/quotes?author=${author.slug}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-semibold text-stone-700 hover:text-black hover:underline inline-flex items-center gap-0.5"
+                          title={`View ${author.quoteCount} quotes by ${author.name}`}
+                        >
+                          View quotes &rarr;
+                        </a>
+                      )}
+                    </div>
                   }
                 />
               )

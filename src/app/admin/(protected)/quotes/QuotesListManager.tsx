@@ -16,7 +16,9 @@ type QuoteItem = {
   attributionStatus?: string
   createdAt: string
   publishedAt: string | null
+  authorId?: string | null
   authorName: string | null
+  authorSlug?: string | null
   categoryName: string | null
   categorySlug: string | null
   sourceTitle: string | null
@@ -73,7 +75,8 @@ function buildQuotesListHref(
   page: number,
   search?: string,
   sort?: SortOption,
-  category?: string
+  category?: string,
+  author?: string
 ) {
   const params = new URLSearchParams()
   if (filter !== "all") {
@@ -81,6 +84,9 @@ function buildQuotesListHref(
   }
   if (category && category !== "all") {
     params.set("category", category)
+  }
+  if (author && author !== "all") {
+    params.set("author", author)
   }
   if (sort && sort !== "newest") {
     params.set("sort", sort)
@@ -107,6 +113,8 @@ export function QuotesListManager({
   initialSort = "newest",
   initialCategory = "all",
   categoryOptions = [],
+  initialAuthor = "",
+  initialAuthorName = null,
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -118,6 +126,8 @@ export function QuotesListManager({
   initialSort?: SortOption
   initialCategory?: string
   categoryOptions?: CategoryOption[]
+  initialAuthor?: string
+  initialAuthorName?: string | null
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -165,6 +175,13 @@ export function QuotesListManager({
     setCategoryFilter(resolvedInitialCategory)
   }
 
+  const [authorFilter, setAuthorFilter] = useState(initialAuthor)
+  const [prevInitialAuthor, setPrevInitialAuthor] = useState(initialAuthor)
+  if (prevInitialAuthor !== initialAuthor) {
+    setPrevInitialAuthor(initialAuthor)
+    setAuthorFilter(initialAuthor)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -175,12 +192,12 @@ export function QuotesListManager({
     if (search.trim() === initialSearch.trim()) return
 
     const timer = setTimeout(() => {
-      const href = buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter)
+      const href = buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter, authorFilter)
       router.push(href)
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [search, activeFilter, initialSearch, sortBy, categoryFilter, router])
+  }, [search, activeFilter, initialSearch, sortBy, categoryFilter, authorFilter, router])
 
   const selectedTagNames = useMemo(
     () => tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name),
@@ -431,27 +448,63 @@ export function QuotesListManager({
 
   function handleSortChange(nextSort: SortOption) {
     setSortBy(nextSort)
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), nextSort, categoryFilter))
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), nextSort, categoryFilter, authorFilter))
   }
 
   function handleCategoryChange(nextCategory: string) {
     setCategoryFilter(nextCategory)
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, nextCategory))
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, nextCategory, authorFilter))
+  }
+
+  function handleAuthorFilter(authorSlugOrId: string) {
+    setAuthorFilter(authorSlugOrId)
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter, authorSlugOrId))
+  }
+
+  function handleClearAuthorFilter() {
+    setAuthorFilter("")
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter, ""))
   }
 
   function handleClearFilters() {
     setSearch("")
     setSortBy("newest")
     setCategoryFilter("all")
-    if (initialSearch.trim() || initialSort !== "newest" || resolvedInitialCategory !== "all") {
-      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all"))
+    setAuthorFilter("")
+    if (
+      initialSearch.trim() ||
+      initialSort !== "newest" ||
+      resolvedInitialCategory !== "all" ||
+      initialAuthor
+    ) {
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", ""))
     }
   }
 
-  const hasActiveFilters = search.trim().length > 0 || sortBy !== "newest" || categoryFilter !== "all"
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    sortBy !== "newest" ||
+    categoryFilter !== "all" ||
+    Boolean(authorFilter && authorFilter !== "all")
 
   return (
     <div className="space-y-4">
+      {authorFilter ? (
+        <div className="flex items-center justify-between rounded-xl border border-stone-200/90 bg-stone-50/90 px-3.5 py-2 text-xs text-stone-800">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-stone-600">Filtered by Author:</span>
+            <span className="font-bold text-stone-900">{initialAuthorName || authorFilter}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearAuthorFilter}
+            className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
+          >
+            Clear Author Filter ✕
+          </button>
+        </div>
+      ) : null}
+
       <FilterToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -691,7 +744,36 @@ export function QuotesListManager({
               }
               subtitle={
                 <span className="flex items-center flex-wrap gap-1.5 text-xs text-stone-600 mt-1">
-                  <span className="font-medium text-stone-800">{quote.authorName ?? "Unknown Author"}</span>
+                  <span
+                    role="button"
+                    tabIndex={quote.authorSlug || quote.authorId ? 0 : undefined}
+                    onClick={(e) => {
+                      if (quote.authorSlug || quote.authorId) {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleAuthorFilter(quote.authorSlug || quote.authorId || "")
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.key === "Enter" || e.key === " ") && (quote.authorSlug || quote.authorId)) {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleAuthorFilter(quote.authorSlug || quote.authorId || "")
+                      }
+                    }}
+                    title={
+                      quote.authorSlug || quote.authorId
+                        ? `Click to filter quotes by ${quote.authorName}`
+                        : undefined
+                    }
+                    className={`font-medium ${
+                      quote.authorSlug || quote.authorId
+                        ? "text-stone-800 hover:text-black hover:underline cursor-pointer"
+                        : "text-stone-600"
+                    }`}
+                  >
+                    {quote.authorName ?? "Unknown Author"}
+                  </span>
                   {quote.categoryName ? (
                     <>
                       <span className="text-stone-300">•</span>
@@ -858,7 +940,7 @@ export function QuotesListManager({
             totalPages={effectiveTotalPages}
             totalItems={effectiveTotal}
             pageSize={pageSize}
-            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch, sortBy, categoryFilter)}
+            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch, sortBy, categoryFilter, authorFilter)}
           />
         </div>
       ) : null}

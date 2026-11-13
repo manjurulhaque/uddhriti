@@ -18,6 +18,7 @@ export async function GET(req: Request) {
   const format = searchParams.get("format")?.toLowerCase() === "json" ? "json" : "csv"
   const filter = searchParams.get("filter")
   const categoryParam = searchParams.get("category")?.trim() || searchParams.get("categoryId")?.trim()
+  const authorParam = searchParams.get("author")?.trim() || searchParams.get("authorId")?.trim()
   const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
   const rawIds = searchParams.get("ids")
@@ -90,6 +91,18 @@ export async function GET(req: Request) {
         ? { categoryId: categoryParam }
         : { categorySlug: categoryParam }
       where.AND = Array.isArray(where.AND) ? [...where.AND, categoryCondition] : [categoryCondition]
+    }
+
+    if (authorParam && authorParam !== "all") {
+      const authorCondition: Prisma.QuoteWhereInput = isValidUuid(authorParam)
+        ? { authorId: authorParam }
+        : {
+            OR: [
+              { authorSlug: authorParam },
+              { author: { slug: authorParam } },
+            ],
+          }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, authorCondition] : [authorCondition]
     }
 
     const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()

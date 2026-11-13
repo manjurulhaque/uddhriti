@@ -9,6 +9,7 @@ import { parseSafePageNumber } from "@/lib/security/input"
 import { searchQuoteIds } from "@/lib/quotes/search"
 import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
 import { registerPublicDataInvalidator } from "@/lib/revalidation"
+import { isValidUuid } from "@/lib/api/route-helpers"
 
 type QuoteFilter =
   | "all"
@@ -199,7 +200,8 @@ function getPageNumber(value: string | string[] | undefined) {
 function buildQuoteWhere(
   activeFilter: QuoteFilter,
   search?: string,
-  searchIds?: string[] | null
+  searchIds?: string[] | null,
+  categorySlugOrId?: string | null
 ): Prisma.QuoteWhereInput {
   let baseWhere: Prisma.QuoteWhereInput
 
@@ -248,29 +250,43 @@ function buildQuoteWhere(
     baseWhere = { deletedAt: null }
   }
 
-  const query = search?.trim()
-  if (!query) return baseWhere
+  const conditions: Prisma.QuoteWhereInput[] = [baseWhere]
 
-  // If GIN full-text index returned matching quote IDs, filter directly by PK id
-  if (Array.isArray(searchIds)) {
-    return {
-      AND: [baseWhere, { id: { in: searchIds } }],
+  const trimmedCategory = categorySlugOrId?.trim()
+  if (trimmedCategory && trimmedCategory !== "all") {
+    if (isValidUuid(trimmedCategory)) {
+      conditions.push({ categoryId: trimmedCategory })
+    } else {
+      conditions.push({ categorySlug: trimmedCategory })
     }
   }
 
-  // Graceful fallback to multi-column ILIKE if FTS was unavailable
-  const searchCondition: Prisma.QuoteWhereInput = {
-    OR: [
-      { content: { contains: query, mode: "insensitive" } },
-      { authorName: { contains: query, mode: "insensitive" } },
-      { author: { name: { contains: query, mode: "insensitive" } } },
-      { category: { name: { contains: query, mode: "insensitive" } } },
-      { source: { title: { contains: query, mode: "insensitive" } } },
-    ],
+  const query = search?.trim()
+  if (query) {
+    // If GIN full-text index returned matching quote IDs, filter directly by PK id
+    if (Array.isArray(searchIds)) {
+      conditions.push({ id: { in: searchIds } })
+    } else {
+      // Graceful fallback to multi-column ILIKE if FTS was unavailable
+      const searchCondition: Prisma.QuoteWhereInput = {
+        OR: [
+          { content: { contains: query, mode: "insensitive" } },
+          { authorName: { contains: query, mode: "insensitive" } },
+          { author: { name: { contains: query, mode: "insensitive" } } },
+          { category: { name: { contains: query, mode: "insensitive" } } },
+          { source: { title: { contains: query, mode: "insensitive" } } },
+        ],
+      }
+      conditions.push(searchCondition)
+    }
+  }
+
+  if (conditions.length === 1) {
+    return conditions[0]
   }
 
   return {
-    AND: [baseWhere, searchCondition],
+    AND: conditions,
   }
 }
 
@@ -286,6 +302,12 @@ export default async function QuotesPage({
   const activeFilter = getQuoteFilter(resolvedSearchParams.filter)
   const activeSort = getQuoteSort(resolvedSearchParams.sort)
   const requestedPage = getPageNumber(resolvedSearchParams.page)
+  const activeCategory =
+    typeof resolvedSearchParams.category === "string"
+      ? resolvedSearchParams.category.trim()
+      : typeof resolvedSearchParams.categoryId === "string"
+      ? resolvedSearchParams.categoryId.trim()
+      : "all"
   const searchQuery =
     typeof resolvedSearchParams.search === "string"
       ? resolvedSearchParams.search.trim()
@@ -293,11 +315,11 @@ export default async function QuotesPage({
       ? resolvedSearchParams.q.trim()
       : ""
   const searchMatchingIds = searchQuery ? await searchQuoteIds(searchQuery) : null
-  const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds)
+  const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds, activeCategory)
   const orderBy = buildQuoteOrderBy(activeSort)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
 
-  const [total, initialQuotes, filterCounts] = await Promise.all([
+  const [total, initialQuotes, filterCounts, categories] = await Promise.all([
     prisma.quote.count({ where }),
     prisma.quote.findMany({
       where,
@@ -307,6 +329,10 @@ export default async function QuotesPage({
       skip: initialSkip,
     }),
     getQuoteFilterCounts(),
+    prisma.category.findMany({
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: "asc" },
+    }),
   ])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -349,6 +375,7 @@ export default async function QuotesPage({
 
   const exportParams = new URLSearchParams({ format: "csv" })
   if (activeFilter !== "all") exportParams.set("filter", activeFilter)
+  if (activeCategory !== "all") exportParams.set("category", activeCategory)
   if (activeSort !== "newest") exportParams.set("sort", activeSort)
   if (searchQuery) exportParams.set("search", searchQuery)
   const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
@@ -356,6 +383,7 @@ export default async function QuotesPage({
   const buildFilterHref = (filterValue: QuoteFilter) => {
     const params = new URLSearchParams()
     if (filterValue !== "all") params.set("filter", filterValue)
+    if (activeCategory !== "all") params.set("category", activeCategory)
     if (activeSort !== "newest") params.set("sort", activeSort)
     if (searchQuery) params.set("search", searchQuery)
     const qs = params.toString()
@@ -419,6 +447,8 @@ export default async function QuotesPage({
         total={total}
         initialSearch={searchQuery}
         initialSort={activeSort}
+        initialCategory={activeCategory}
+        categoryOptions={categories}
       />
     </div>
   )

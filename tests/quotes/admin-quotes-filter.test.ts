@@ -1,6 +1,7 @@
 import { describe, it, after } from "node:test"
 import assert from "node:assert/strict"
 import { prisma } from "../../src/lib/prisma"
+import { isValidUuid } from "../../src/lib/api/route-helpers"
 
 // Mirroring the filter resolver function from src/app/admin/(protected)/quotes/page.tsx
 function getQuoteFilter(value: string | string[] | undefined) {
@@ -292,5 +293,85 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
     `
 
     assert.equal(rows[0].featured, featuredQuotes.length, "Raw SQL featured count must match Prisma count")
+  })
+
+  it("filters quotes by category slug and category UUID", async () => {
+    // Find an active category that contains quotes
+    const category = await prisma.category.findFirst({
+      where: {
+        quotes: {
+          some: {
+            deletedAt: null,
+          },
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+      },
+    })
+
+    assert.ok(category, "Should find at least one category with quotes")
+    assert.ok(isValidUuid(category.id), "Category id must be a valid UUID")
+
+    // 1. Filter by category slug
+    const quotesBySlug = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        categorySlug: category.slug,
+      },
+      select: {
+        id: true,
+        categoryId: true,
+        categorySlug: true,
+      },
+    })
+
+    assert.ok(quotesBySlug.length > 0, "Should return quotes for category slug")
+    for (const q of quotesBySlug) {
+      assert.equal(q.categorySlug, category.slug, "Quote categorySlug must match")
+      assert.equal(q.categoryId, category.id, "Quote categoryId must match category id")
+    }
+
+    // 2. Filter by category UUID
+    const quotesById = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        categoryId: category.id,
+      },
+      select: {
+        id: true,
+        categoryId: true,
+        categorySlug: true,
+      },
+    })
+
+    assert.equal(
+      quotesById.length,
+      quotesBySlug.length,
+      "Quotes filtered by category UUID must match count of quotes filtered by category slug"
+    )
+
+    // 3. Filter by category combined with a status or attribute (e.g. isFeatured or status)
+    const featuredCategoryQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { categorySlug: category.slug },
+          { isFeatured: true },
+        ],
+      },
+      select: {
+        id: true,
+        isFeatured: true,
+        categorySlug: true,
+      },
+    })
+
+    for (const q of featuredCategoryQuotes) {
+      assert.equal(q.categorySlug, category.slug)
+      assert.equal(q.isFeatured, true)
+    }
   })
 })

@@ -4,6 +4,7 @@ import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { searchQuoteIds } from "@/lib/quotes/search"
 import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
 import { escapeCsvCell } from "@/lib/security/csv"
+import { isValidUuid } from "@/lib/api/route-helpers"
 import type { Prisma, QuoteStatus } from "@prisma/client"
 
 export async function GET(req: Request) {
@@ -16,6 +17,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const format = searchParams.get("format")?.toLowerCase() === "json" ? "json" : "csv"
   const filter = searchParams.get("filter")
+  const categoryParam = searchParams.get("category")?.trim() || searchParams.get("categoryId")?.trim()
   const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
   const rawIds = searchParams.get("ids")
@@ -81,6 +83,13 @@ export async function GET(req: Request) {
       where.AND = Array.isArray(where.AND) ? [...where.AND, hasContextCondition] : [hasContextCondition]
     } else if (filter === "orphaned") {
       where.OR = [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }]
+    }
+
+    if (categoryParam && categoryParam !== "all") {
+      const categoryCondition: Prisma.QuoteWhereInput = isValidUuid(categoryParam)
+        ? { categoryId: categoryParam }
+        : { categorySlug: categoryParam }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, categoryCondition] : [categoryCondition]
     }
 
     const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()

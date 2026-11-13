@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar, AdminEntityCard } from "@/components/admin"
-import { Pagination, EmptyState, ConfirmModal, Button, Badge } from "@/components/ui"
+import { Pagination, EmptyState, ConfirmModal, Button, Badge, Select } from "@/components/ui"
 import { quoteSortOptions as sortOptions, type QuoteSortOption as SortOption } from "@/lib/quotes/sort"
 
 type QuoteItem = {
@@ -62,15 +62,25 @@ type QuoteFilter =
   | "has-context"
   | "orphaned"
 
+type CategoryOption = {
+  id: string
+  name: string
+  slug: string
+}
+
 function buildQuotesListHref(
   filter: QuoteFilter,
   page: number,
   search?: string,
-  sort?: SortOption
+  sort?: SortOption,
+  category?: string
 ) {
   const params = new URLSearchParams()
   if (filter !== "all") {
     params.set("filter", filter)
+  }
+  if (category && category !== "all") {
+    params.set("category", category)
   }
   if (sort && sort !== "newest") {
     params.set("sort", sort)
@@ -95,6 +105,8 @@ export function QuotesListManager({
   total,
   initialSearch = "",
   initialSort = "newest",
+  initialCategory = "all",
+  categoryOptions = [],
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -104,6 +116,8 @@ export function QuotesListManager({
   total: number
   initialSearch?: string
   initialSort?: SortOption
+  initialCategory?: string
+  categoryOptions?: CategoryOption[]
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -115,7 +129,7 @@ export function QuotesListManager({
   const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
   const [verificationValue, setVerificationValue] = useState(true)
   const [authors, setAuthors] = useState<Option[]>([])
-  const [categories, setCategories] = useState<Option[]>([])
+  const [categories, setCategories] = useState<Option[]>(categoryOptions)
   const [sources, setSources] = useState<Option[]>([])
   const [tags, setTags] = useState<TagOption[]>([])
   const [authorId, setAuthorId] = useState("")
@@ -136,6 +150,21 @@ export function QuotesListManager({
     setSortBy(initialSort)
   }
 
+  const resolvedInitialCategory = useMemo(() => {
+    if (!initialCategory || initialCategory === "all") return "all"
+    const match = categoryOptions.find(
+      (c) => c.slug === initialCategory || c.id === initialCategory
+    )
+    return match ? match.slug : initialCategory
+  }, [initialCategory, categoryOptions])
+
+  const [categoryFilter, setCategoryFilter] = useState(resolvedInitialCategory)
+  const [prevInitialCategory, setPrevInitialCategory] = useState(resolvedInitialCategory)
+  if (prevInitialCategory !== resolvedInitialCategory) {
+    setPrevInitialCategory(resolvedInitialCategory)
+    setCategoryFilter(resolvedInitialCategory)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -146,12 +175,12 @@ export function QuotesListManager({
     if (search.trim() === initialSearch.trim()) return
 
     const timer = setTimeout(() => {
-      const href = buildQuotesListHref(activeFilter, 1, search.trim(), sortBy)
+      const href = buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter)
       router.push(href)
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [search, activeFilter, initialSearch, sortBy, router])
+  }, [search, activeFilter, initialSearch, sortBy, categoryFilter, router])
 
   const selectedTagNames = useMemo(
     () => tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name),
@@ -402,18 +431,24 @@ export function QuotesListManager({
 
   function handleSortChange(nextSort: SortOption) {
     setSortBy(nextSort)
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), nextSort))
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), nextSort, categoryFilter))
+  }
+
+  function handleCategoryChange(nextCategory: string) {
+    setCategoryFilter(nextCategory)
+    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, nextCategory))
   }
 
   function handleClearFilters() {
     setSearch("")
     setSortBy("newest")
-    if (initialSearch.trim() || initialSort !== "newest") {
-      router.push(buildQuotesListHref(activeFilter, 1, "", "newest"))
+    setCategoryFilter("all")
+    if (initialSearch.trim() || initialSort !== "newest" || resolvedInitialCategory !== "all") {
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all"))
     }
   }
 
-  const hasActiveFilters = search.trim().length > 0 || sortBy !== "newest"
+  const hasActiveFilters = search.trim().length > 0 || sortBy !== "newest" || categoryFilter !== "all"
 
   return (
     <div className="space-y-4">
@@ -424,6 +459,21 @@ export function QuotesListManager({
         sortValue={sortBy}
         onSortChange={(value) => handleSortChange(value as SortOption)}
         sortOptions={sortOptions}
+        filters={
+          categoryOptions.length > 0 ? (
+            <Select
+              value={categoryFilter}
+              onChange={(event) => handleCategoryChange(event.target.value)}
+              options={[
+                { value: "all", label: "Category: All Categories" },
+                ...categoryOptions.map((cat) => ({
+                  value: cat.slug,
+                  label: `Category: ${cat.name}`,
+                })),
+              ]}
+            />
+          ) : undefined
+        }
         visibleCount={visibleQuotes.length}
         totalCount={effectiveTotal}
         itemLabel={`quotes${search.trim() ? " found" : ` on page${activeFilterLabel !== "All Quotes" ? ` (${activeFilterLabel})` : ""}`}`}
@@ -808,7 +858,7 @@ export function QuotesListManager({
             totalPages={effectiveTotalPages}
             totalItems={effectiveTotal}
             pageSize={pageSize}
-            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch, sortBy)}
+            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch, sortBy, categoryFilter)}
           />
         </div>
       ) : null}

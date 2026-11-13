@@ -521,6 +521,9 @@ export default async function QuotesPage({
       name: qt.tag.name,
       slug: qt.tag.slug,
     })),
+    meaning: quote.meaning ?? null,
+    historicalContext: quote.historicalContext ?? null,
+    modernRelevance: quote.modernRelevance ?? null,
     hasContext: Boolean(
       (quote.meaning && quote.meaning.trim()) ||
       (quote.historicalContext && quote.historicalContext.trim()) ||

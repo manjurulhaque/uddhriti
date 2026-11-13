@@ -3,7 +3,7 @@ import slugify from "slugify"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
-import { quoteUpdateSchema } from "@/lib/validation/quote"
+import { quoteUpdateSchema, quoteContextUpdateSchema } from "@/lib/validation/quote"
 import { parseDateTimeLocalInAppTimeZone } from "@/lib/datetime"
 import {
   recalculateAuthorQuoteCounts,
@@ -80,6 +80,94 @@ export async function PATCH(
   if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
+
+  // Support lightweight quick-update for quote meaning, historical context, and modern relevance
+  if (
+    body?.action === "updateContext" ||
+    (!body?.content &&
+      !body?.authorId &&
+      (body?.meaning !== undefined ||
+        body?.historicalContext !== undefined ||
+        body?.modernRelevance !== undefined))
+  ) {
+    const parsedContext = quoteContextUpdateSchema.safeParse(body)
+    if (!parsedContext.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: parsedContext.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const existing = await prisma.quote.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        slug: true,
+        status: true,
+        content: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } } } },
+      },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: "Quote not found" }, { status: 404 })
+    }
+
+    const meaning = parsedContext.data.meaning !== undefined ? (parsedContext.data.meaning?.trim() || null) : undefined
+    const historicalContext = parsedContext.data.historicalContext !== undefined ? (parsedContext.data.historicalContext?.trim() || null) : undefined
+    const modernRelevance = parsedContext.data.modernRelevance !== undefined ? (parsedContext.data.modernRelevance?.trim() || null) : undefined
+
+    const updatedQuote = await prisma.quote.update({
+      where: { id },
+      data: {
+        ...(meaning !== undefined && { meaning }),
+        ...(historicalContext !== undefined && { historicalContext }),
+        ...(modernRelevance !== undefined && { modernRelevance }),
+      },
+      select: {
+        id: true,
+        meaning: true,
+        historicalContext: true,
+        modernRelevance: true,
+        status: true,
+        slug: true,
+      },
+    })
+
+    if (existing.status === "PUBLISHED") {
+      revalidatePublicSurfaces()
+      revalidateQuote(existing.slug, {
+        authorSlug: existing.author?.slug,
+        categorySlug: existing.category?.slug,
+        tagSlugs: existing.tags.map((t) => t.tag.slug),
+      })
+    }
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      entityId: id,
+      entityName: existing.content?.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        action: "updateContext",
+        hasMeaning: Boolean(updatedQuote.meaning),
+        hasHistoricalContext: Boolean(updatedQuote.historicalContext),
+        hasModernRelevance: Boolean(updatedQuote.modernRelevance),
+      },
+      req,
+    })
+
+    return NextResponse.json({
+      success: true,
+      quote: updatedQuote,
+    })
+  }
+
   const parsed = quoteUpdateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(

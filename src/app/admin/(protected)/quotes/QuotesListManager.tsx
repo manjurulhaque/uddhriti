@@ -6,6 +6,7 @@ import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar, AdminEntityCard } from "@/components/admin"
 import { Pagination, EmptyState, ConfirmModal, Button, Badge, Select } from "@/components/ui"
 import { quoteSortOptions as sortOptions, type QuoteSortOption as SortOption } from "@/lib/quotes/sort"
+import { QuoteContextQuickEditor } from "./QuoteContextQuickEditor"
 
 type QuoteItem = {
   id: string
@@ -30,6 +31,9 @@ type QuoteItem = {
   hasTags: boolean
   tags?: Array<{ id: string; name: string; slug: string }>
   hasContext?: boolean
+  meaning?: string | null
+  historicalContext?: string | null
+  modernRelevance?: string | null
 }
 
 type Option = {
@@ -177,6 +181,40 @@ export function QuotesListManager({
   const [verificationOverrides, setVerificationOverrides] = useState<Record<string, boolean>>({})
   const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
   const [verificationValue, setVerificationValue] = useState(true)
+  const [editingContextQuote, setEditingContextQuote] = useState<{
+    id: string
+    content: string
+    authorName: string | null
+    categoryName: string | null
+    meaning?: string | null
+    historicalContext?: string | null
+    modernRelevance?: string | null
+  } | null>(null)
+  const [contextOverrides, setContextOverrides] = useState<
+    Record<
+      string,
+      {
+        meaning: string | null
+        historicalContext: string | null
+        modernRelevance: string | null
+        hasContext: boolean
+      }
+    >
+  >({})
+
+  function handleContextSaveSuccess(updated: {
+    id: string
+    meaning: string | null
+    historicalContext: string | null
+    modernRelevance: string | null
+    hasContext: boolean
+  }) {
+    setContextOverrides((prev) => ({
+      ...prev,
+      [updated.id]: updated,
+    }))
+    router.refresh()
+  }
   const [authors, setAuthors] = useState<Option[]>([])
   const [categories, setCategories] = useState<Option[]>(categoryOptions)
   const [sources, setSources] = useState<Option[]>([])
@@ -1168,6 +1206,15 @@ export function QuotesListManager({
           const isTogglingStatus = togglingStatusId === quote.id
           const isTogglingVerification = togglingVerificationId === quote.id
           const isPublished = effectiveStatus === "PUBLISHED"
+          const effectiveMeaning = contextOverrides[quote.id]?.meaning ?? quote.meaning ?? null
+          const effectiveHistoricalContext =
+            contextOverrides[quote.id]?.historicalContext ?? quote.historicalContext ?? null
+          const effectiveModernRelevance =
+            contextOverrides[quote.id]?.modernRelevance ?? quote.modernRelevance ?? null
+          const effectiveHasContext =
+            contextOverrides[quote.id] !== undefined
+              ? contextOverrides[quote.id].hasContext
+              : quote.hasContext
 
           return (
             <AdminEntityCard
@@ -1450,15 +1497,93 @@ export function QuotesListManager({
                       </Badge>
                     </span>
                   )}
-                  {quote.hasContext === true && (
-                    <Badge variant="outline" size="xs" className="font-sans font-medium text-emerald-700 bg-emerald-50 border-emerald-200">
-                      Has context
-                    </Badge>
+                  {effectiveHasContext === true && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setEditingContextQuote({
+                          id: quote.id,
+                          content: quote.content,
+                          authorName: quote.authorName,
+                          categoryName: quote.categoryName,
+                          meaning: effectiveMeaning,
+                          historicalContext: effectiveHistoricalContext,
+                          modernRelevance: effectiveModernRelevance,
+                        })
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setEditingContextQuote({
+                            id: quote.id,
+                            content: quote.content,
+                            authorName: quote.authorName,
+                            categoryName: quote.categoryName,
+                            meaning: effectiveMeaning,
+                            historicalContext: effectiveHistoricalContext,
+                            modernRelevance: effectiveModernRelevance,
+                          })
+                        }
+                      }}
+                      title="Click to view and edit quote meaning & context"
+                      className="cursor-pointer inline-flex"
+                    >
+                      <Badge
+                        variant="outline"
+                        size="xs"
+                        className="font-sans font-medium text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition cursor-pointer"
+                      >
+                        Has context ✎
+                      </Badge>
+                    </span>
                   )}
-                  {quote.hasContext === false && (
-                    <Badge variant="neutral" size="xs">
-                      No context
-                    </Badge>
+                  {effectiveHasContext === false && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setEditingContextQuote({
+                          id: quote.id,
+                          content: quote.content,
+                          authorName: quote.authorName,
+                          categoryName: quote.categoryName,
+                          meaning: effectiveMeaning,
+                          historicalContext: effectiveHistoricalContext,
+                          modernRelevance: effectiveModernRelevance,
+                        })
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setEditingContextQuote({
+                            id: quote.id,
+                            content: quote.content,
+                            authorName: quote.authorName,
+                            categoryName: quote.categoryName,
+                            meaning: effectiveMeaning,
+                            historicalContext: effectiveHistoricalContext,
+                            modernRelevance: effectiveModernRelevance,
+                          })
+                        }
+                      }}
+                      title="Click to enrich quote meaning & context"
+                      className="cursor-pointer inline-flex"
+                    >
+                      <Badge
+                        variant="neutral"
+                        size="xs"
+                        className="hover:border-stone-400 hover:bg-stone-200/60 transition cursor-pointer"
+                      >
+                        No context +
+                      </Badge>
+                    </span>
                   )}
                   <span className="text-[11px] text-stone-400">
                     {quote.publishedAt
@@ -1469,6 +1594,28 @@ export function QuotesListManager({
               }
               actions={
                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setEditingContextQuote({
+                        id: quote.id,
+                        content: quote.content,
+                        authorName: quote.authorName,
+                        categoryName: quote.categoryName,
+                        meaning: effectiveMeaning,
+                        historicalContext: effectiveHistoricalContext,
+                        modernRelevance: effectiveModernRelevance,
+                      })
+                    }}
+                    title="Quick edit quote meaning, historical context, and modern relevance"
+                    className="text-stone-700 hover:text-stone-900 border-stone-200 hover:bg-stone-100"
+                  >
+                    Context
+                  </Button>
                   <Button
                     type="button"
                     variant={effectiveVerified ? "ghost" : "outline"}
@@ -1567,6 +1714,13 @@ export function QuotesListManager({
         confirmLabel="Move to Trash"
         isDestructive
         isLoading={deletingId !== null}
+      />
+
+      <QuoteContextQuickEditor
+        isOpen={editingContextQuote !== null}
+        onClose={() => setEditingContextQuote(null)}
+        quote={editingContextQuote}
+        onSaveSuccess={handleContextSaveSuccess}
       />
     </div>
   )

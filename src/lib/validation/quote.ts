@@ -42,3 +42,9 @@ export const quoteUpdateSchema = quoteSchema.extend({
   sourceType: sourceTypeSchema.optional(),
   publishedAt: z.union([z.string().trim(), z.date()]).optional().nullable(),
 })
+
+export const quoteContextUpdateSchema = z.object({
+  meaning: z.string().trim().max(5_000, "Meaning cannot exceed 5,000 characters").optional().nullable(),
+  historicalContext: z.string().trim().max(5_000, "Historical context cannot exceed 5,000 characters").optional().nullable(),
+  modernRelevance: z.string().trim().max(5_000, "Modern relevance cannot exceed 5,000 characters").optional().nullable(),
+})

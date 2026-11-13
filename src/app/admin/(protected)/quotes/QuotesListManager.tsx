@@ -12,6 +12,7 @@ type QuoteItem = {
   content: string
   status: string
   isVerified: boolean
+  isFeatured?: boolean
   attributionStatus?: string
   createdAt: string
   publishedAt: string | null
@@ -51,6 +52,7 @@ type QuoteFilter =
   | "all"
   | "draft"
   | "archived"
+  | "featured"
   | "unverified"
   | "disputed"
   | "unattributed"
@@ -704,6 +706,11 @@ export function QuotesListManager({
                   {!quote.hasTags && (
                     <Badge variant="neutral" size="xs">
                       Missing tags
+                    </Badge>
+                  )}
+                  {quote.isFeatured && (
+                    <Badge variant="gold" size="xs">
+                      ★ Featured
                     </Badge>
                   )}
                   {quote.attributionStatus === "DISPUTED" && (

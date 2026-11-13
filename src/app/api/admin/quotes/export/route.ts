@@ -36,6 +36,8 @@ export async function GET(req: Request) {
       where.status = { in: ["DRAFT", "REVIEW"] }
     } else if (filter === "archived") {
       where.status = "ARCHIVED"
+    } else if (filter === "featured" || filter === "is-featured") {
+      where.isFeatured = true
     } else if (filter === "unverified") {
       where.isVerified = false
     } else if (filter === "disputed" || filter === "misattributed" || filter === "attribution-risk") {

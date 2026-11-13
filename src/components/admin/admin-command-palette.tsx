@@ -194,6 +194,15 @@ const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
     keywords: ["archived", "hidden", "quotes"],
   },
   {
+    id: "nav-quotes-featured",
+    title: "Featured Quotes",
+    description: "Quotes featured on homepage hero and spotlight carousels",
+    href: "/admin/quotes?filter=featured",
+    section: "Content",
+    badge: "Spotlight",
+    keywords: ["featured", "spotlight", "hero", "starred", "quotes"],
+  },
+  {
     id: "nav-quotes-disputed",
     title: "Disputed Quotes",
     description: "Quotes with contested or misattributed authorship",

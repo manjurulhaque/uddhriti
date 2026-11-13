@@ -7,6 +7,7 @@ function getQuoteFilter(value: string | string[] | undefined) {
   if (typeof value !== "string") return "all"
   if (value === "draft") return "draft"
   if (value === "archived") return "archived"
+  if (value === "featured" || value === "is-featured") return "featured"
   if (value === "unverified") return "unverified"
   if (value === "disputed" || value === "misattributed" || value === "attribution-risk") return "disputed"
   if (value === "unattributed") return "unattributed"
@@ -61,6 +62,9 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
     // Retains standard filters
     assert.equal(getQuoteFilter("all"), "all")
     assert.equal(getQuoteFilter("draft"), "draft")
+    assert.equal(getQuoteFilter("archived"), "archived")
+    assert.equal(getQuoteFilter("featured"), "featured")
+    assert.equal(getQuoteFilter("is-featured"), "featured")
     assert.equal(getQuoteFilter("disputed"), "disputed")
     assert.equal(getQuoteFilter("misattributed"), "disputed")
     assert.equal(getQuoteFilter("attribution-risk"), "disputed")
@@ -260,5 +264,33 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
     const { total, hasContext, noContext } = rows[0]
     assert.equal(hasContext, hasContextQuotes.length, "Raw SQL hasContext count must match Prisma count")
     assert.equal(hasContext + noContext, total, "noContext and hasContext must partition the entire catalog")
+  })
+
+  it("queries featured quotes correctly and matches raw SQL count", async () => {
+    const featuredQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        isFeatured: true,
+      },
+      select: {
+        id: true,
+        isFeatured: true,
+      },
+    })
+
+    for (const q of featuredQuotes) {
+      assert.equal(q.isFeatured, true, "Quote must be featured")
+    }
+
+    const rows = await prisma.$queryRaw<Array<{ featured: number }>>`
+      SELECT
+        COUNT(*) FILTER (
+          WHERE "isFeatured" = true
+        )::int AS "featured"
+      FROM "Quote" q
+      WHERE "deletedAt" IS NULL;
+    `
+
+    assert.equal(rows[0].featured, featuredQuotes.length, "Raw SQL featured count must match Prisma count")
   })
 })

@@ -14,6 +14,7 @@ type QuoteFilter =
   | "all"
   | "draft"
   | "archived"
+  | "featured"
   | "unverified"
   | "disputed"
   | "unattributed"
@@ -31,6 +32,7 @@ const quoteSelect = {
   status: true,
   isVerified: true,
   attributionStatus: true,
+  isFeatured: true,
   createdAt: true,
   publishedAt: true,
   authorId: true,
@@ -51,6 +53,7 @@ type QuoteFilterCounts = {
   all: number
   draft: number
   archived: number
+  featured: number
   unverified: number
   disputed: number
   unattributed: number
@@ -80,6 +83,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
         COUNT(*)::int AS "all",
         COUNT(*) FILTER (WHERE status IN ('DRAFT', 'REVIEW'))::int AS "draft",
         COUNT(*) FILTER (WHERE status = 'ARCHIVED')::int AS "archived",
+        COUNT(*) FILTER (WHERE "isFeatured" = true)::int AS "featured",
         COUNT(*) FILTER (WHERE "isVerified" = false)::int AS "unverified",
         COUNT(*) FILTER (WHERE "attributionStatus" IN ('DISPUTED', 'MISATTRIBUTED'))::int AS "disputed",
         COUNT(*) FILTER (WHERE "authorId" IS NULL OR "authorName" IS NULL)::int AS "unattributed",
@@ -108,6 +112,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       all: 0,
       draft: 0,
       archived: 0,
+      featured: 0,
       unverified: 0,
       disputed: 0,
       unattributed: 0,
@@ -125,6 +130,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       all: 0,
       draft: 0,
       archived: 0,
+      featured: 0,
       unverified: 0,
       disputed: 0,
       unattributed: 0,
@@ -141,6 +147,7 @@ const filterLabels: Record<QuoteFilter, string> = {
   all: "All Quotes",
   draft: "Draft / Review",
   archived: "Archived",
+  featured: "Featured",
   unverified: "Unverified",
   disputed: "Disputed Quotes",
   unattributed: "Unattributed",
@@ -155,6 +162,7 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
   if (typeof value !== "string") return "all"
   if (value === "draft") return "draft"
   if (value === "archived") return "archived"
+  if (value === "featured" || value === "is-featured") return "featured"
   if (value === "unverified") return "unverified"
   if (value === "disputed" || value === "misattributed" || value === "attribution-risk") return "disputed"
   if (value === "unattributed") return "unattributed"
@@ -201,6 +209,8 @@ function buildQuoteWhere(
     baseWhere = { deletedAt: null, status: { in: ["DRAFT", "REVIEW"] } }
   } else if (activeFilter === "archived") {
     baseWhere = { deletedAt: null, status: "ARCHIVED" }
+  } else if (activeFilter === "featured") {
+    baseWhere = { deletedAt: null, isFeatured: true }
   } else if (activeFilter === "unverified") {
     baseWhere = { deletedAt: null, isVerified: false }
   } else if (activeFilter === "disputed") {
@@ -318,6 +328,7 @@ export default async function QuotesPage({
     content: quote.content,
     status: quote.status,
     isVerified: Boolean(quote.isVerified),
+    isFeatured: Boolean(quote.isFeatured),
     attributionStatus: quote.attributionStatus,
     createdAt: quote.createdAt.toISOString(),
     publishedAt: quote.publishedAt?.toISOString() ?? null,
@@ -387,6 +398,7 @@ export default async function QuotesPage({
           { value: "all", label: filterLabels.all, href: buildFilterHref("all"), count: filterCounts.all },
           { value: "draft", label: filterLabels.draft, href: buildFilterHref("draft"), count: filterCounts.draft },
           { value: "archived", label: filterLabels.archived, href: buildFilterHref("archived"), count: filterCounts.archived },
+          { value: "featured", label: filterLabels.featured, href: buildFilterHref("featured"), count: filterCounts.featured },
           { value: "unverified", label: filterLabels.unverified, href: buildFilterHref("unverified"), count: filterCounts.unverified },
           { value: "disputed", label: filterLabels.disputed, href: buildFilterHref("disputed"), count: filterCounts.disputed },
           { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed"), count: filterCounts.unattributed },

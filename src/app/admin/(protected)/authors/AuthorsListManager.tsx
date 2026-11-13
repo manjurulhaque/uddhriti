@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
 import { formatLifespan } from "@/lib/formatters"
 import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
@@ -34,6 +35,7 @@ type QuoteFilter = "all" | "with-quotes" | "without-quotes"
 type LifeStatusFilter = "all" | "living" | "deceased" | "unknown"
 
 export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
+  const router = useRouter()
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [quoteFilter, setQuoteFilter] = useState<QuoteFilter>("all")
@@ -275,14 +277,26 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
                         Added {formatDateInAppTimeZone(author.createdAt)}
                       </span>
                       {author.quoteCount > 0 && (
-                        <a
-                          href={`/admin/quotes?author=${author.slug}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-xs font-semibold text-stone-700 hover:text-black hover:underline inline-flex items-center gap-0.5"
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            router.push(`/admin/quotes?author=${author.slug}`)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              router.push(`/admin/quotes?author=${author.slug}`)
+                            }
+                          }}
+                          className="text-xs font-semibold text-stone-700 hover:text-black hover:underline inline-flex items-center gap-0.5 cursor-pointer"
                           title={`View ${author.quoteCount} quotes by ${author.name}`}
                         >
                           View quotes &rarr;
-                        </a>
+                        </span>
                       )}
                     </div>
                   }

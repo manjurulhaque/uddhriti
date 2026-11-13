@@ -21,6 +21,7 @@ export async function GET(req: Request) {
   const authorParam = searchParams.get("author")?.trim() || searchParams.get("authorId")?.trim()
   const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
+  const verifiedParam = searchParams.get("verified")?.trim().toLowerCase() || searchParams.get("isVerified")?.trim().toLowerCase()
   const rawIds = searchParams.get("ids")
   const ids = rawIds ? rawIds.split(",").map((s) => s.trim()).filter(Boolean) : []
   const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "10000", 10)), 20000)
@@ -32,7 +33,16 @@ export async function GET(req: Request) {
     where.id = { in: ids }
   } else {
     if (statusParam && ["PUBLISHED", "DRAFT", "ARCHIVED", "REVIEW"].includes(statusParam)) {
-      where.status = statusParam as QuoteStatus
+      const statusCondition: Prisma.QuoteWhereInput = { status: statusParam as QuoteStatus }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, statusCondition] : [statusCondition]
+    }
+
+    if (verifiedParam === "verified" || verifiedParam === "true") {
+      const verifiedCondition: Prisma.QuoteWhereInput = { isVerified: true }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, verifiedCondition] : [verifiedCondition]
+    } else if (verifiedParam === "unverified" || verifiedParam === "false") {
+      const verifiedCondition: Prisma.QuoteWhereInput = { isVerified: false }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, verifiedCondition] : [verifiedCondition]
     }
 
     if (filter === "draft") {

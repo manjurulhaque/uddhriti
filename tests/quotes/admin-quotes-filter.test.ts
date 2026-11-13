@@ -458,4 +458,86 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
       assert.equal(q.status, "PUBLISHED")
     }
   })
+
+  it("queries quotes with status and verification filters composed together", async () => {
+    // 1. Status: PUBLISHED, Verified: true
+    const publishedVerified = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { status: "PUBLISHED" },
+          { isVerified: true },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        isVerified: true,
+      },
+      take: 10,
+    })
+
+    for (const q of publishedVerified) {
+      assert.equal(q.status, "PUBLISHED")
+      assert.equal(q.isVerified, true)
+    }
+
+    // 2. Status: DRAFT, Verified: false
+    const draftUnverified = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { status: { in: ["DRAFT", "REVIEW"] } },
+          { isVerified: false },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        isVerified: true,
+      },
+      take: 10,
+    })
+
+    for (const q of draftUnverified) {
+      assert.ok(["DRAFT", "REVIEW"].includes(q.status))
+      assert.equal(q.isVerified, false)
+    }
+
+    // 3. Multi-dimensional filter composition:
+    // Tab (has-context) + Status (PUBLISHED) + Verified (true)
+    const multiComposed = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { AND: [{ meaning: { not: null } }, { meaning: { not: "" } }] },
+          { AND: [{ historicalContext: { not: null } }, { historicalContext: { not: "" } }] },
+          { AND: [{ modernRelevance: { not: null } }, { modernRelevance: { not: "" } }] },
+        ],
+        AND: [
+          { status: "PUBLISHED" },
+          { isVerified: true },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        isVerified: true,
+        meaning: true,
+        historicalContext: true,
+        modernRelevance: true,
+      },
+      take: 5,
+    })
+
+    for (const q of multiComposed) {
+      assert.equal(q.status, "PUBLISHED")
+      assert.equal(q.isVerified, true)
+      const hasAnyContext =
+        Boolean(q.meaning && q.meaning.trim()) ||
+        Boolean(q.historicalContext && q.historicalContext.trim()) ||
+        Boolean(q.modernRelevance && q.modernRelevance.trim())
+      assert.ok(hasAnyContext, `Quote ${q.id} should have context`)
+    }
+  })
 })

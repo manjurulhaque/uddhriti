@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import type { Prisma } from "@prisma/client"
+import type { Prisma, QuoteStatus } from "@prisma/client"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { prisma } from "@/lib/prisma"
 import { QuotesListManager } from "./QuotesListManager"
@@ -203,7 +203,9 @@ function buildQuoteWhere(
   search?: string,
   searchIds?: string[] | null,
   categorySlugOrId?: string | null,
-  authorSlugOrId?: string | null
+  authorSlugOrId?: string | null,
+  statusFilter?: string | null,
+  verifiedFilter?: string | null
 ): Prisma.QuoteWhereInput {
   let baseWhere: Prisma.QuoteWhereInput
 
@@ -277,6 +279,22 @@ function buildQuoteWhere(
     }
   }
 
+  const normalizedStatus = statusFilter?.trim().toUpperCase()
+  if (
+    normalizedStatus &&
+    normalizedStatus !== "ALL" &&
+    ["PUBLISHED", "DRAFT", "REVIEW", "ARCHIVED"].includes(normalizedStatus)
+  ) {
+    conditions.push({ status: normalizedStatus as QuoteStatus })
+  }
+
+  const normalizedVerified = verifiedFilter?.trim().toLowerCase()
+  if (normalizedVerified === "verified" || normalizedVerified === "true") {
+    conditions.push({ isVerified: true })
+  } else if (normalizedVerified === "unverified" || normalizedVerified === "false") {
+    conditions.push({ isVerified: false })
+  }
+
   const query = search?.trim()
   if (query) {
     // If GIN full-text index returned matching quote IDs, filter directly by PK id
@@ -330,6 +348,16 @@ export default async function QuotesPage({
       : typeof resolvedSearchParams.authorId === "string"
       ? resolvedSearchParams.authorId.trim()
       : ""
+  const activeStatus =
+    typeof resolvedSearchParams.status === "string"
+      ? resolvedSearchParams.status.trim()
+      : "all"
+  const activeVerified =
+    typeof resolvedSearchParams.verified === "string"
+      ? resolvedSearchParams.verified.trim()
+      : typeof resolvedSearchParams.isVerified === "string"
+      ? resolvedSearchParams.isVerified.trim()
+      : "all"
   const searchQuery =
     typeof resolvedSearchParams.search === "string"
       ? resolvedSearchParams.search.trim()
@@ -337,7 +365,15 @@ export default async function QuotesPage({
       ? resolvedSearchParams.q.trim()
       : ""
   const searchMatchingIds = searchQuery ? await searchQuoteIds(searchQuery) : null
-  const where = buildQuoteWhere(activeFilter, searchQuery, searchMatchingIds, activeCategory, activeAuthor)
+  const where = buildQuoteWhere(
+    activeFilter,
+    searchQuery,
+    searchMatchingIds,
+    activeCategory,
+    activeAuthor,
+    activeStatus,
+    activeVerified
+  )
   const orderBy = buildQuoteOrderBy(activeSort)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
 
@@ -410,6 +446,8 @@ export default async function QuotesPage({
   if (activeFilter !== "all") exportParams.set("filter", activeFilter)
   if (activeCategory !== "all") exportParams.set("category", activeCategory)
   if (activeAuthor && activeAuthor !== "all") exportParams.set("author", activeAuthor)
+  if (activeStatus && activeStatus !== "all") exportParams.set("status", activeStatus)
+  if (activeVerified && activeVerified !== "all") exportParams.set("verified", activeVerified)
   if (activeSort !== "newest") exportParams.set("sort", activeSort)
   if (searchQuery) exportParams.set("search", searchQuery)
   const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
@@ -419,6 +457,8 @@ export default async function QuotesPage({
     if (filterValue !== "all") params.set("filter", filterValue)
     if (activeCategory !== "all") params.set("category", activeCategory)
     if (activeAuthor && activeAuthor !== "all") params.set("author", activeAuthor)
+    if (activeStatus && activeStatus !== "all") params.set("status", activeStatus)
+    if (activeVerified && activeVerified !== "all") params.set("verified", activeVerified)
     if (activeSort !== "newest") params.set("sort", activeSort)
     if (searchQuery) params.set("search", searchQuery)
     const qs = params.toString()
@@ -486,6 +526,8 @@ export default async function QuotesPage({
         categoryOptions={categories}
         initialAuthor={activeAuthor}
         initialAuthorName={activeAuthorName}
+        initialStatus={activeStatus}
+        initialVerified={activeVerified}
       />
     </div>
   )

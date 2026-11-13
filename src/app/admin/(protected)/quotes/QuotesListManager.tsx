@@ -76,7 +76,9 @@ function buildQuotesListHref(
   search?: string,
   sort?: SortOption,
   category?: string,
-  author?: string
+  author?: string,
+  status?: string,
+  verified?: string
 ) {
   const params = new URLSearchParams()
   if (filter !== "all") {
@@ -87,6 +89,12 @@ function buildQuotesListHref(
   }
   if (author && author !== "all") {
     params.set("author", author)
+  }
+  if (status && status !== "all") {
+    params.set("status", status)
+  }
+  if (verified && verified !== "all") {
+    params.set("verified", verified)
   }
   if (sort && sort !== "newest") {
     params.set("sort", sort)
@@ -115,6 +123,8 @@ export function QuotesListManager({
   categoryOptions = [],
   initialAuthor = "",
   initialAuthorName = null,
+  initialStatus = "all",
+  initialVerified = "all",
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -128,6 +138,8 @@ export function QuotesListManager({
   categoryOptions?: CategoryOption[]
   initialAuthor?: string
   initialAuthorName?: string | null
+  initialStatus?: string
+  initialVerified?: string
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -182,6 +194,20 @@ export function QuotesListManager({
     setAuthorFilter(initialAuthor)
   }
 
+  const [statusFilter, setStatusFilter] = useState(initialStatus)
+  const [prevInitialStatus, setPrevInitialStatus] = useState(initialStatus)
+  if (prevInitialStatus !== initialStatus) {
+    setPrevInitialStatus(initialStatus)
+    setStatusFilter(initialStatus)
+  }
+
+  const [verifiedFilter, setVerifiedFilter] = useState(initialVerified)
+  const [prevInitialVerified, setPrevInitialVerified] = useState(initialVerified)
+  if (prevInitialVerified !== initialVerified) {
+    setPrevInitialVerified(initialVerified)
+    setVerifiedFilter(initialVerified)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -192,12 +218,21 @@ export function QuotesListManager({
     if (search.trim() === initialSearch.trim()) return
 
     const timer = setTimeout(() => {
-      const href = buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter, authorFilter)
+      const href = buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter
+      )
       router.push(href)
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [search, activeFilter, initialSearch, sortBy, categoryFilter, authorFilter, router])
+  }, [search, activeFilter, initialSearch, sortBy, categoryFilter, authorFilter, statusFilter, verifiedFilter, router])
 
   const selectedTagNames = useMemo(
     () => tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name),
@@ -448,22 +483,98 @@ export function QuotesListManager({
 
   function handleSortChange(nextSort: SortOption) {
     setSortBy(nextSort)
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), nextSort, categoryFilter, authorFilter))
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        nextSort,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter
+      )
+    )
   }
 
   function handleCategoryChange(nextCategory: string) {
     setCategoryFilter(nextCategory)
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, nextCategory, authorFilter))
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        nextCategory,
+        authorFilter,
+        statusFilter,
+        verifiedFilter
+      )
+    )
   }
 
   function handleAuthorFilter(authorSlugOrId: string) {
     setAuthorFilter(authorSlugOrId)
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter, authorSlugOrId))
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorSlugOrId,
+        statusFilter,
+        verifiedFilter
+      )
+    )
   }
 
   function handleClearAuthorFilter() {
     setAuthorFilter("")
-    router.push(buildQuotesListHref(activeFilter, 1, search.trim(), sortBy, categoryFilter, ""))
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        "",
+        statusFilter,
+        verifiedFilter
+      )
+    )
+  }
+
+  function handleStatusChange(nextStatus: string) {
+    setStatusFilter(nextStatus)
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        nextStatus,
+        verifiedFilter
+      )
+    )
+  }
+
+  function handleVerifiedChange(nextVerified: string) {
+    setVerifiedFilter(nextVerified)
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        nextVerified
+      )
+    )
   }
 
   function handleClearFilters() {
@@ -471,13 +582,17 @@ export function QuotesListManager({
     setSortBy("newest")
     setCategoryFilter("all")
     setAuthorFilter("")
+    setStatusFilter("all")
+    setVerifiedFilter("all")
     if (
       initialSearch.trim() ||
       initialSort !== "newest" ||
       resolvedInitialCategory !== "all" ||
-      initialAuthor
+      initialAuthor ||
+      initialStatus !== "all" ||
+      initialVerified !== "all"
     ) {
-      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", ""))
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all"))
     }
   }
 
@@ -485,7 +600,9 @@ export function QuotesListManager({
     search.trim().length > 0 ||
     sortBy !== "newest" ||
     categoryFilter !== "all" ||
-    Boolean(authorFilter && authorFilter !== "all")
+    Boolean(authorFilter && authorFilter !== "all") ||
+    statusFilter !== "all" ||
+    verifiedFilter !== "all"
 
   return (
     <div className="space-y-4">
@@ -513,19 +630,41 @@ export function QuotesListManager({
         onSortChange={(value) => handleSortChange(value as SortOption)}
         sortOptions={sortOptions}
         filters={
-          categoryOptions.length > 0 ? (
+          <>
+            {categoryOptions.length > 0 && (
+              <Select
+                value={categoryFilter}
+                onChange={(event) => handleCategoryChange(event.target.value)}
+                options={[
+                  { value: "all", label: "Category: All Categories" },
+                  ...categoryOptions.map((cat) => ({
+                    value: cat.slug,
+                    label: `Category: ${cat.name}`,
+                  })),
+                ]}
+              />
+            )}
             <Select
-              value={categoryFilter}
-              onChange={(event) => handleCategoryChange(event.target.value)}
+              value={statusFilter}
+              onChange={(event) => handleStatusChange(event.target.value)}
               options={[
-                { value: "all", label: "Category: All Categories" },
-                ...categoryOptions.map((cat) => ({
-                  value: cat.slug,
-                  label: `Category: ${cat.name}`,
-                })),
+                { value: "all", label: "Status: All Statuses" },
+                { value: "PUBLISHED", label: "Status: Published" },
+                { value: "DRAFT", label: "Status: Draft" },
+                { value: "REVIEW", label: "Status: Review" },
+                { value: "ARCHIVED", label: "Status: Archived" },
               ]}
             />
-          ) : undefined
+            <Select
+              value={verifiedFilter}
+              onChange={(event) => handleVerifiedChange(event.target.value)}
+              options={[
+                { value: "all", label: "Verification: All" },
+                { value: "verified", label: "Verification: Verified Only" },
+                { value: "unverified", label: "Verification: Unverified Only" },
+              ]}
+            />
+          </>
         }
         visibleCount={visibleQuotes.length}
         totalCount={effectiveTotal}
@@ -940,7 +1079,18 @@ export function QuotesListManager({
             totalPages={effectiveTotalPages}
             totalItems={effectiveTotal}
             pageSize={pageSize}
-            buildHref={(targetPage) => buildQuotesListHref(activeFilter, targetPage, initialSearch, sortBy, categoryFilter, authorFilter)}
+            buildHref={(targetPage) =>
+              buildQuotesListHref(
+                activeFilter,
+                targetPage,
+                initialSearch,
+                sortBy,
+                categoryFilter,
+                authorFilter,
+                statusFilter,
+                verifiedFilter
+              )
+            }
           />
         </div>
       ) : null}

@@ -10,10 +10,12 @@ export type QuoteSortOption =
   | "status"
   | "content"
   | "needs-attention"
+  | "views"
 
 export const quoteSortOptions = [
   { value: "newest", label: "Arrange: Newest first" },
   { value: "oldest", label: "Arrange: Oldest first" },
+  { value: "views", label: "Arrange: Most viewed" },
   { value: "author-asc", label: "Sort: Author A-Z" },
   { value: "author-desc", label: "Sort: Author Z-A" },
   { value: "category-asc", label: "Sort: Category A-Z" },
@@ -26,6 +28,7 @@ export const quoteSortOptions = [
 export function getQuoteSort(value: string | string[] | undefined | null): QuoteSortOption {
   if (typeof value !== "string") return "newest"
   if (value === "oldest") return "oldest"
+  if (value === "views" || value === "popular" || value === "most-viewed") return "views"
   if (value === "author-asc") return "author-asc"
   if (value === "author-desc") return "author-desc"
   if (value === "category-asc") return "category-asc"
@@ -40,6 +43,8 @@ export function buildQuoteOrderBy(sort: QuoteSortOption): Prisma.QuoteOrderByWit
   switch (sort) {
     case "oldest":
       return [{ createdAt: "asc" }, { id: "asc" }]
+    case "views":
+      return [{ views: "desc" }, { createdAt: "desc" }, { id: "asc" }]
     case "author-asc":
       return [{ authorName: "asc" }, { author: { name: "asc" } }, { createdAt: "desc" }, { id: "asc" }]
     case "author-desc":

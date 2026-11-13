@@ -20,6 +20,7 @@ export async function GET(req: Request) {
   const categoryParam = searchParams.get("category")?.trim() || searchParams.get("categoryId")?.trim()
   const authorParam = searchParams.get("author")?.trim() || searchParams.get("authorId")?.trim()
   const tagParam = searchParams.get("tag")?.trim() || searchParams.get("tagId")?.trim()
+  const sourceParam = searchParams.get("source")?.trim() || searchParams.get("sourceId")?.trim()
   const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
   const verifiedParam = searchParams.get("verified")?.trim().toLowerCase() || searchParams.get("isVerified")?.trim().toLowerCase()
@@ -127,6 +128,13 @@ export async function GET(req: Request) {
         ? { tags: { some: { tagId: tagParam } } }
         : { tags: { some: { tag: { slug: tagParam } } } }
       where.AND = Array.isArray(where.AND) ? [...where.AND, tagCondition] : [tagCondition]
+    }
+
+    if (sourceParam && sourceParam !== "all") {
+      const sourceCondition: Prisma.QuoteWhereInput = isValidUuid(sourceParam)
+        ? { sourceId: sourceParam }
+        : { source: { slug: sourceParam } }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, sourceCondition] : [sourceCondition]
     }
 
     const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()

@@ -699,4 +699,73 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
       assert.equal(q.status, "PUBLISHED")
     }
   })
+
+  it("filters quotes by source slug and source UUID and sorts by views", async () => {
+    const source = await prisma.source.findFirst({
+      where: {
+        quotes: {
+          some: {
+            deletedAt: null,
+          },
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        quoteCount: true,
+      },
+    })
+
+    assert.ok(source, "Should find at least one source with active quotes")
+    assert.ok(source.slug, "Source must have a slug")
+
+    // Filter by source slug
+    const quotesBySlug = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        source: { slug: source.slug },
+      },
+      select: {
+        id: true,
+        sourceId: true,
+        source: { select: { slug: true } },
+      },
+    })
+
+    assert.ok(quotesBySlug.length > 0, "Should return quotes for source slug")
+    for (const q of quotesBySlug) {
+      assert.equal(q.sourceId, source.id)
+      assert.equal(q.source?.slug, source.slug)
+    }
+
+    // Filter by source UUID
+    const quotesById = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        sourceId: source.id,
+      },
+      select: {
+        id: true,
+        sourceId: true,
+      },
+    })
+
+    assert.equal(quotesById.length, quotesBySlug.length)
+
+    // Sort quotes by views descending
+    const quotesByViews = await prisma.quote.findMany({
+      where: { deletedAt: null, status: "PUBLISHED" },
+      orderBy: [{ views: "desc" }, { createdAt: "desc" }, { id: "asc" }],
+      select: { id: true, views: true },
+      take: 5,
+    })
+
+    for (let i = 1; i < quotesByViews.length; i++) {
+      assert.ok(
+        quotesByViews[i - 1].views >= quotesByViews[i].views,
+        "Quotes should be sorted by views descending"
+      )
+    }
+  })
 })

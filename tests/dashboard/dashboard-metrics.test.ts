@@ -101,5 +101,30 @@ describe("Admin Dashboard: Metrics Aggregation & Quality Tracking", () => {
     assert.equal(metrics.featuredQuotes, dbFeaturedCount)
     assert.equal(metrics.featuredPublishedQuotes, dbFeaturedPublishedCount)
   })
+
+  it("verifies topCategories, topTags, and topSources return slug and quoteCount", async () => {
+    const metrics = await getCachedDashboardMetrics()
+
+    for (const category of metrics.topCategories) {
+      assert.ok(category.id, "Category should have an id")
+      assert.ok(category.name, "Category should have a name")
+      assert.ok(typeof category.slug === "string", "Category should have a slug")
+      assert.ok(typeof category.quoteCount === "number", "Category should have quoteCount")
+    }
+
+    for (const tag of metrics.topTags) {
+      assert.ok(tag.id, "Tag should have an id")
+      assert.ok(tag.name, "Tag should have a name")
+      assert.ok(typeof tag.slug === "string", "Tag should have a slug")
+      assert.ok(typeof tag.quoteCount === "number", "Tag should have quoteCount")
+    }
+
+    for (const source of metrics.topSources) {
+      assert.ok(source.id, "Source should have an id")
+      assert.ok(source.title, "Source should have a title")
+      assert.ok(typeof source.slug === "string", "Source should have a slug")
+      assert.ok(typeof source.quoteCount === "number", "Source should have quoteCount")
+    }
+  })
 })
 

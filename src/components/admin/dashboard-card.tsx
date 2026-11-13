@@ -76,7 +76,7 @@ export function ListOrEmpty({
   items,
   empty,
 }: {
-  items: { key: string; left: React.ReactNode; right: React.ReactNode }[]
+  items: { key: string; left: React.ReactNode; right: React.ReactNode; href?: string }[]
   empty: string
 }) {
   if (items.length === 0) {
@@ -85,17 +85,37 @@ export function ListOrEmpty({
 
   return (
     <div className="space-y-2.5">
-      {items.map((item) => (
-        <div
-          key={item.key}
-          className="flex items-center justify-between gap-4 rounded-2xl border border-stone-100 bg-stone-50/70 px-3.5 py-2.5 text-sm transition hover:bg-stone-100/80"
-        >
-          <span className="text-stone-800 font-medium truncate">{item.left}</span>
-          <span className="whitespace-nowrap text-xs text-stone-500 shrink-0 font-medium">
-            {item.right}
-          </span>
-        </div>
-      ))}
+      {items.map((item) => {
+        const content = (
+          <>
+            <span className="text-stone-800 font-medium truncate group-hover:text-stone-950">{item.left}</span>
+            <span className="whitespace-nowrap text-xs text-stone-500 shrink-0 font-medium group-hover:text-stone-700">
+              {item.right}
+            </span>
+          </>
+        )
+
+        if (item.href) {
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className="group flex items-center justify-between gap-4 rounded-2xl border border-stone-100 bg-stone-50/70 px-3.5 py-2.5 text-sm transition hover:bg-stone-100/80 hover:border-stone-300"
+            >
+              {content}
+            </Link>
+          )
+        }
+
+        return (
+          <div
+            key={item.key}
+            className="flex items-center justify-between gap-4 rounded-2xl border border-stone-100 bg-stone-50/70 px-3.5 py-2.5 text-sm transition hover:bg-stone-100/80"
+          >
+            {content}
+          </div>
+        )
+      })}
     </div>
   )
 }

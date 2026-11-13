@@ -47,7 +47,7 @@ const quoteSelect = {
   modernRelevance: true,
   author: { select: { name: true, slug: true } },
   category: { select: { name: true, slug: true } },
-  source: { select: { title: true } },
+  source: { select: { title: true, slug: true } },
   tags: {
     select: {
       tag: {
@@ -217,7 +217,8 @@ function buildQuoteWhere(
   statusFilter?: string | null,
   verifiedFilter?: string | null,
   attributionFilter?: string | null,
-  tagSlugOrId?: string | null
+  tagSlugOrId?: string | null,
+  sourceSlugOrId?: string | null
 ): Prisma.QuoteWhereInput {
   let baseWhere: Prisma.QuoteWhereInput
 
@@ -325,6 +326,15 @@ function buildQuoteWhere(
     }
   }
 
+  const trimmedSource = sourceSlugOrId?.trim()
+  if (trimmedSource && trimmedSource !== "all") {
+    if (isValidUuid(trimmedSource)) {
+      conditions.push({ sourceId: trimmedSource })
+    } else {
+      conditions.push({ source: { slug: trimmedSource } })
+    }
+  }
+
   const query = search?.trim()
   if (query) {
     // If GIN full-text index returned matching quote IDs, filter directly by PK id
@@ -400,6 +410,12 @@ export default async function QuotesPage({
       : typeof resolvedSearchParams.tagId === "string"
       ? resolvedSearchParams.tagId.trim()
       : ""
+  const activeSource =
+    typeof resolvedSearchParams.source === "string"
+      ? resolvedSearchParams.source.trim()
+      : typeof resolvedSearchParams.sourceId === "string"
+      ? resolvedSearchParams.sourceId.trim()
+      : ""
   const searchQuery =
     typeof resolvedSearchParams.search === "string"
       ? resolvedSearchParams.search.trim()
@@ -416,7 +432,8 @@ export default async function QuotesPage({
     activeStatus,
     activeVerified,
     activeAttribution,
-    activeTag
+    activeTag,
+    activeSource
   )
   const orderBy = buildQuoteOrderBy(activeSort)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
@@ -437,6 +454,15 @@ export default async function QuotesPage({
       select: { name: true, slug: true },
     })
     activeTagName = tagRecord?.name ?? activeTag
+  }
+
+  let activeSourceTitle: string | null = null
+  if (activeSource && activeSource !== "all") {
+    const sourceRecord = await prisma.source.findFirst({
+      where: isValidUuid(activeSource) ? { id: activeSource } : { slug: activeSource },
+      select: { title: true, slug: true },
+    })
+    activeSourceTitle = sourceRecord?.title ?? activeSource
   }
 
   const [total, initialQuotes, filterCounts, categories] = await Promise.all([
@@ -483,7 +509,9 @@ export default async function QuotesPage({
     authorSlug: quote.author?.slug ?? quote.authorSlug ?? null,
     categoryName: quote.category?.name ?? null,
     categorySlug: quote.category?.slug ?? quote.categorySlug ?? null,
+    sourceId: quote.sourceId ?? null,
     sourceTitle: quote.source?.title ?? null,
+    sourceSlug: quote.source?.slug ?? null,
     hasAuthor: Boolean(quote.authorId || quote.authorName),
     hasCategory: Boolean(quote.categoryId && (quote.category?.name || quote.categorySlug)),
     hasSource: Boolean(quote.sourceId),
@@ -508,6 +536,7 @@ export default async function QuotesPage({
   if (activeVerified && activeVerified !== "all") exportParams.set("verified", activeVerified)
   if (activeAttribution && activeAttribution !== "all") exportParams.set("attribution", activeAttribution)
   if (activeTag && activeTag !== "all") exportParams.set("tag", activeTag)
+  if (activeSource && activeSource !== "all") exportParams.set("source", activeSource)
   if (activeSort !== "newest") exportParams.set("sort", activeSort)
   if (searchQuery) exportParams.set("search", searchQuery)
   const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
@@ -521,6 +550,7 @@ export default async function QuotesPage({
     if (activeVerified && activeVerified !== "all") params.set("verified", activeVerified)
     if (activeAttribution && activeAttribution !== "all") params.set("attribution", activeAttribution)
     if (activeTag && activeTag !== "all") params.set("tag", activeTag)
+    if (activeSource && activeSource !== "all") params.set("source", activeSource)
     if (activeSort !== "newest") params.set("sort", activeSort)
     if (searchQuery) params.set("search", searchQuery)
     const qs = params.toString()
@@ -593,6 +623,8 @@ export default async function QuotesPage({
         initialAttribution={activeAttribution}
         initialTag={activeTag}
         initialTagName={activeTagName}
+        initialSource={activeSource}
+        initialSourceTitle={activeSourceTitle}
       />
     </div>
   )

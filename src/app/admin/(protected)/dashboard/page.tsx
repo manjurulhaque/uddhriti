@@ -389,59 +389,114 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <DashboardCard title="Top Categories">
+        <DashboardCard
+          title="Top Categories"
+          action={
+            <Link
+              href="/admin/categories"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              Manage categories &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No categories with quotes yet."
             items={topCategories.map((c, i) => ({
               key: c.id,
               left: `${i + 1}. ${c.name}`,
               right: `${formatNumber(c.quoteCount)} quotes`,
+              href: `/admin/quotes?category=${c.slug}`,
             }))}
           />
         </DashboardCard>
 
-        <DashboardCard title="Top Tags">
+        <DashboardCard
+          title="Top Tags"
+          action={
+            <Link
+              href="/admin/tags"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              Manage tags &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No tags with quotes yet."
             items={topTags.map((t, i) => ({
               key: t.id,
-              left: `${i + 1}. ${t.name} (${t.type})`,
+              left: `${i + 1}. #${t.name} (${t.type})`,
               right: `${formatNumber(t.quoteCount)} quotes`,
+              href: `/admin/quotes?tag=${t.slug}`,
             }))}
           />
         </DashboardCard>
 
-        <DashboardCard title="Top Sources">
+        <DashboardCard
+          title="Top Sources"
+          action={
+            <Link
+              href="/admin/sources"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              Manage sources &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No sources with quotes yet."
             items={topSources.map((s, i) => ({
               key: s.id,
               left: `${i + 1}. ${truncate(s.title, 50)} (${s.type})`,
               right: `${formatNumber(s.quoteCount)} quotes`,
+              href: `/admin/quotes?source=${s.slug}`,
             }))}
           />
         </DashboardCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <DashboardCard title="Most Viewed Quotes">
+        <DashboardCard
+          title="Most Viewed Quotes"
+          action={
+            <Link
+              href="/admin/quotes?sort=views"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              View all by views &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No published quotes with views yet."
             items={mostViewedQuotes.map((q, i) => ({
               key: q.id,
               left: `${i + 1}. ${truncate(q.content, 90)} | ${q.authorName ?? "Unknown"}`,
               right: `${formatNumber(q.views)} views`,
+              href: `/admin/quotes/${q.id}`,
             }))}
           />
         </DashboardCard>
 
-        <DashboardCard title="Trending Quotes">
+        <DashboardCard
+          title="Trending Quotes"
+          action={
+            <Link
+              href="/admin/quotes?sort=views"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              View top quotes &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No trending signal available yet."
             items={trendingQuotes.map((q, i) => ({
               key: q.id,
               left: `${i + 1}. ${truncate(q.content, 90)} | ${q.authorName ?? "Unknown"}`,
               right: `Score ${q.score.toFixed(2)}`,
+              href: `/admin/quotes/${q.id}`,
             }))}
           />
         </DashboardCard>
@@ -452,12 +507,16 @@ export default async function DashboardPage() {
           <div className="space-y-3 text-sm">
             {recentQuotes.length === 0 && <EmptyRow message="No recent quote activity." />}
             {recentQuotes.map((q) => (
-              <div key={q.id} className="space-y-1">
-                <div className="font-medium">{truncate(q.content, 85)}</div>
-                <div className="text-gray-500">
+              <Link
+                key={q.id}
+                href={`/admin/quotes/${q.id}`}
+                className="block space-y-1 rounded-xl p-1.5 transition hover:bg-stone-50 group"
+              >
+                <div className="font-medium text-stone-900 group-hover:text-black">{truncate(q.content, 85)}</div>
+                <div className="text-gray-500 text-xs">
                   {q.createdBy?.email ?? "System"} | {formatDateInAppTimeZone(q.createdAt)}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </DashboardCard>
@@ -466,10 +525,14 @@ export default async function DashboardPage() {
           <div className="space-y-3 text-sm">
             {recentAuthors.length === 0 && <EmptyRow message="No recent author activity." />}
             {recentAuthors.map((a) => (
-              <div key={a.id} className="flex justify-between">
-                <span>{a.name}</span>
-                <span className="text-gray-500">{formatDateInAppTimeZone(a.createdAt)}</span>
-              </div>
+              <Link
+                key={a.id}
+                href={`/admin/authors/${a.id}`}
+                className="flex justify-between items-center rounded-xl p-1.5 transition hover:bg-stone-50 group"
+              >
+                <span className="font-medium text-stone-800 group-hover:text-black">{a.name}</span>
+                <span className="text-gray-500 text-xs">{formatDateInAppTimeZone(a.createdAt)}</span>
+              </Link>
             ))}
           </div>
         </DashboardCard>
@@ -478,10 +541,14 @@ export default async function DashboardPage() {
           <div className="space-y-3 text-sm">
             {recentSources.length === 0 && <EmptyRow message="No recent source activity." />}
             {recentSources.map((s) => (
-              <div key={s.id} className="flex justify-between gap-3">
-                <span>{truncate(s.title, 40)}</span>
-                <span className="text-gray-500">{formatDateInAppTimeZone(s.createdAt)}</span>
-              </div>
+              <Link
+                key={s.id}
+                href={`/admin/sources/${s.id}`}
+                className="flex justify-between items-center gap-3 rounded-xl p-1.5 transition hover:bg-stone-50 group"
+              >
+                <span className="font-medium text-stone-800 truncate group-hover:text-black">{truncate(s.title, 40)}</span>
+                <span className="text-gray-500 text-xs shrink-0">{formatDateInAppTimeZone(s.createdAt)}</span>
+              </Link>
             ))}
           </div>
         </DashboardCard>

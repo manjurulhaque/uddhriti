@@ -1,15 +1,17 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
-import { Select, EmptyState, Pagination } from "@/components/ui"
+import { Select, EmptyState, Pagination, Button } from "@/components/ui"
 
 const PAGE_SIZE = 25
 
 type SourceItem = {
   id: string
   title: string
+  slug?: string
   type: string
   year: number | null
   yearLabel?: string | null
@@ -229,14 +231,54 @@ export function SourcesListManager({ sources }: { sources: SourceItem[] }) {
 }
 
 function SourceListRow({ source }: { source: SourceItem }) {
+  const router = useRouter()
   const yearText = formatSourceYearLabel(source) ?? "-"
+  const targetQuotesHref = `/admin/quotes?source=${source.slug || source.id}`
 
   return (
     <AdminEntityCard
       href={`/admin/sources/${source.id}`}
       title={source.title}
       subtitle={[source.type, yearText, source.authorName || "No Author"].join(" • ")}
-      badge={<AdminEntityCountBadge count={source.quoteCount} />}
+      badge={
+        source.quoteCount > 0 ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              router.push(targetQuotesHref)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push(targetQuotesHref)
+              }
+            }}
+            className="cursor-pointer inline-flex transition hover:opacity-80"
+            title={`View ${source.quoteCount} quotes from ${source.title}`}
+          >
+            <AdminEntityCountBadge count={source.quoteCount} />
+          </span>
+        ) : (
+          <AdminEntityCountBadge count={source.quoteCount} />
+        )
+      }
+      actions={
+        source.quoteCount > 0 ? (
+          <Button
+            href={targetQuotesHref}
+            variant="ghost"
+            size="xs"
+            className="text-stone-700 hover:text-stone-900 hidden sm:inline-flex"
+            title={`View ${source.quoteCount} quotes from ${source.title}`}
+          >
+            View quotes &rarr;
+          </Button>
+        ) : undefined
+      }
     />
   )
 }

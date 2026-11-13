@@ -13,6 +13,7 @@ export default async function SourcesPage() {
     select: {
       id: true,
       title: true,
+      slug: true,
       type: true,
       year: true,
       yearLabel: true,
@@ -26,6 +27,7 @@ export default async function SourcesPage() {
   const normalizedSources = sources.map((source) => ({
     id: source.id,
     title: source.title,
+    slug: source.slug,
     type: source.type,
     year: source.year,
     yearLabel: source.yearLabel,

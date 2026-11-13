@@ -420,7 +420,7 @@ async function fetchTopCategories() {
   return prisma.category.findMany({
     orderBy: { quoteCount: "desc" },
     take: 5,
-    select: { id: true, name: true, quoteCount: true },
+    select: { id: true, name: true, slug: true, quoteCount: true },
   })
 }
 
@@ -428,7 +428,7 @@ async function fetchTopTags() {
   return prisma.tag.findMany({
     orderBy: { quoteCount: "desc" },
     take: 5,
-    select: { id: true, name: true, type: true, quoteCount: true },
+    select: { id: true, name: true, slug: true, type: true, quoteCount: true },
   })
 }
 
@@ -436,7 +436,7 @@ async function fetchTopSources() {
   return prisma.source.findMany({
     orderBy: { quoteCount: "desc" },
     take: 5,
-    select: { id: true, title: true, type: true, quoteCount: true },
+    select: { id: true, title: true, slug: true, type: true, quoteCount: true },
   })
 }
 

@@ -21,7 +21,9 @@ type QuoteItem = {
   authorSlug?: string | null
   categoryName: string | null
   categorySlug: string | null
+  sourceId?: string | null
   sourceTitle: string | null
+  sourceSlug?: string | null
   hasAuthor: boolean
   hasCategory: boolean
   hasSource: boolean
@@ -82,7 +84,8 @@ function buildQuotesListHref(
   status?: string,
   verified?: string,
   attribution?: string,
-  tag?: string
+  tag?: string,
+  source?: string
 ) {
   const params = new URLSearchParams()
   if (filter !== "all") {
@@ -105,6 +108,9 @@ function buildQuotesListHref(
   }
   if (tag && tag !== "all") {
     params.set("tag", tag)
+  }
+  if (source && source !== "all") {
+    params.set("source", source)
   }
   if (sort && sort !== "newest") {
     params.set("sort", sort)
@@ -138,6 +144,8 @@ export function QuotesListManager({
   initialAttribution = "all",
   initialTag = "",
   initialTagName = null,
+  initialSource = "",
+  initialSourceTitle = null,
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -156,6 +164,8 @@ export function QuotesListManager({
   initialAttribution?: string
   initialTag?: string
   initialTagName?: string | null
+  initialSource?: string
+  initialSourceTitle?: string | null
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -239,6 +249,13 @@ export function QuotesListManager({
     setTagFilter(initialTag)
   }
 
+  const [sourceFilter, setSourceFilter] = useState(initialSource)
+  const [prevInitialSource, setPrevInitialSource] = useState(initialSource)
+  if (prevInitialSource !== initialSource) {
+    setPrevInitialSource(initialSource)
+    setSourceFilter(initialSource)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -259,7 +276,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
       router.push(href)
     }, 350)
@@ -276,6 +294,7 @@ export function QuotesListManager({
     verifiedFilter,
     attributionFilter,
     tagFilter,
+    sourceFilter,
     router,
   ])
 
@@ -540,7 +559,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -558,7 +578,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -576,7 +597,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -594,7 +616,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -612,7 +635,8 @@ export function QuotesListManager({
         nextStatus,
         verifiedFilter,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -630,7 +654,8 @@ export function QuotesListManager({
         statusFilter,
         nextVerified,
         attributionFilter,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -648,7 +673,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         nextAttribution,
-        tagFilter
+        tagFilter,
+        sourceFilter
       )
     )
   }
@@ -666,7 +692,8 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
-        tagSlugOrId
+        tagSlugOrId,
+        sourceFilter
       )
     )
   }
@@ -684,6 +711,45 @@ export function QuotesListManager({
         statusFilter,
         verifiedFilter,
         attributionFilter,
+        "",
+        sourceFilter
+      )
+    )
+  }
+
+  function handleSourceFilter(sourceSlugOrId: string) {
+    setSourceFilter(sourceSlugOrId)
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter,
+        attributionFilter,
+        tagFilter,
+        sourceSlugOrId
+      )
+    )
+  }
+
+  function handleClearSourceFilter() {
+    setSourceFilter("")
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter,
+        attributionFilter,
+        tagFilter,
         ""
       )
     )
@@ -698,6 +764,7 @@ export function QuotesListManager({
     setVerifiedFilter("all")
     setAttributionFilter("all")
     setTagFilter("")
+    setSourceFilter("")
     if (
       initialSearch.trim() ||
       initialSort !== "newest" ||
@@ -706,9 +773,10 @@ export function QuotesListManager({
       initialStatus !== "all" ||
       initialVerified !== "all" ||
       initialAttribution !== "all" ||
-      initialTag
+      initialTag ||
+      initialSource
     ) {
-      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all", "all", ""))
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all", "all", "", ""))
     }
   }
 
@@ -720,7 +788,8 @@ export function QuotesListManager({
     statusFilter !== "all" ||
     verifiedFilter !== "all" ||
     attributionFilter !== "all" ||
-    Boolean(tagFilter && tagFilter !== "all")
+    Boolean(tagFilter && tagFilter !== "all") ||
+    Boolean(sourceFilter && sourceFilter !== "all")
 
   const activeFiltersBannerList = [
     authorFilter
@@ -747,6 +816,13 @@ export function QuotesListManager({
           label: "Tag",
           value: initialTagName ? `#${initialTagName}` : `#${tagFilter}`,
           onClear: handleClearTagFilter,
+        }
+      : null,
+    sourceFilter && sourceFilter !== "all"
+      ? {
+          label: "Source",
+          value: initialSourceTitle || sourceFilter,
+          onClear: handleClearSourceFilter,
         }
       : null,
   ].filter(Boolean) as Array<{ label: string; value: string; onClear: () => void }>
@@ -782,6 +858,7 @@ export function QuotesListManager({
                   setVerifiedFilter("all")
                   setAttributionFilter("all")
                   setTagFilter("")
+                  setSourceFilter("")
                   router.push(
                     buildQuotesListHref(
                       activeFilter,
@@ -793,6 +870,7 @@ export function QuotesListManager({
                       "all",
                       "all",
                       "all",
+                      "",
                       ""
                     )
                   )
@@ -1172,7 +1250,34 @@ export function QuotesListManager({
                   {quote.sourceTitle ? (
                     <>
                       <span className="text-stone-300">•</span>
-                      <span className="italic text-stone-500 truncate max-w-[260px]" title={quote.sourceTitle}>
+                      <span
+                        role={quote.sourceSlug || quote.sourceId ? "button" : undefined}
+                        tabIndex={quote.sourceSlug || quote.sourceId ? 0 : undefined}
+                        onClick={(e) => {
+                          if (quote.sourceSlug || quote.sourceId) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleSourceFilter(quote.sourceSlug || quote.sourceId || "")
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if ((e.key === "Enter" || e.key === " ") && (quote.sourceSlug || quote.sourceId)) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleSourceFilter(quote.sourceSlug || quote.sourceId || "")
+                          }
+                        }}
+                        title={
+                          quote.sourceSlug || quote.sourceId
+                            ? `Click to filter quotes from source: ${quote.sourceTitle}`
+                            : undefined
+                        }
+                        className={`italic truncate max-w-[260px] ${
+                          quote.sourceSlug || quote.sourceId
+                            ? "text-stone-700 hover:text-black hover:underline cursor-pointer font-medium"
+                            : "text-stone-500"
+                        }`}
+                      >
                         {quote.sourceTitle}
                       </span>
                     </>
@@ -1441,7 +1546,8 @@ export function QuotesListManager({
                 statusFilter,
                 verifiedFilter,
                 attributionFilter,
-                tagFilter
+                tagFilter,
+                sourceFilter
               )
             }
           />

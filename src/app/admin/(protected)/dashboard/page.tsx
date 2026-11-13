@@ -236,7 +236,7 @@ export default async function DashboardPage() {
           subtitle={`C:${formatNumber(attributionConfirmedQuotes)} D:${formatNumber(attributionDisputedQuotes)} M:${formatNumber(
             attributionMisattributedQuotes
           )} U:${formatNumber(attributionUnknownQuotes)}`}
-          href="/admin/quotes"
+          href={attributionRiskQuotes > 0 ? "/admin/quotes?filter=disputed" : "/admin/quotes"}
         />
         <KpiCard
           title="Verification Confidence"

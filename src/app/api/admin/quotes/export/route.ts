@@ -38,6 +38,8 @@ export async function GET(req: Request) {
       where.status = "ARCHIVED"
     } else if (filter === "unverified") {
       where.isVerified = false
+    } else if (filter === "disputed" || filter === "misattributed" || filter === "attribution-risk") {
+      where.attributionStatus = { in: ["DISPUTED", "MISATTRIBUTED"] }
     } else if (filter === "unattributed") {
       where.OR = [{ authorId: null }, { authorName: null }]
     } else if (filter === "missing-source") {

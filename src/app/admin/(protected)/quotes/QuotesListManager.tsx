@@ -12,6 +12,7 @@ type QuoteItem = {
   content: string
   status: string
   isVerified: boolean
+  attributionStatus?: string
   createdAt: string
   publishedAt: string | null
   authorName: string | null
@@ -51,6 +52,7 @@ type QuoteFilter =
   | "draft"
   | "archived"
   | "unverified"
+  | "disputed"
   | "unattributed"
   | "missing-source"
   | "no-tags"
@@ -701,6 +703,16 @@ export function QuotesListManager({
                   {!quote.hasTags && (
                     <Badge variant="neutral" size="xs">
                       Missing tags
+                    </Badge>
+                  )}
+                  {quote.attributionStatus === "DISPUTED" && (
+                    <Badge variant="danger" size="xs">
+                      Disputed
+                    </Badge>
+                  )}
+                  {quote.attributionStatus === "MISATTRIBUTED" && (
+                    <Badge variant="danger" size="xs">
+                      Misattributed
                     </Badge>
                   )}
                   {quote.hasContext === false && (

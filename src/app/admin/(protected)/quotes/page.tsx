@@ -15,6 +15,7 @@ type QuoteFilter =
   | "draft"
   | "archived"
   | "unverified"
+  | "disputed"
   | "unattributed"
   | "missing-source"
   | "no-tags"
@@ -28,6 +29,7 @@ const quoteSelect = {
   content: true,
   status: true,
   isVerified: true,
+  attributionStatus: true,
   createdAt: true,
   publishedAt: true,
   authorId: true,
@@ -49,6 +51,7 @@ type QuoteFilterCounts = {
   draft: number
   archived: number
   unverified: number
+  disputed: number
   unattributed: number
   missingSource: number
   noTags: number
@@ -76,6 +79,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
         COUNT(*) FILTER (WHERE status IN ('DRAFT', 'REVIEW'))::int AS "draft",
         COUNT(*) FILTER (WHERE status = 'ARCHIVED')::int AS "archived",
         COUNT(*) FILTER (WHERE "isVerified" = false)::int AS "unverified",
+        COUNT(*) FILTER (WHERE "attributionStatus" IN ('DISPUTED', 'MISATTRIBUTED'))::int AS "disputed",
         COUNT(*) FILTER (WHERE "authorId" IS NULL OR "authorName" IS NULL)::int AS "unattributed",
         COUNT(*) FILTER (WHERE "sourceId" IS NULL)::int AS "missingSource",
         COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM "QuoteTag" qt WHERE qt."quoteId" = q.id))::int AS "noTags",
@@ -98,6 +102,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       draft: 0,
       archived: 0,
       unverified: 0,
+      disputed: 0,
       unattributed: 0,
       missingSource: 0,
       noTags: 0,
@@ -113,6 +118,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       draft: 0,
       archived: 0,
       unverified: 0,
+      disputed: 0,
       unattributed: 0,
       missingSource: 0,
       noTags: 0,
@@ -127,6 +133,7 @@ const filterLabels: Record<QuoteFilter, string> = {
   draft: "Draft / Review",
   archived: "Archived",
   unverified: "Unverified",
+  disputed: "Disputed Quotes",
   unattributed: "Unattributed",
   "missing-source": "Missing Source",
   "no-tags": "No Tags",
@@ -139,6 +146,7 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
   if (value === "draft") return "draft"
   if (value === "archived") return "archived"
   if (value === "unverified") return "unverified"
+  if (value === "disputed" || value === "misattributed" || value === "attribution-risk") return "disputed"
   if (value === "unattributed") return "unattributed"
   if (value === "missing-source") return "missing-source"
   if (value === "no-tags") return "no-tags"
@@ -176,6 +184,8 @@ function buildQuoteWhere(
     baseWhere = { deletedAt: null, status: "ARCHIVED" }
   } else if (activeFilter === "unverified") {
     baseWhere = { deletedAt: null, isVerified: false }
+  } else if (activeFilter === "disputed") {
+    baseWhere = { deletedAt: null, attributionStatus: { in: ["DISPUTED", "MISATTRIBUTED"] } }
   } else if (activeFilter === "unattributed") {
     baseWhere = { deletedAt: null, OR: [{ authorId: null }, { authorName: null }] }
   } else if (activeFilter === "missing-source") {
@@ -280,6 +290,7 @@ export default async function QuotesPage({
     content: quote.content,
     status: quote.status,
     isVerified: Boolean(quote.isVerified),
+    attributionStatus: quote.attributionStatus,
     createdAt: quote.createdAt.toISOString(),
     publishedAt: quote.publishedAt?.toISOString() ?? null,
     authorName: quote.author?.name ?? quote.authorName ?? null,
@@ -349,6 +360,7 @@ export default async function QuotesPage({
           { value: "draft", label: filterLabels.draft, href: buildFilterHref("draft"), count: filterCounts.draft },
           { value: "archived", label: filterLabels.archived, href: buildFilterHref("archived"), count: filterCounts.archived },
           { value: "unverified", label: filterLabels.unverified, href: buildFilterHref("unverified"), count: filterCounts.unverified },
+          { value: "disputed", label: filterLabels.disputed, href: buildFilterHref("disputed"), count: filterCounts.disputed },
           { value: "unattributed", label: filterLabels.unattributed, href: buildFilterHref("unattributed"), count: filterCounts.unattributed },
           { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source"), count: filterCounts.missingSource },
           { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags"), count: filterCounts.noTags },

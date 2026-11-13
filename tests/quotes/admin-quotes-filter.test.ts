@@ -8,6 +8,7 @@ function getQuoteFilter(value: string | string[] | undefined) {
   if (value === "draft") return "draft"
   if (value === "archived") return "archived"
   if (value === "unverified") return "unverified"
+  if (value === "disputed" || value === "misattributed" || value === "attribution-risk") return "disputed"
   if (value === "unattributed") return "unattributed"
   if (value === "missing-source") return "missing-source"
   if (value === "no-tags") return "no-tags"
@@ -45,6 +46,9 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
     // Retains standard filters
     assert.equal(getQuoteFilter("all"), "all")
     assert.equal(getQuoteFilter("draft"), "draft")
+    assert.equal(getQuoteFilter("disputed"), "disputed")
+    assert.equal(getQuoteFilter("misattributed"), "disputed")
+    assert.equal(getQuoteFilter("attribution-risk"), "disputed")
     assert.equal(getQuoteFilter("missing-source"), "missing-source")
     assert.equal(getQuoteFilter("no-tags"), "no-tags")
     assert.equal(getQuoteFilter("orphaned"), "orphaned")
@@ -160,5 +164,38 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
         )
       }
     }
+  })
+
+  it("queries disputed and misattributed quotes correctly", async () => {
+    const disputedQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        attributionStatus: { in: ["DISPUTED", "MISATTRIBUTED"] },
+      },
+      select: {
+        id: true,
+        attributionStatus: true,
+      },
+    })
+
+    assert.ok(disputedQuotes.length > 0, "Should find disputed/misattributed quotes in DB")
+    for (const q of disputedQuotes) {
+      assert.ok(
+        q.attributionStatus === "DISPUTED" || q.attributionStatus === "MISATTRIBUTED",
+        `Quote ${q.id} must be DISPUTED or MISATTRIBUTED`
+      )
+    }
+
+    // Verify raw SQL count matches Prisma where count
+    const rows = await prisma.$queryRaw<Array<{ disputed: number }>>`
+      SELECT
+        COUNT(*) FILTER (
+          WHERE "attributionStatus" IN ('DISPUTED', 'MISATTRIBUTED')
+        )::int AS "disputed"
+      FROM "Quote" q
+      WHERE "deletedAt" IS NULL;
+    `
+
+    assert.equal(rows[0].disputed, disputedQuotes.length, "Raw SQL disputed count must match Prisma count")
   })
 })

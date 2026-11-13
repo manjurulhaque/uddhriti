@@ -194,6 +194,15 @@ const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
     keywords: ["archived", "hidden", "quotes"],
   },
   {
+    id: "nav-quotes-disputed",
+    title: "Disputed Quotes",
+    description: "Quotes with contested or misattributed authorship",
+    href: "/admin/quotes?filter=disputed",
+    section: "Content",
+    badge: "Audit",
+    keywords: ["disputed", "misattributed", "attribution", "fake", "quotes"],
+  },
+  {
     id: "nav-quotes-unattributed",
     title: "Unattributed Quotes",
     description: "Quotes without an author assigned",

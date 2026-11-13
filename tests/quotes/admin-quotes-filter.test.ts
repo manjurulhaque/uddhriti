@@ -22,6 +22,15 @@ function getQuoteFilter(value: string | string[] | undefined) {
   ) {
     return "no-context"
   }
+  if (
+    value === "has-context" ||
+    value === "curated" ||
+    value === "with-context" ||
+    value === "has-interpretation" ||
+    value === "with-interpretation"
+  ) {
+    return "has-context"
+  }
   if (value === "orphaned") return "orphaned"
   return "all"
 }
@@ -42,6 +51,12 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
     assert.equal(getQuoteFilter("no-interpretation"), "no-context")
     assert.equal(getQuoteFilter("missing-interpretation"), "no-context")
     assert.equal(getQuoteFilter("without-interpretation"), "no-context")
+
+    assert.equal(getQuoteFilter("has-context"), "has-context")
+    assert.equal(getQuoteFilter("curated"), "has-context")
+    assert.equal(getQuoteFilter("with-context"), "has-context")
+    assert.equal(getQuoteFilter("has-interpretation"), "has-context")
+    assert.equal(getQuoteFilter("with-interpretation"), "has-context")
 
     // Retains standard filters
     assert.equal(getQuoteFilter("all"), "all")
@@ -197,5 +212,53 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
     `
 
     assert.equal(rows[0].disputed, disputedQuotes.length, "Raw SQL disputed count must match Prisma count")
+  })
+
+  it("queries quotes WITH Interpretation & Context correctly and verifies partition", async () => {
+    const hasContextQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { AND: [{ meaning: { not: null } }, { meaning: { not: "" } }] },
+          { AND: [{ historicalContext: { not: null } }, { historicalContext: { not: "" } }] },
+          { AND: [{ modernRelevance: { not: null } }, { modernRelevance: { not: "" } }] },
+        ],
+      },
+      select: {
+        id: true,
+        meaning: true,
+        historicalContext: true,
+        modernRelevance: true,
+      },
+    })
+
+    assert.ok(hasContextQuotes.length > 0, "Should find curated quotes in DB")
+    for (const q of hasContextQuotes) {
+      const hasMeaning = Boolean(q.meaning && q.meaning.trim())
+      const hasHistorical = Boolean(q.historicalContext && q.historicalContext.trim())
+      const hasModern = Boolean(q.modernRelevance && q.modernRelevance.trim())
+      assert.ok(hasMeaning || hasHistorical || hasModern, "Must have at least one enriched field")
+    }
+
+    const rows = await prisma.$queryRaw<Array<{ hasContext: number; noContext: number; total: number }>>`
+      SELECT
+        COUNT(*)::int AS "total",
+        COUNT(*) FILTER (
+          WHERE ("meaning" IS NOT NULL AND TRIM("meaning") <> '')
+             OR ("historicalContext" IS NOT NULL AND TRIM("historicalContext") <> '')
+             OR ("modernRelevance" IS NOT NULL AND TRIM("modernRelevance") <> '')
+        )::int AS "hasContext",
+        COUNT(*) FILTER (
+          WHERE ("meaning" IS NULL OR TRIM("meaning") = '')
+            AND ("historicalContext" IS NULL OR TRIM("historicalContext") = '')
+            AND ("modernRelevance" IS NULL OR TRIM("modernRelevance") = '')
+        )::int AS "noContext"
+      FROM "Quote" q
+      WHERE "deletedAt" IS NULL;
+    `
+
+    const { total, hasContext, noContext } = rows[0]
+    assert.equal(hasContext, hasContextQuotes.length, "Raw SQL hasContext count must match Prisma count")
+    assert.equal(hasContext + noContext, total, "noContext and hasContext must partition the entire catalog")
   })
 })

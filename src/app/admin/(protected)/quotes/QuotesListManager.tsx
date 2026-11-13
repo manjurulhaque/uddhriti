@@ -57,6 +57,7 @@ type QuoteFilter =
   | "missing-source"
   | "no-tags"
   | "no-context"
+  | "has-context"
   | "orphaned"
 
 function buildQuotesListHref(
@@ -713,6 +714,11 @@ export function QuotesListManager({
                   {quote.attributionStatus === "MISATTRIBUTED" && (
                     <Badge variant="danger" size="xs">
                       Misattributed
+                    </Badge>
+                  )}
+                  {quote.hasContext === true && (
+                    <Badge variant="outline" size="xs" className="font-sans font-medium text-emerald-700 bg-emerald-50 border-emerald-200">
+                      Has context
                     </Badge>
                   )}
                   {quote.hasContext === false && (

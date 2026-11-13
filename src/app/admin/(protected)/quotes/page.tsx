@@ -20,6 +20,7 @@ type QuoteFilter =
   | "missing-source"
   | "no-tags"
   | "no-context"
+  | "has-context"
   | "orphaned"
 
 const PAGE_SIZE = 50
@@ -56,6 +57,7 @@ type QuoteFilterCounts = {
   missingSource: number
   noTags: number
   noContext: number
+  hasContext: number
   orphaned: number
 }
 
@@ -89,6 +91,11 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
             AND ("modernRelevance" IS NULL OR TRIM("modernRelevance") = '')
         )::int AS "noContext",
         COUNT(*) FILTER (
+          WHERE ("meaning" IS NOT NULL AND TRIM("meaning") <> '')
+             OR ("historicalContext" IS NOT NULL AND TRIM("historicalContext") <> '')
+             OR ("modernRelevance" IS NOT NULL AND TRIM("modernRelevance") <> '')
+        )::int AS "hasContext",
+        COUNT(*) FILTER (
           WHERE "authorId" IS NULL 
              OR "authorName" IS NULL 
              OR "sourceId" IS NULL 
@@ -107,6 +114,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       missingSource: 0,
       noTags: 0,
       noContext: 0,
+      hasContext: 0,
       orphaned: 0,
     }
     cachedQuoteFilterCounts = { counts, timestamp: now }
@@ -123,6 +131,7 @@ async function getQuoteFilterCounts(): Promise<QuoteFilterCounts> {
       missingSource: 0,
       noTags: 0,
       noContext: 0,
+      hasContext: 0,
       orphaned: 0,
     }
   }
@@ -138,6 +147,7 @@ const filterLabels: Record<QuoteFilter, string> = {
   "missing-source": "Missing Source",
   "no-tags": "No Tags",
   "no-context": "No Interpretation & Context",
+  "has-context": "Has Interpretation & Context",
   orphaned: "Orphaned",
 }
 
@@ -159,6 +169,15 @@ function getQuoteFilter(value: string | string[] | undefined): QuoteFilter {
     value === "without-interpretation"
   ) {
     return "no-context"
+  }
+  if (
+    value === "has-context" ||
+    value === "curated" ||
+    value === "with-context" ||
+    value === "has-interpretation" ||
+    value === "with-interpretation"
+  ) {
+    return "has-context"
   }
   if (value === "orphaned") return "orphaned"
   return "all"
@@ -199,6 +218,15 @@ function buildQuoteWhere(
         { OR: [{ meaning: null }, { meaning: "" }] },
         { OR: [{ historicalContext: null }, { historicalContext: "" }] },
         { OR: [{ modernRelevance: null }, { modernRelevance: "" }] },
+      ],
+    }
+  } else if (activeFilter === "has-context") {
+    baseWhere = {
+      deletedAt: null,
+      OR: [
+        { AND: [{ meaning: { not: null } }, { meaning: { not: "" } }] },
+        { AND: [{ historicalContext: { not: null } }, { historicalContext: { not: "" } }] },
+        { AND: [{ modernRelevance: { not: null } }, { modernRelevance: { not: "" } }] },
       ],
     }
   } else if (activeFilter === "orphaned") {
@@ -365,6 +393,7 @@ export default async function QuotesPage({
           { value: "missing-source", label: filterLabels["missing-source"], href: buildFilterHref("missing-source"), count: filterCounts.missingSource },
           { value: "no-tags", label: filterLabels["no-tags"], href: buildFilterHref("no-tags"), count: filterCounts.noTags },
           { value: "no-context", label: filterLabels["no-context"], href: buildFilterHref("no-context"), count: filterCounts.noContext },
+          { value: "has-context", label: filterLabels["has-context"], href: buildFilterHref("has-context"), count: filterCounts.hasContext },
           { value: "orphaned", label: filterLabels.orphaned, href: buildFilterHref("orphaned"), count: filterCounts.orphaned },
         ]}
       />

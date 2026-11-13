@@ -36,6 +36,9 @@ export function QuoteContextQuickEditor({
   const [historicalContext, setHistoricalContext] = useState("")
   const [modernRelevance, setModernRelevance] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
+  const [generatingField, setGeneratingField] = useState<"meaning" | "historicalContext" | "modernRelevance" | null>(null)
+  const [generationProvider, setGenerationProvider] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -50,6 +53,7 @@ export function QuoteContextQuickEditor({
       setModernRelevance(quote.modernRelevance ?? "")
       setError(null)
       setSuccessMessage(null)
+      setGenerationProvider(null)
     }
   }, [quote])
 
@@ -77,6 +81,58 @@ export function QuoteContextQuickEditor({
   const isHistoricalFilled = historicalContext.trim().length > 0
   const isModernFilled = modernRelevance.trim().length > 0
   const filledCount = Number(isMeaningFilled) + Number(isHistoricalFilled) + Number(isModernFilled)
+
+  async function handleGenerate(field?: "meaning" | "historicalContext" | "modernRelevance") {
+    if (!quote) return
+    if (field) {
+      setGeneratingField(field)
+    } else {
+      setIsGeneratingAll(true)
+    }
+    setError(null)
+
+    try {
+      const res = await fetch("/api/admin/quotes/suggest-context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteId: quote.id,
+          content: quote.content,
+          authorName: quote.authorName,
+          categoryName: quote.categoryName,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to generate context draft")
+      }
+
+      const result = await res.json()
+      const draft = result.draft
+      const providerName =
+        result.provider === "gemini" ? "Google Gemini AI" : "Curator Knowledge Engine"
+
+      if (field === "meaning") {
+        setMeaning(draft.meaning)
+      } else if (field === "historicalContext") {
+        setHistoricalContext(draft.historicalContext)
+      } else if (field === "modernRelevance") {
+        setModernRelevance(draft.modernRelevance)
+      } else {
+        setMeaning(draft.meaning)
+        setHistoricalContext(draft.historicalContext)
+        setModernRelevance(draft.modernRelevance)
+      }
+
+      setGenerationProvider(providerName)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to generate suggestion")
+    } finally {
+      setIsGeneratingAll(false)
+      setGeneratingField(null)
+    }
+  }
 
   async function handleSave() {
     if (!quote) return
@@ -160,15 +216,30 @@ export function QuoteContextQuickEditor({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSaving}
-                className="rounded-full p-1.5 text-stone-400 hover:bg-stone-200/70 hover:text-stone-700 transition cursor-pointer"
-                aria-label="Close drawer"
-              >
-                <CloseIcon className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => handleGenerate()}
+                  disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
+                  isLoading={isGeneratingAll}
+                  className="border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 font-medium text-xs cursor-pointer"
+                  title="Draft all 3 contextual dimensions automatically with AI"
+                >
+                  ✨ Auto-Draft Context
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isSaving || isGeneratingAll}
+                  className="rounded-full p-1.5 text-stone-400 hover:bg-stone-200/70 hover:text-stone-700 transition cursor-pointer"
+                  aria-label="Close drawer"
+                >
+                  <CloseIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Quote Snippet Callout */}
@@ -241,6 +312,25 @@ export function QuoteContextQuickEditor({
               </div>
             )}
 
+            {generationProvider && (
+              <div className="flex items-center justify-between rounded-xl border border-violet-200 bg-violet-50/80 px-3.5 py-2.5 text-xs text-violet-900 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">✨</span>
+                  <span>
+                    Context drafted via <strong>{generationProvider}</strong>. Review and tailor each dimension before saving.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGenerationProvider(null)}
+                  className="text-violet-500 hover:text-violet-800 cursor-pointer font-bold text-xs ml-2"
+                  title="Dismiss notice"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Dimension 1: Meaning & Interpretation */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -248,6 +338,15 @@ export function QuoteContextQuickEditor({
                   Meaning & Interpretation
                 </label>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleGenerate("meaning")}
+                    disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
+                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50/70 px-2 py-0.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100 transition cursor-pointer disabled:opacity-50"
+                    title="Draft meaning & interpretation"
+                  >
+                    {generatingField === "meaning" ? "Drafting..." : "✨ Suggest"}
+                  </button>
                   <span className="text-[11px] text-stone-400">
                     {meaning.length} / 5,000
                   </span>
@@ -283,6 +382,15 @@ export function QuoteContextQuickEditor({
                   Historical Context
                 </label>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleGenerate("historicalContext")}
+                    disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
+                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50/70 px-2 py-0.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100 transition cursor-pointer disabled:opacity-50"
+                    title="Draft historical context"
+                  >
+                    {generatingField === "historicalContext" ? "Drafting..." : "✨ Suggest"}
+                  </button>
                   <span className="text-[11px] text-stone-400">
                     {historicalContext.length} / 5,000
                   </span>
@@ -318,6 +426,15 @@ export function QuoteContextQuickEditor({
                   Modern Relevance
                 </label>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleGenerate("modernRelevance")}
+                    disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
+                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50/70 px-2 py-0.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100 transition cursor-pointer disabled:opacity-50"
+                    title="Draft modern relevance"
+                  >
+                    {generatingField === "modernRelevance" ? "Drafting..." : "✨ Suggest"}
+                  </button>
                   <span className="text-[11px] text-stone-400">
                     {modernRelevance.length} / 5,000
                   </span>

@@ -46,9 +46,16 @@ describe("Admin Quotes: Context Quick-Editor & Enrichment", () => {
   })
 
   it("updates and enriches quote context dimensions in database", async () => {
-    // Find an active quote to test
+    // Find an active curated quote so partition counts remain stable during parallel test runs
     const quote = await prisma.quote.findFirst({
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        OR: [
+          { meaning: { not: null } },
+          { historicalContext: { not: null } },
+          { modernRelevance: { not: null } },
+        ],
+      },
       select: {
         id: true,
         meaning: true,
@@ -123,9 +130,9 @@ describe("Admin Quotes: Context Quick-Editor & Enrichment", () => {
 
       // Calculate context presence
       const hasContext = Boolean(
-        (partialUpdate.meaning && partialUpdate.meaning.trim()) ||
-        (partialUpdate.historicalContext && partialUpdate.historicalContext.trim()) ||
-        (partialUpdate.modernRelevance && partialUpdate.modernRelevance.trim())
+        (typeof partialUpdate.meaning === "string" && partialUpdate.meaning.trim()) ||
+        (typeof partialUpdate.historicalContext === "string" && (partialUpdate.historicalContext as string).trim()) ||
+        (typeof partialUpdate.modernRelevance === "string" && (partialUpdate.modernRelevance as string).trim())
       )
       assert.equal(hasContext, true, "Quote with meaning populated should have hasContext = true")
     } finally {

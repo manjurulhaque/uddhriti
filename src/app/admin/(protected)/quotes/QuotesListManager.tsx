@@ -26,6 +26,7 @@ type QuoteItem = {
   hasCategory: boolean
   hasSource: boolean
   hasTags: boolean
+  tags?: Array<{ id: string; name: string; slug: string }>
   hasContext?: boolean
 }
 
@@ -80,7 +81,8 @@ function buildQuotesListHref(
   author?: string,
   status?: string,
   verified?: string,
-  attribution?: string
+  attribution?: string,
+  tag?: string
 ) {
   const params = new URLSearchParams()
   if (filter !== "all") {
@@ -100,6 +102,9 @@ function buildQuotesListHref(
   }
   if (attribution && attribution !== "all") {
     params.set("attribution", attribution)
+  }
+  if (tag && tag !== "all") {
+    params.set("tag", tag)
   }
   if (sort && sort !== "newest") {
     params.set("sort", sort)
@@ -131,6 +136,8 @@ export function QuotesListManager({
   initialStatus = "all",
   initialVerified = "all",
   initialAttribution = "all",
+  initialTag = "",
+  initialTagName = null,
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -147,6 +154,8 @@ export function QuotesListManager({
   initialStatus?: string
   initialVerified?: string
   initialAttribution?: string
+  initialTag?: string
+  initialTagName?: string | null
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -223,6 +232,13 @@ export function QuotesListManager({
     setAttributionFilter(initialAttribution)
   }
 
+  const [tagFilter, setTagFilter] = useState(initialTag)
+  const [prevInitialTag, setPrevInitialTag] = useState(initialTag)
+  if (prevInitialTag !== initialTag) {
+    setPrevInitialTag(initialTag)
+    setTagFilter(initialTag)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -242,7 +258,8 @@ export function QuotesListManager({
         authorFilter,
         statusFilter,
         verifiedFilter,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
       router.push(href)
     }, 350)
@@ -258,6 +275,7 @@ export function QuotesListManager({
     statusFilter,
     verifiedFilter,
     attributionFilter,
+    tagFilter,
     router,
   ])
 
@@ -521,7 +539,8 @@ export function QuotesListManager({
         authorFilter,
         statusFilter,
         verifiedFilter,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
     )
   }
@@ -538,7 +557,8 @@ export function QuotesListManager({
         authorFilter,
         statusFilter,
         verifiedFilter,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
     )
   }
@@ -555,7 +575,8 @@ export function QuotesListManager({
         authorSlugOrId,
         statusFilter,
         verifiedFilter,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
     )
   }
@@ -572,7 +593,8 @@ export function QuotesListManager({
         "",
         statusFilter,
         verifiedFilter,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
     )
   }
@@ -589,7 +611,8 @@ export function QuotesListManager({
         authorFilter,
         nextStatus,
         verifiedFilter,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
     )
   }
@@ -606,7 +629,8 @@ export function QuotesListManager({
         authorFilter,
         statusFilter,
         nextVerified,
-        attributionFilter
+        attributionFilter,
+        tagFilter
       )
     )
   }
@@ -623,7 +647,44 @@ export function QuotesListManager({
         authorFilter,
         statusFilter,
         verifiedFilter,
-        nextAttribution
+        nextAttribution,
+        tagFilter
+      )
+    )
+  }
+
+  function handleTagFilter(tagSlugOrId: string) {
+    setTagFilter(tagSlugOrId)
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter,
+        attributionFilter,
+        tagSlugOrId
+      )
+    )
+  }
+
+  function handleClearTagFilter() {
+    setTagFilter("")
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter,
+        attributionFilter,
+        ""
       )
     )
   }
@@ -636,6 +697,7 @@ export function QuotesListManager({
     setStatusFilter("all")
     setVerifiedFilter("all")
     setAttributionFilter("all")
+    setTagFilter("")
     if (
       initialSearch.trim() ||
       initialSort !== "newest" ||
@@ -643,9 +705,10 @@ export function QuotesListManager({
       initialAuthor ||
       initialStatus !== "all" ||
       initialVerified !== "all" ||
-      initialAttribution !== "all"
+      initialAttribution !== "all" ||
+      initialTag
     ) {
-      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all", "all"))
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all", "all", ""))
     }
   }
 
@@ -656,7 +719,8 @@ export function QuotesListManager({
     Boolean(authorFilter && authorFilter !== "all") ||
     statusFilter !== "all" ||
     verifiedFilter !== "all" ||
-    attributionFilter !== "all"
+    attributionFilter !== "all" ||
+    Boolean(tagFilter && tagFilter !== "all")
 
   const activeFiltersBannerList = [
     authorFilter
@@ -676,6 +740,13 @@ export function QuotesListManager({
           label: "Attribution",
           value: attributionFilter,
           onClear: () => handleAttributionChange("all"),
+        }
+      : null,
+    tagFilter && tagFilter !== "all"
+      ? {
+          label: "Tag",
+          value: initialTagName ? `#${initialTagName}` : `#${tagFilter}`,
+          onClear: handleClearTagFilter,
         }
       : null,
   ].filter(Boolean) as Array<{ label: string; value: string; onClear: () => void }>
@@ -710,6 +781,7 @@ export function QuotesListManager({
                   setStatusFilter("all")
                   setVerifiedFilter("all")
                   setAttributionFilter("all")
+                  setTagFilter("")
                   router.push(
                     buildQuotesListHref(
                       activeFilter,
@@ -720,7 +792,8 @@ export function QuotesListManager({
                       "",
                       "all",
                       "all",
-                      "all"
+                      "all",
+                      ""
                     )
                   )
                 }}
@@ -1184,7 +1257,37 @@ export function QuotesListManager({
                       Missing source
                     </Badge>
                   )}
-                  {!quote.hasTags && (
+                  {quote.tags && quote.tags.length > 0 ? (
+                    quote.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleTagFilter(tag.slug)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleTagFilter(tag.slug)
+                          }
+                        }}
+                        title={`Click to filter quotes tagged with #${tag.name}`}
+                        className="cursor-pointer inline-flex"
+                      >
+                        <Badge
+                          variant="outline"
+                          size="xs"
+                          className="font-sans font-medium text-stone-600 bg-stone-50/90 border-stone-200/90 hover:bg-stone-100 hover:text-black hover:border-stone-400 transition-colors"
+                        >
+                          #{tag.name}
+                        </Badge>
+                      </span>
+                    ))
+                  ) : (
                     <Badge variant="neutral" size="xs">
                       Missing tags
                     </Badge>
@@ -1337,7 +1440,8 @@ export function QuotesListManager({
                 authorFilter,
                 statusFilter,
                 verifiedFilter,
-                attributionFilter
+                attributionFilter,
+                tagFilter
               )
             }
           />

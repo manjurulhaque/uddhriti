@@ -466,9 +466,45 @@ export function TagsListManager({ tags }: { tags: TagItem[] }) {
                           selected={selectedIds.includes(tag.id)}
                           onSelect={() => toggleSelect(tag.id)}
                           disabled={isDeleting || isUpdating}
-                          badge={<AdminEntityCountBadge count={tag.quoteCount} />}
+                          badge={
+                            tag.quoteCount > 0 ? (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  router.push(`/admin/quotes?tag=${tag.slug}`)
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    router.push(`/admin/quotes?tag=${tag.slug}`)
+                                  }
+                                }}
+                                className="cursor-pointer inline-flex transition hover:opacity-80"
+                                title={`View ${tag.quoteCount} quotes tagged with #${tag.name}`}
+                              >
+                                <AdminEntityCountBadge count={tag.quoteCount} />
+                              </span>
+                            ) : (
+                              <AdminEntityCountBadge count={tag.quoteCount} />
+                            )
+                          }
                           actions={
                             <div className="flex flex-wrap gap-2 items-center justify-end">
+                              {tag.quoteCount > 0 && (
+                                <Button
+                                  href={`/admin/quotes?tag=${tag.slug}`}
+                                  variant="ghost"
+                                  size="xs"
+                                  className="text-stone-700 hover:text-stone-900 hidden sm:inline-flex"
+                                  title={`View ${tag.quoteCount} quotes tagged with #${tag.name}`}
+                                >
+                                  View quotes &rarr;
+                                </Button>
+                              )}
                               <select
                                 value={tagTypesById[tag.id] || tag.type}
                                 onChange={(event) =>

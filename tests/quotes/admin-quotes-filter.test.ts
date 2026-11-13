@@ -601,4 +601,102 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
       assert.equal(q.attributionStatus, "CONFIRMED")
     }
   })
+
+  it("filters quotes by tag slug and tag UUID and verifies tag badges structure", async () => {
+    // 1. Find a tag that has active quotes
+    const tag = await prisma.tag.findFirst({
+      where: {
+        quotes: {
+          some: {
+            quote: {
+              deletedAt: null,
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+      },
+    })
+
+    assert.ok(tag, "Should find at least one tag with active quotes")
+    assert.ok(isValidUuid(tag.id), "Tag id must be a valid UUID")
+
+    // 2. Query quotes by tag slug
+    const quotesBySlug = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        tags: {
+          some: {
+            tag: { slug: tag.slug },
+          },
+        },
+      },
+      select: {
+        id: true,
+        tags: {
+          select: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
+      },
+      take: 10,
+    })
+
+    assert.ok(quotesBySlug.length > 0, "Should return quotes for tag slug")
+    for (const q of quotesBySlug) {
+      const hasMatchingTag = q.tags.some((qt) => qt.tag.slug === tag.slug)
+      assert.ok(hasMatchingTag, `Quote ${q.id} must contain tag ${tag.slug}`)
+    }
+
+    // 3. Query quotes by tag UUID
+    const quotesById = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        tags: {
+          some: {
+            tagId: tag.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+      take: 10,
+    })
+
+    assert.equal(
+      quotesById.length,
+      quotesBySlug.length,
+      "Quotes filtered by tag UUID must match quotes filtered by tag slug"
+    )
+
+    // 4. Combined filter: Tag + Status (PUBLISHED)
+    const publishedTagQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { tags: { some: { tag: { slug: tag.slug } } } },
+          { status: "PUBLISHED" },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+      take: 5,
+    })
+
+    for (const q of publishedTagQuotes) {
+      assert.equal(q.status, "PUBLISHED")
+    }
+  })
 })

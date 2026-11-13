@@ -19,6 +19,7 @@ export async function GET(req: Request) {
   const filter = searchParams.get("filter")
   const categoryParam = searchParams.get("category")?.trim() || searchParams.get("categoryId")?.trim()
   const authorParam = searchParams.get("author")?.trim() || searchParams.get("authorId")?.trim()
+  const tagParam = searchParams.get("tag")?.trim() || searchParams.get("tagId")?.trim()
   const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
   const verifiedParam = searchParams.get("verified")?.trim().toLowerCase() || searchParams.get("isVerified")?.trim().toLowerCase()
@@ -119,6 +120,13 @@ export async function GET(req: Request) {
             ],
           }
       where.AND = Array.isArray(where.AND) ? [...where.AND, authorCondition] : [authorCondition]
+    }
+
+    if (tagParam && tagParam !== "all") {
+      const tagCondition: Prisma.QuoteWhereInput = isValidUuid(tagParam)
+        ? { tags: { some: { tagId: tagParam } } }
+        : { tags: { some: { tag: { slug: tagParam } } } }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, tagCondition] : [tagCondition]
     }
 
     const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()

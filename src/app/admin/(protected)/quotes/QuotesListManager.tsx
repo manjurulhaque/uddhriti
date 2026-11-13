@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation"
 import { formatDateTimeInAppTimeZone } from "@/lib/datetime"
 import { FilterToolbar, AdminEntityCard } from "@/components/admin"
 import { Pagination, EmptyState, ConfirmModal, Button, Badge, Select } from "@/components/ui"
-import { quoteSortOptions as sortOptions, type QuoteSortOption as SortOption } from "@/lib/quotes/sort"
+import { QuoteSortOption as SortOption, quoteSortOptions as sortOptions } from "@/lib/quotes/sort"
 import { QuoteContextQuickEditor } from "./QuoteContextQuickEditor"
+import { QuoteVerificationModal } from "./QuoteVerificationModal"
 
 type QuoteItem = {
   id: string
@@ -34,6 +35,8 @@ type QuoteItem = {
   meaning?: string | null
   historicalContext?: string | null
   modernRelevance?: string | null
+  verificationNote?: string | null
+  verificationConfidence?: number | null
 }
 
 type Option = {
@@ -179,8 +182,21 @@ export function QuotesListManager({
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
   const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
   const [verificationOverrides, setVerificationOverrides] = useState<Record<string, boolean>>({})
+  const [attributionOverrides, setAttributionOverrides] = useState<Record<string, string>>({})
+  const [verificationNoteOverrides, setVerificationNoteOverrides] = useState<Record<string, string | null>>({})
   const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
   const [verificationValue, setVerificationValue] = useState(true)
+  const [verifyingQuote, setVerifyingQuote] = useState<{
+    id: string
+    content: string
+    authorName: string | null
+    sourceTitle?: string | null
+    categoryName?: string | null
+    isVerified?: boolean
+    attributionStatus?: string | null
+    verificationNote?: string | null
+    verificationConfidence?: number | null
+  } | null>(null)
   const [editingContextQuote, setEditingContextQuote] = useState<{
     id: string
     content: string
@@ -212,6 +228,28 @@ export function QuotesListManager({
     setContextOverrides((prev) => ({
       ...prev,
       [updated.id]: updated,
+    }))
+    router.refresh()
+  }
+
+  function handleVerificationSaveSuccess(updated: {
+    id: string
+    isVerified: boolean
+    attributionStatus: "CONFIRMED" | "DISPUTED" | "MISATTRIBUTED" | "UNKNOWN"
+    verificationConfidence: number
+    verificationNote: string | null
+  }) {
+    setVerificationOverrides((prev) => ({
+      ...prev,
+      [updated.id]: updated.isVerified,
+    }))
+    setAttributionOverrides((prev) => ({
+      ...prev,
+      [updated.id]: updated.attributionStatus,
+    }))
+    setVerificationNoteOverrides((prev) => ({
+      ...prev,
+      [updated.id]: updated.verificationNote,
     }))
     router.refresh()
   }
@@ -1203,6 +1241,11 @@ export function QuotesListManager({
         {visibleQuotes.map((quote) => {
           const effectiveStatus = statusOverrides[quote.id] ?? quote.status
           const effectiveVerified = verificationOverrides[quote.id] ?? quote.isVerified
+          const effectiveAttribution = attributionOverrides[quote.id] ?? quote.attributionStatus ?? "UNKNOWN"
+          const effectiveVerificationNote =
+            verificationNoteOverrides[quote.id] !== undefined
+              ? verificationNoteOverrides[quote.id]
+              : quote.verificationNote ?? null
           const isTogglingStatus = togglingStatusId === quote.id
           const isTogglingVerification = togglingVerificationId === quote.id
           const isPublished = effectiveStatus === "PUBLISHED"
@@ -1620,21 +1663,33 @@ export function QuotesListManager({
                     type="button"
                     variant={effectiveVerified ? "ghost" : "outline"}
                     size="xs"
-                    disabled={isTogglingVerification}
-                    isLoading={isTogglingVerification}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      toggleQuoteVerification(quote.id, effectiveVerified)
+                      setVerifyingQuote({
+                        id: quote.id,
+                        content: quote.content,
+                        authorName: quote.authorName,
+                        sourceTitle: quote.sourceTitle,
+                        categoryName: quote.categoryName,
+                        isVerified: effectiveVerified,
+                        attributionStatus: effectiveAttribution,
+                        verificationNote: effectiveVerificationNote,
+                        verificationConfidence: quote.verificationConfidence,
+                      })
                     }}
-                    title={effectiveVerified ? "Click to mark as unverified" : "Click to mark as verified immediately"}
+                    title={
+                      effectiveVerified
+                        ? "Scholarly verified. Click to inspect, review, or update citations with AI."
+                        : "Click to run AI fact-check, determine attribution, and verify primary sources."
+                    }
                     className={
                       effectiveVerified
-                        ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border border-emerald-200/80"
-                        : "text-amber-800 border-amber-300 bg-amber-50/60 hover:bg-amber-100/80"
+                        ? "text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border border-emerald-200/80 cursor-pointer"
+                        : "text-amber-800 border-amber-300 bg-amber-50/60 hover:bg-amber-100/80 cursor-pointer font-medium"
                     }
                   >
-                    {effectiveVerified ? "✓ Verified" : "Verify"}
+                    {effectiveVerified ? "✓ Verified" : "✨ Verify"}
                   </Button>
                   <Button
                     type="button"
@@ -1721,6 +1776,13 @@ export function QuotesListManager({
         onClose={() => setEditingContextQuote(null)}
         quote={editingContextQuote}
         onSaveSuccess={handleContextSaveSuccess}
+      />
+
+      <QuoteVerificationModal
+        isOpen={verifyingQuote !== null}
+        onClose={() => setVerifyingQuote(null)}
+        quote={verifyingQuote}
+        onSaveSuccess={handleVerificationSaveSuccess}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 const quoteStatusSchema = z.enum(["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"])
-const attributionStatusSchema = z.enum(["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"])
+export const attributionStatusSchema = z.enum(["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"])
 const maxQuoteTags = 7
 const sourceTypeSchema = z.enum([
   "BOOK",
@@ -47,4 +47,11 @@ export const quoteContextUpdateSchema = z.object({
   meaning: z.string().trim().max(5_000, "Meaning cannot exceed 5,000 characters").optional().nullable(),
   historicalContext: z.string().trim().max(5_000, "Historical context cannot exceed 5,000 characters").optional().nullable(),
   modernRelevance: z.string().trim().max(5_000, "Modern relevance cannot exceed 5,000 characters").optional().nullable(),
+})
+
+export const quoteVerificationUpdateSchema = z.object({
+  isVerified: z.boolean().optional(),
+  attributionStatus: attributionStatusSchema.optional(),
+  verificationConfidence: z.coerce.number().min(0).max(1).optional(),
+  verificationNote: z.string().trim().max(2_000, "Verification note cannot exceed 2,000 characters").optional().nullable(),
 })

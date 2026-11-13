@@ -686,6 +686,8 @@ export default function QuoteEditorForm({
               updateForm={updateForm}
               derivedVerificationConfidence={derivedVerificationConfidence}
               derivedAdminSortKey={derivedAdminSortKey}
+              authorName={authors.find((a) => a.id === form.authorId)?.name}
+              quoteId={quoteId}
             />
           )}
 

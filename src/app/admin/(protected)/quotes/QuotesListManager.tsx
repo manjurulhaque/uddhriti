@@ -606,19 +606,82 @@ export function QuotesListManager({
 
   return (
     <div className="space-y-4">
-      {authorFilter ? (
-        <div className="flex items-center justify-between rounded-xl border border-stone-200/90 bg-stone-50/90 px-3.5 py-2 text-xs text-stone-800">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-stone-600">Filtered by Author:</span>
-            <span className="font-bold text-stone-900">{initialAuthorName || authorFilter}</span>
+      {authorFilter || (categoryFilter && categoryFilter !== "all") ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-stone-200/90 bg-stone-50/90 px-3.5 py-2 text-xs text-stone-800">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            {authorFilter ? (
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-stone-600">Filtered by Author:</span>
+                <span className="font-bold text-stone-900">{initialAuthorName || authorFilter}</span>
+                <button
+                  type="button"
+                  onClick={handleClearAuthorFilter}
+                  className="ml-1 text-stone-500 hover:text-stone-900 cursor-pointer font-bold text-xs"
+                  title="Clear author filter"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+            {categoryFilter && categoryFilter !== "all" ? (
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-stone-600">Filtered by Category:</span>
+                <span className="font-bold text-stone-900">
+                  {categoryOptions.find((c) => c.slug === categoryFilter || c.id === categoryFilter)?.name || categoryFilter}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryChange("all")}
+                  className="ml-1 text-stone-500 hover:text-stone-900 cursor-pointer font-bold text-xs"
+                  title="Clear category filter"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={handleClearAuthorFilter}
-            className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
-          >
-            Clear Author Filter ✕
-          </button>
+          <div className="flex items-center gap-3">
+            {authorFilter && categoryFilter && categoryFilter !== "all" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthorFilter("")
+                  setCategoryFilter("all")
+                  router.push(
+                    buildQuotesListHref(
+                      activeFilter,
+                      1,
+                      search.trim(),
+                      sortBy,
+                      "all",
+                      "",
+                      statusFilter,
+                      verifiedFilter
+                    )
+                  )
+                }}
+                className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
+              >
+                Clear all active filters ✕
+              </button>
+            ) : authorFilter ? (
+              <button
+                type="button"
+                onClick={handleClearAuthorFilter}
+                className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
+              >
+                Clear Author Filter ✕
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleCategoryChange("all")}
+                className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
+              >
+                Clear Category Filter ✕
+              </button>
+            )}
+          </div>
         </div>
       ) : null}
 
@@ -916,7 +979,36 @@ export function QuotesListManager({
                   {quote.categoryName ? (
                     <>
                       <span className="text-stone-300">•</span>
-                      <span className="text-stone-600 font-medium">{quote.categoryName}</span>
+                      <span
+                        role={quote.categorySlug ? "button" : undefined}
+                        tabIndex={quote.categorySlug ? 0 : undefined}
+                        onClick={(e) => {
+                          if (quote.categorySlug) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleCategoryChange(quote.categorySlug)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if ((e.key === "Enter" || e.key === " ") && quote.categorySlug) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleCategoryChange(quote.categorySlug)
+                          }
+                        }}
+                        title={
+                          quote.categorySlug
+                            ? `Click to filter quotes by category: ${quote.categoryName}`
+                            : undefined
+                        }
+                        className={`font-medium ${
+                          quote.categorySlug
+                            ? "text-stone-700 hover:text-black hover:underline cursor-pointer"
+                            : "text-stone-600"
+                        }`}
+                      >
+                        {quote.categoryName}
+                      </span>
                     </>
                   ) : null}
                   {quote.sourceTitle ? (
@@ -956,9 +1048,42 @@ export function QuotesListManager({
                     </Badge>
                   )}
                   {quote.categoryName ? (
-                    <Badge variant="outline" size="xs" className="font-sans font-medium text-stone-700 bg-stone-50 border-stone-200/90">
-                      {quote.categoryName}
-                    </Badge>
+                    <span
+                      role={quote.categorySlug ? "button" : undefined}
+                      tabIndex={quote.categorySlug ? 0 : undefined}
+                      onClick={(e) => {
+                        if (quote.categorySlug) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleCategoryChange(quote.categorySlug)
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if ((e.key === "Enter" || e.key === " ") && quote.categorySlug) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleCategoryChange(quote.categorySlug)
+                        }
+                      }}
+                      title={
+                        quote.categorySlug
+                          ? `Click to filter quotes by category: ${quote.categoryName}`
+                          : undefined
+                      }
+                      className={quote.categorySlug ? "cursor-pointer inline-flex" : undefined}
+                    >
+                      <Badge
+                        variant="outline"
+                        size="xs"
+                        className={`font-sans font-medium text-stone-700 bg-stone-50 border-stone-200/90 transition-colors ${
+                          quote.categorySlug
+                            ? "hover:bg-stone-100 hover:text-black hover:border-stone-400"
+                            : ""
+                        }`}
+                      >
+                        {quote.categoryName}
+                      </Badge>
+                    </span>
                   ) : (
                     <Badge variant="danger" size="xs">
                       Missing category

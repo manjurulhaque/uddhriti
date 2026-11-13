@@ -273,9 +273,45 @@ export function CategoriesListManager({ categories }: { categories: CategoryItem
                 selected={selectedIds.includes(c.id)}
                 onSelect={() => toggleSelect(c.id)}
                 disabled={isDeleting}
-                badge={<AdminEntityCountBadge count={c.quoteCount} />}
+                badge={
+                  c.quoteCount > 0 ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        router.push(`/admin/quotes?category=${c.slug}`)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          router.push(`/admin/quotes?category=${c.slug}`)
+                        }
+                      }}
+                      className="cursor-pointer inline-flex transition hover:opacity-80"
+                      title={`View ${c.quoteCount} quotes in ${c.name}`}
+                    >
+                      <AdminEntityCountBadge count={c.quoteCount} />
+                    </span>
+                  ) : (
+                    <AdminEntityCountBadge count={c.quoteCount} />
+                  )
+                }
                 actions={
                   <div className="flex items-center gap-2">
+                    {c.quoteCount > 0 && (
+                      <Button
+                        href={`/admin/quotes?category=${c.slug}`}
+                        variant="ghost"
+                        size="xs"
+                        className="text-stone-700 hover:text-stone-900 hidden sm:inline-flex"
+                        title={`View ${c.quoteCount} quotes in ${c.name}`}
+                      >
+                        View quotes &rarr;
+                      </Button>
+                    )}
                     <Button href={`/admin/categories/${c.id}`} variant="outline" size="xs">
                       Edit
                     </Button>

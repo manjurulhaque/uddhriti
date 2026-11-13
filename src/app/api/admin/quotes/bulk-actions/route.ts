@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { QuoteStatus } from "@prisma/client"
+import { QuoteStatus, AttributionStatus } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
@@ -22,6 +22,7 @@ type BulkActionPayload = {
   tagIds?: unknown
   status?: unknown
   isVerified?: unknown
+  attributionStatus?: unknown
 }
 
 function uniqueStringList(value: unknown) {
@@ -65,7 +66,8 @@ export async function POST(req: Request) {
     action !== "addTags" &&
     action !== "removeTags" &&
     action !== "setStatus" &&
-    action !== "setVerification"
+    action !== "setVerification" &&
+    action !== "setAttribution"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
@@ -161,6 +163,46 @@ export async function POST(req: Request) {
         adminEmail: admin.email,
         adminName: admin.name,
         details: { action, isVerified, quoteIdsCount: quoteIds.length, updatedCount: result.count },
+        req,
+      })
+
+      return NextResponse.json({ success: true, updatedCount: result.count })
+    }
+
+    if (action === "setAttribution") {
+      const attributionStatus = typeof body.attributionStatus === "string" ? body.attributionStatus.trim() : ""
+      if (
+        attributionStatus !== "CONFIRMED" &&
+        attributionStatus !== "DISPUTED" &&
+        attributionStatus !== "MISATTRIBUTED" &&
+        attributionStatus !== "UNKNOWN"
+      ) {
+        return NextResponse.json(
+          { error: "Valid attributionStatus value (CONFIRMED, DISPUTED, MISATTRIBUTED, UNKNOWN) is required" },
+          { status: 400 }
+        )
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const updated = await tx.quote.updateMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          data: {
+            attributionStatus: attributionStatus as AttributionStatus,
+          },
+        })
+
+        return updated
+      })
+
+      revalidatePublicSurfaces()
+
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "QUOTE",
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, attributionStatus, quoteIdsCount: quoteIds.length, updatedCount: result.count },
         req,
       })
 

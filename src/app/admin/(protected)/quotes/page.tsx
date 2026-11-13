@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import type { Prisma, QuoteStatus } from "@prisma/client"
+import type { Prisma, QuoteStatus, AttributionStatus } from "@prisma/client"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { prisma } from "@/lib/prisma"
 import { QuotesListManager } from "./QuotesListManager"
@@ -205,7 +205,8 @@ function buildQuoteWhere(
   categorySlugOrId?: string | null,
   authorSlugOrId?: string | null,
   statusFilter?: string | null,
-  verifiedFilter?: string | null
+  verifiedFilter?: string | null,
+  attributionFilter?: string | null
 ): Prisma.QuoteWhereInput {
   let baseWhere: Prisma.QuoteWhereInput
 
@@ -295,6 +296,15 @@ function buildQuoteWhere(
     conditions.push({ isVerified: false })
   }
 
+  const normalizedAttribution = attributionFilter?.trim().toUpperCase()
+  if (
+    normalizedAttribution &&
+    normalizedAttribution !== "ALL" &&
+    ["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"].includes(normalizedAttribution)
+  ) {
+    conditions.push({ attributionStatus: normalizedAttribution as AttributionStatus })
+  }
+
   const query = search?.trim()
   if (query) {
     // If GIN full-text index returned matching quote IDs, filter directly by PK id
@@ -358,6 +368,12 @@ export default async function QuotesPage({
       : typeof resolvedSearchParams.isVerified === "string"
       ? resolvedSearchParams.isVerified.trim()
       : "all"
+  const activeAttribution =
+    typeof resolvedSearchParams.attribution === "string"
+      ? resolvedSearchParams.attribution.trim()
+      : typeof resolvedSearchParams.attributionStatus === "string"
+      ? resolvedSearchParams.attributionStatus.trim()
+      : "all"
   const searchQuery =
     typeof resolvedSearchParams.search === "string"
       ? resolvedSearchParams.search.trim()
@@ -372,7 +388,8 @@ export default async function QuotesPage({
     activeCategory,
     activeAuthor,
     activeStatus,
-    activeVerified
+    activeVerified,
+    activeAttribution
   )
   const orderBy = buildQuoteOrderBy(activeSort)
   const initialSkip = Math.max(0, (requestedPage - 1) * PAGE_SIZE)
@@ -448,6 +465,7 @@ export default async function QuotesPage({
   if (activeAuthor && activeAuthor !== "all") exportParams.set("author", activeAuthor)
   if (activeStatus && activeStatus !== "all") exportParams.set("status", activeStatus)
   if (activeVerified && activeVerified !== "all") exportParams.set("verified", activeVerified)
+  if (activeAttribution && activeAttribution !== "all") exportParams.set("attribution", activeAttribution)
   if (activeSort !== "newest") exportParams.set("sort", activeSort)
   if (searchQuery) exportParams.set("search", searchQuery)
   const exportUrl = `/api/admin/quotes/export?${exportParams.toString()}`
@@ -459,6 +477,7 @@ export default async function QuotesPage({
     if (activeAuthor && activeAuthor !== "all") params.set("author", activeAuthor)
     if (activeStatus && activeStatus !== "all") params.set("status", activeStatus)
     if (activeVerified && activeVerified !== "all") params.set("verified", activeVerified)
+    if (activeAttribution && activeAttribution !== "all") params.set("attribution", activeAttribution)
     if (activeSort !== "newest") params.set("sort", activeSort)
     if (searchQuery) params.set("search", searchQuery)
     const qs = params.toString()
@@ -528,6 +547,7 @@ export default async function QuotesPage({
         initialAuthorName={activeAuthorName}
         initialStatus={activeStatus}
         initialVerified={activeVerified}
+        initialAttribution={activeAttribution}
       />
     </div>
   )

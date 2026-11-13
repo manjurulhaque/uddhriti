@@ -5,7 +5,7 @@ import { searchQuoteIds } from "@/lib/quotes/search"
 import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
 import { escapeCsvCell } from "@/lib/security/csv"
 import { isValidUuid } from "@/lib/api/route-helpers"
-import type { Prisma, QuoteStatus } from "@prisma/client"
+import type { Prisma, QuoteStatus, AttributionStatus } from "@prisma/client"
 
 export async function GET(req: Request) {
   const { admin, response } = await requireSuperAdmin()
@@ -22,6 +22,7 @@ export async function GET(req: Request) {
   const sortParam = searchParams.get("sort")
   const statusParam = searchParams.get("status")?.toUpperCase()
   const verifiedParam = searchParams.get("verified")?.trim().toLowerCase() || searchParams.get("isVerified")?.trim().toLowerCase()
+  const attributionParam = searchParams.get("attribution")?.toUpperCase() || searchParams.get("attributionStatus")?.toUpperCase()
   const rawIds = searchParams.get("ids")
   const ids = rawIds ? rawIds.split(",").map((s) => s.trim()).filter(Boolean) : []
   const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "10000", 10)), 20000)
@@ -43,6 +44,11 @@ export async function GET(req: Request) {
     } else if (verifiedParam === "unverified" || verifiedParam === "false") {
       const verifiedCondition: Prisma.QuoteWhereInput = { isVerified: false }
       where.AND = Array.isArray(where.AND) ? [...where.AND, verifiedCondition] : [verifiedCondition]
+    }
+
+    if (attributionParam && ["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"].includes(attributionParam)) {
+      const attributionCondition: Prisma.QuoteWhereInput = { attributionStatus: attributionParam as AttributionStatus }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, attributionCondition] : [attributionCondition]
     }
 
     if (filter === "draft") {

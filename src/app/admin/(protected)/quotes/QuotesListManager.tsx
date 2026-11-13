@@ -49,6 +49,7 @@ type BulkActionType =
   | "removeTags"
   | "setStatus"
   | "setVerification"
+  | "setAttribution"
 
 type QuoteFilter =
   | "all"
@@ -78,7 +79,8 @@ function buildQuotesListHref(
   category?: string,
   author?: string,
   status?: string,
-  verified?: string
+  verified?: string,
+  attribution?: string
 ) {
   const params = new URLSearchParams()
   if (filter !== "all") {
@@ -95,6 +97,9 @@ function buildQuotesListHref(
   }
   if (verified && verified !== "all") {
     params.set("verified", verified)
+  }
+  if (attribution && attribution !== "all") {
+    params.set("attribution", attribution)
   }
   if (sort && sort !== "newest") {
     params.set("sort", sort)
@@ -125,6 +130,7 @@ export function QuotesListManager({
   initialAuthorName = null,
   initialStatus = "all",
   initialVerified = "all",
+  initialAttribution = "all",
 }: {
   quotes: QuoteItem[]
   activeFilter: QuoteFilter
@@ -140,11 +146,13 @@ export function QuotesListManager({
   initialAuthorName?: string | null
   initialStatus?: string
   initialVerified?: string
+  initialAttribution?: string
 }) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [action, setAction] = useState<BulkActionType>("setStatus")
   const [statusValue, setStatusValue] = useState<"PUBLISHED" | "DRAFT" | "ARCHIVED">("PUBLISHED")
+  const [attributionValue, setAttributionValue] = useState<"CONFIRMED" | "DISPUTED" | "MISATTRIBUTED" | "UNKNOWN">("CONFIRMED")
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
   const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
   const [verificationOverrides, setVerificationOverrides] = useState<Record<string, boolean>>({})
@@ -208,6 +216,13 @@ export function QuotesListManager({
     setVerifiedFilter(initialVerified)
   }
 
+  const [attributionFilter, setAttributionFilter] = useState(initialAttribution)
+  const [prevInitialAttribution, setPrevInitialAttribution] = useState(initialAttribution)
+  if (prevInitialAttribution !== initialAttribution) {
+    setPrevInitialAttribution(initialAttribution)
+    setAttributionFilter(initialAttribution)
+  }
+
   const [isLoadingOptions, setIsLoadingOptions] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -226,13 +241,25 @@ export function QuotesListManager({
         categoryFilter,
         authorFilter,
         statusFilter,
-        verifiedFilter
+        verifiedFilter,
+        attributionFilter
       )
       router.push(href)
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [search, activeFilter, initialSearch, sortBy, categoryFilter, authorFilter, statusFilter, verifiedFilter, router])
+  }, [
+    search,
+    activeFilter,
+    initialSearch,
+    sortBy,
+    categoryFilter,
+    authorFilter,
+    statusFilter,
+    verifiedFilter,
+    attributionFilter,
+    router,
+  ])
 
   const selectedTagNames = useMemo(
     () => tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name),
@@ -346,6 +373,7 @@ export function QuotesListManager({
           tagIds: action === "addTags" || action === "removeTags" ? tagIds : undefined,
           status: action === "setStatus" ? statusValue : undefined,
           isVerified: action === "setVerification" ? verificationValue : undefined,
+          attributionStatus: action === "setAttribution" ? attributionValue : undefined,
         }),
       })
 
@@ -492,7 +520,8 @@ export function QuotesListManager({
         categoryFilter,
         authorFilter,
         statusFilter,
-        verifiedFilter
+        verifiedFilter,
+        attributionFilter
       )
     )
   }
@@ -508,7 +537,8 @@ export function QuotesListManager({
         nextCategory,
         authorFilter,
         statusFilter,
-        verifiedFilter
+        verifiedFilter,
+        attributionFilter
       )
     )
   }
@@ -524,7 +554,8 @@ export function QuotesListManager({
         categoryFilter,
         authorSlugOrId,
         statusFilter,
-        verifiedFilter
+        verifiedFilter,
+        attributionFilter
       )
     )
   }
@@ -540,7 +571,8 @@ export function QuotesListManager({
         categoryFilter,
         "",
         statusFilter,
-        verifiedFilter
+        verifiedFilter,
+        attributionFilter
       )
     )
   }
@@ -556,7 +588,8 @@ export function QuotesListManager({
         categoryFilter,
         authorFilter,
         nextStatus,
-        verifiedFilter
+        verifiedFilter,
+        attributionFilter
       )
     )
   }
@@ -572,7 +605,25 @@ export function QuotesListManager({
         categoryFilter,
         authorFilter,
         statusFilter,
-        nextVerified
+        nextVerified,
+        attributionFilter
+      )
+    )
+  }
+
+  function handleAttributionChange(nextAttribution: string) {
+    setAttributionFilter(nextAttribution)
+    router.push(
+      buildQuotesListHref(
+        activeFilter,
+        1,
+        search.trim(),
+        sortBy,
+        categoryFilter,
+        authorFilter,
+        statusFilter,
+        verifiedFilter,
+        nextAttribution
       )
     )
   }
@@ -584,15 +635,17 @@ export function QuotesListManager({
     setAuthorFilter("")
     setStatusFilter("all")
     setVerifiedFilter("all")
+    setAttributionFilter("all")
     if (
       initialSearch.trim() ||
       initialSort !== "newest" ||
       resolvedInitialCategory !== "all" ||
       initialAuthor ||
       initialStatus !== "all" ||
-      initialVerified !== "all"
+      initialVerified !== "all" ||
+      initialAttribution !== "all"
     ) {
-      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all"))
+      router.push(buildQuotesListHref(activeFilter, 1, "", "newest", "all", "", "all", "all", "all"))
     }
   }
 
@@ -602,51 +655,61 @@ export function QuotesListManager({
     categoryFilter !== "all" ||
     Boolean(authorFilter && authorFilter !== "all") ||
     statusFilter !== "all" ||
-    verifiedFilter !== "all"
+    verifiedFilter !== "all" ||
+    attributionFilter !== "all"
+
+  const activeFiltersBannerList = [
+    authorFilter
+      ? { label: "Author", value: initialAuthorName || authorFilter, onClear: handleClearAuthorFilter }
+      : null,
+    categoryFilter && categoryFilter !== "all"
+      ? {
+          label: "Category",
+          value:
+            categoryOptions.find((c) => c.slug === categoryFilter || c.id === categoryFilter)?.name ||
+            categoryFilter,
+          onClear: () => handleCategoryChange("all"),
+        }
+      : null,
+    attributionFilter && attributionFilter !== "all"
+      ? {
+          label: "Attribution",
+          value: attributionFilter,
+          onClear: () => handleAttributionChange("all"),
+        }
+      : null,
+  ].filter(Boolean) as Array<{ label: string; value: string; onClear: () => void }>
 
   return (
     <div className="space-y-4">
-      {authorFilter || (categoryFilter && categoryFilter !== "all") ? (
+      {activeFiltersBannerList.length > 0 ? (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-stone-200/90 bg-stone-50/90 px-3.5 py-2 text-xs text-stone-800">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-            {authorFilter ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-stone-600">Filtered by Author:</span>
-                <span className="font-bold text-stone-900">{initialAuthorName || authorFilter}</span>
+            {activeFiltersBannerList.map((item) => (
+              <div key={item.label} className="flex items-center gap-1.5">
+                <span className="font-semibold text-stone-600">Filtered by {item.label}:</span>
+                <span className="font-bold text-stone-900">{item.value}</span>
                 <button
                   type="button"
-                  onClick={handleClearAuthorFilter}
+                  onClick={item.onClear}
                   className="ml-1 text-stone-500 hover:text-stone-900 cursor-pointer font-bold text-xs"
-                  title="Clear author filter"
+                  title={`Clear ${item.label.toLowerCase()} filter`}
                 >
                   ✕
                 </button>
               </div>
-            ) : null}
-            {categoryFilter && categoryFilter !== "all" ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-stone-600">Filtered by Category:</span>
-                <span className="font-bold text-stone-900">
-                  {categoryOptions.find((c) => c.slug === categoryFilter || c.id === categoryFilter)?.name || categoryFilter}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCategoryChange("all")}
-                  className="ml-1 text-stone-500 hover:text-stone-900 cursor-pointer font-bold text-xs"
-                  title="Clear category filter"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : null}
+            ))}
           </div>
           <div className="flex items-center gap-3">
-            {authorFilter && categoryFilter && categoryFilter !== "all" ? (
+            {activeFiltersBannerList.length > 1 ? (
               <button
                 type="button"
                 onClick={() => {
                   setAuthorFilter("")
                   setCategoryFilter("all")
+                  setStatusFilter("all")
+                  setVerifiedFilter("all")
+                  setAttributionFilter("all")
                   router.push(
                     buildQuotesListHref(
                       activeFilter,
@@ -655,8 +718,9 @@ export function QuotesListManager({
                       sortBy,
                       "all",
                       "",
-                      statusFilter,
-                      verifiedFilter
+                      "all",
+                      "all",
+                      "all"
                     )
                   )
                 }}
@@ -664,21 +728,13 @@ export function QuotesListManager({
               >
                 Clear all active filters ✕
               </button>
-            ) : authorFilter ? (
-              <button
-                type="button"
-                onClick={handleClearAuthorFilter}
-                className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
-              >
-                Clear Author Filter ✕
-              </button>
             ) : (
               <button
                 type="button"
-                onClick={() => handleCategoryChange("all")}
+                onClick={activeFiltersBannerList[0].onClear}
                 className="text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
               >
-                Clear Category Filter ✕
+                Clear {activeFiltersBannerList[0].label} Filter ✕
               </button>
             )}
           </div>
@@ -725,6 +781,17 @@ export function QuotesListManager({
                 { value: "all", label: "Verification: All" },
                 { value: "verified", label: "Verification: Verified Only" },
                 { value: "unverified", label: "Verification: Unverified Only" },
+              ]}
+            />
+            <Select
+              value={attributionFilter}
+              onChange={(event) => handleAttributionChange(event.target.value)}
+              options={[
+                { value: "all", label: "Attribution: All" },
+                { value: "CONFIRMED", label: "Attribution: Confirmed" },
+                { value: "DISPUTED", label: "Attribution: Disputed" },
+                { value: "MISATTRIBUTED", label: "Attribution: Misattributed" },
+                { value: "UNKNOWN", label: "Attribution: Unknown" },
               ]}
             />
           </>
@@ -779,6 +846,7 @@ export function QuotesListManager({
             >
               <option value="setStatus">Set Status</option>
               <option value="setVerification">Set Verification</option>
+              <option value="setAttribution">Set Attribution</option>
               <option value="setCategory">Set Category</option>
               <option value="setAuthor">Set Author</option>
               <option value="setSource">Set Source</option>
@@ -807,6 +875,23 @@ export function QuotesListManager({
               >
                 <option value="true">Verification: Mark Verified</option>
                 <option value="false">Verification: Mark Unverified</option>
+              </select>
+            ) : null}
+
+            {action === "setAttribution" ? (
+              <select
+                className="border border-stone-300 rounded-xl px-3 py-1.5 text-sm bg-white min-w-[200px]"
+                value={attributionValue}
+                onChange={(event) =>
+                  setAttributionValue(
+                    event.target.value as "CONFIRMED" | "DISPUTED" | "MISATTRIBUTED" | "UNKNOWN"
+                  )
+                }
+              >
+                <option value="CONFIRMED">Attribution: Confirmed</option>
+                <option value="DISPUTED">Attribution: Disputed</option>
+                <option value="MISATTRIBUTED">Attribution: Misattributed</option>
+                <option value="UNKNOWN">Attribution: Unknown</option>
               </select>
             ) : null}
 
@@ -1110,14 +1195,52 @@ export function QuotesListManager({
                     </Badge>
                   )}
                   {quote.attributionStatus === "DISPUTED" && (
-                    <Badge variant="danger" size="xs">
-                      Disputed
-                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleAttributionChange("DISPUTED")
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleAttributionChange("DISPUTED")
+                        }
+                      }}
+                      title="Click to filter quotes with Disputed attribution"
+                      className="cursor-pointer inline-flex"
+                    >
+                      <Badge variant="danger" size="xs" className="hover:opacity-80 transition cursor-pointer">
+                        Disputed
+                      </Badge>
+                    </span>
                   )}
                   {quote.attributionStatus === "MISATTRIBUTED" && (
-                    <Badge variant="danger" size="xs">
-                      Misattributed
-                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleAttributionChange("MISATTRIBUTED")
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleAttributionChange("MISATTRIBUTED")
+                        }
+                      }}
+                      title="Click to filter quotes with Misattributed attribution"
+                      className="cursor-pointer inline-flex"
+                    >
+                      <Badge variant="danger" size="xs" className="hover:opacity-80 transition cursor-pointer">
+                        Misattributed
+                      </Badge>
+                    </span>
                   )}
                   {quote.hasContext === true && (
                     <Badge variant="outline" size="xs" className="font-sans font-medium text-emerald-700 bg-emerald-50 border-emerald-200">
@@ -1213,7 +1336,8 @@ export function QuotesListManager({
                 categoryFilter,
                 authorFilter,
                 statusFilter,
-                verifiedFilter
+                verifiedFilter,
+                attributionFilter
               )
             }
           />

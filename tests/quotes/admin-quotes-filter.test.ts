@@ -540,4 +540,65 @@ describe("Admin Quotes: Interpretation & Context Filter", () => {
       assert.ok(hasAnyContext, `Quote ${q.id} should have context`)
     }
   })
+
+  it("queries quotes with attribution status dropdown filter and composed dimensions", async () => {
+    // 1. Filter quotes specifically by DISPUTED attribution status
+    const disputedQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        attributionStatus: "DISPUTED",
+      },
+      select: {
+        id: true,
+        attributionStatus: true,
+      },
+      take: 10,
+    })
+
+    for (const q of disputedQuotes) {
+      assert.equal(q.attributionStatus, "DISPUTED")
+    }
+
+    // 2. Filter quotes specifically by CONFIRMED attribution status
+    const confirmedQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        attributionStatus: "CONFIRMED",
+      },
+      select: {
+        id: true,
+        attributionStatus: true,
+      },
+      take: 10,
+    })
+
+    for (const q of confirmedQuotes) {
+      assert.equal(q.attributionStatus, "CONFIRMED")
+    }
+
+    // 3. Multi-dimensional composition: Status (PUBLISHED) + Verified (true) + Attribution (CONFIRMED)
+    const composedQuotes = await prisma.quote.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { status: "PUBLISHED" },
+          { isVerified: true },
+          { attributionStatus: "CONFIRMED" },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        isVerified: true,
+        attributionStatus: true,
+      },
+      take: 10,
+    })
+
+    for (const q of composedQuotes) {
+      assert.equal(q.status, "PUBLISHED")
+      assert.equal(q.isVerified, true)
+      assert.equal(q.attributionStatus, "CONFIRMED")
+    }
+  })
 })

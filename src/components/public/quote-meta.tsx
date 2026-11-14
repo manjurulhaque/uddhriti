@@ -1,5 +1,6 @@
 import * as React from "react"
 import Link from "next/link"
+import { slugify } from "@/lib/slug"
 
 export interface QuoteMetaProps {
   authorName?: string | null
@@ -69,12 +70,13 @@ export function QuoteMeta({
             Topics:
           </span>
           {tags.map((tag) => (
-            <span
+            <Link
               key={tag}
+              href={`/tags/${slugify(tag)}`}
               className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide transition-colors ${tagClass}`}
             >
               #{tag}
-            </span>
+            </Link>
           ))}
         </div>
       ) : null}

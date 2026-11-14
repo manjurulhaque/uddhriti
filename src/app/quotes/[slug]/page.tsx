@@ -376,6 +376,33 @@ export default async function IndividualQuotePage({
             )}
           </div>
 
+          {/* Thematic Tags Strip inside Master Quotation Card */}
+          {quote.tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-stone-100">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mr-1 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <span>Tags:</span>
+              </span>
+              {quote.tags.map((entry) => (
+                <Link
+                  key={entry.tag.id}
+                  href={`/tags/${entry.tag.slug}`}
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-stone-50/90 px-3 py-1 text-xs font-medium text-stone-700 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 transition-all shadow-2xs"
+                >
+                  <span className="text-stone-400 group-hover:text-stone-600 font-mono text-[11px]">#</span>
+                  <span>{entry.tag.name}</span>
+                  {entry.tag.type && entry.tag.type !== "TOPIC" && (
+                    <span className="text-[9px] font-mono uppercase text-stone-400 group-hover:text-stone-600">
+                      {entry.tag.type}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+
           {/* Interactive Actions: Copy, Share, Save */}
           <QuoteActions
             id={quote.id}

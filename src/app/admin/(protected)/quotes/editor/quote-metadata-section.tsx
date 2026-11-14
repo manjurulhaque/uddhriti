@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Author, Category, Source, QuoteEditorFormState, STATUSES, SOURCE_TYPES } from "./types"
+import { AIAuthorSelect } from "./AIAuthorSelect"
 
 interface QuoteMetadataSectionProps {
   form: QuoteEditorFormState
@@ -12,6 +13,7 @@ interface QuoteMetadataSectionProps {
   filteredSources: Source[]
   sourceSearch: string
   setSourceSearch: (search: string) => void
+  authors?: Author[]
 }
 
 export function QuoteMetadataSection({
@@ -25,6 +27,7 @@ export function QuoteMetadataSection({
   filteredSources,
   sourceSearch,
   setSourceSearch,
+  authors,
 }: QuoteMetadataSectionProps) {
   return (
     <div className="space-y-6">
@@ -40,64 +43,44 @@ export function QuoteMetadataSection({
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
-          {/* Author Selection with instant filter */}
+          {/* AI-Assisted Author Selection with 1-Click Identify and Smart Search */}
+          <AIAuthorSelect
+            authors={authors && authors.length > 0 ? authors : filteredAuthors}
+            selectedAuthorId={form.authorId}
+            onSelectAuthor={(id) => updateForm("authorId", id)}
+            quoteContent={form.content}
+            required
+          />
+
+          {/* Category Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
-                Author <span className="text-red-500">*</span>
+                Category <span className="text-red-500">*</span>
               </label>
-              {form.authorId ? (
+              {form.categoryId ? (
                 <button
                   type="button"
-                  onClick={() => updateForm("authorId", "")}
+                  onClick={() => updateForm("categoryId", "")}
                   className="text-[11px] text-stone-500 hover:text-stone-800 underline underline-offset-2"
                 >
                   Clear
                 </button>
               ) : null}
             </div>
-            <input
-              type="text"
-              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
-              value={authorSearch}
-              onChange={(e) => setAuthorSearch(e.target.value)}
-              placeholder="Search author by name..."
-            />
             <select
               className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
-              value={form.authorId}
-              onChange={(e) => updateForm("authorId", e.target.value)}
+              value={form.categoryId}
+              onChange={(e) => updateForm("categoryId", e.target.value)}
               required
             >
-              <option value="">Select Author...</option>
-              {filteredAuthors.map((author) => (
-                <option key={author.id} value={author.id}>
-                  {author.name}
+              <option value="">Select Primary Category...</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* Category Selection */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
-              Category <span className="text-red-500">*</span>
-            </label>
-            <div className="pt-[34px]">
-              <select
-                className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
-                value={form.categoryId}
-                onChange={(e) => updateForm("categoryId", e.target.value)}
-                required
-              >
-                <option value="">Select Primary Category...</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
 

@@ -2,7 +2,15 @@ import { prisma } from "@/lib/prisma"
 import { registerPublicDataInvalidator } from "@/lib/revalidation"
 
 export interface QuoteEditorOptions {
-  authors: Array<{ id: string; name: string }>
+  authors: Array<{
+    id: string
+    name: string
+    slug?: string
+    profession?: string | null
+    birthYear?: number | null
+    deathYear?: number | null
+    quoteCount?: number
+  }>
   categories: Array<{ id: string; name: string; slug: string }>
   sources: Array<{ id: string; title: string }>
   tags: Array<{ id: string; name: string; type: string; description: string | null }>
@@ -24,7 +32,15 @@ export async function getQuoteEditorOptions(): Promise<QuoteEditorOptions> {
   const [authors, categories, sources, tags] = await Promise.all([
     prisma.author.findMany({
       orderBy: [{ name: "asc" }, { id: "asc" }],
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        profession: true,
+        birthYear: true,
+        deathYear: true,
+        quoteCount: true,
+      },
     }),
     prisma.category.findMany({
       orderBy: [{ name: "asc" }, { id: "asc" }],

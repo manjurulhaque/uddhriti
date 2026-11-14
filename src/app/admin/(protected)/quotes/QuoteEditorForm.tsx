@@ -680,6 +680,7 @@ export default function QuoteEditorForm({
             filteredSources={filteredSources}
             sourceSearch={sourceSearch}
             setSourceSearch={setSourceSearch}
+            authors={authors}
           />
 
           {mode === "edit" && (

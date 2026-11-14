@@ -1,6 +1,12 @@
 export type Author = {
   id: string
   name: string
+  slug?: string
+  profession?: string | null
+  nationality?: string | null
+  birthYear?: number | null
+  deathYear?: number | null
+  quoteCount?: number
 }
 
 export type Category = {

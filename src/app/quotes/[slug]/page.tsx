@@ -266,7 +266,7 @@ export default async function IndividualQuotePage({
         />
 
         {/* Master Quotation Hero Card */}
-        <article className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-10 lg:p-12 shadow-sm space-y-8 relative overflow-hidden">
+        <article className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-10 lg:p-12 shadow-sm space-y-5 relative overflow-hidden">
           {/* Top Classification Badges & Reading Metrics */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -324,84 +324,86 @@ export default async function IndividualQuotePage({
             </blockquote>
           </div>
 
-          {/* Author Attribution Card */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pt-6 border-t border-stone-100">
-            <div className="flex items-center gap-4">
-              {/* Author Portrait Thumbnail */}
-              <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" priority loading="eager" />
+          {/* Author Attribution & Thematic Tags Provenance Block */}
+          <div className="pt-4 border-t border-stone-100 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Author Portrait Thumbnail */}
+                <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" priority loading="eager" />
 
-              {/* Author Details */}
-              <div className="space-y-0.5">
-                {quote.author?.slug ? (
-                  <Link
-                    href={`/authors/${quote.author.slug}`}
-                    className="font-serif text-lg sm:text-xl font-bold text-stone-900 hover:text-[var(--accent-rust)] transition-colors block"
-                  >
-                    — {authorName}
-                  </Link>
-                ) : (
-                  <p className="font-serif text-lg sm:text-xl font-bold text-stone-900">
-                    — {authorName}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-stone-500">
-                  {quote.author?.profession && <span>{quote.author.profession}</span>}
-                  {quote.author?.nationality && <span>· {quote.author.nationality}</span>}
-                  {authorLifespan && <span className="font-mono">({authorLifespan})</span>}
-                  {authorEpoch && (
-                    <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.2 text-[10px] font-semibold text-amber-800">
-                      {authorEpoch}
-                    </span>
+                {/* Author Details */}
+                <div className="space-y-0.5">
+                  {quote.author?.slug ? (
+                    <Link
+                      href={`/authors/${quote.author.slug}`}
+                      className="font-serif text-lg sm:text-xl font-bold text-stone-900 hover:text-[var(--accent-rust)] transition-colors block"
+                    >
+                      — {authorName}
+                    </Link>
+                  ) : (
+                    <p className="font-serif text-lg sm:text-xl font-bold text-stone-900">
+                      — {authorName}
+                    </p>
                   )}
+
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-stone-500">
+                    {quote.author?.profession && <span>{quote.author.profession}</span>}
+                    {quote.author?.nationality && <span>· {quote.author.nationality}</span>}
+                    {authorLifespan && <span className="font-mono">({authorLifespan})</span>}
+                    {authorEpoch && (
+                      <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.2 text-[10px] font-semibold text-amber-800">
+                        {authorEpoch}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Source Provenance Citation */}
+              {quote.source && (
+                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/70 px-4 py-3 text-xs text-stone-700 space-y-0.5 self-start sm:self-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
+                    Primary Source
+                  </span>
+                  <p className="font-medium text-stone-900">
+                    {quote.source.title}
+                    {quote.source.year ? ` (${quote.source.year})` : ""}
+                  </p>
+                  <p className="text-[11px] text-stone-500">
+                    {quote.source.type.toLowerCase()}
+                    {quote.source.publisher ? ` · ${quote.source.publisher}` : ""}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Source Provenance Citation */}
-            {quote.source && (
-              <div className="rounded-2xl border border-stone-200/80 bg-stone-50/70 px-4 py-3 text-xs text-stone-700 space-y-0.5 self-start sm:self-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
-                  Primary Source
+            {/* Thematic Tags Strip inside Master Quotation Card */}
+            {quote.tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mr-1 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  <span>Tags:</span>
                 </span>
-                <p className="font-medium text-stone-900">
-                  {quote.source.title}
-                  {quote.source.year ? ` (${quote.source.year})` : ""}
-                </p>
-                <p className="text-[11px] text-stone-500">
-                  {quote.source.type.toLowerCase()}
-                  {quote.source.publisher ? ` · ${quote.source.publisher}` : ""}
-                </p>
+                {quote.tags.map((entry) => (
+                  <Link
+                    key={entry.tag.id}
+                    href={`/tags/${entry.tag.slug}`}
+                    className="group inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-stone-50/90 px-3 py-1 text-xs font-medium text-stone-700 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 transition-all shadow-2xs"
+                  >
+                    <span className="text-stone-400 group-hover:text-stone-600 font-mono text-[11px]">#</span>
+                    <span>{entry.tag.name}</span>
+                    {entry.tag.type && entry.tag.type !== "TOPIC" && (
+                      <span className="text-[9px] font-mono uppercase text-stone-400 group-hover:text-stone-600">
+                        {entry.tag.type}
+                      </span>
+                    )}
+                  </Link>
+                ))}
               </div>
             )}
           </div>
-
-          {/* Thematic Tags Strip inside Master Quotation Card */}
-          {quote.tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-stone-100">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mr-1 flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                <span>Tags:</span>
-              </span>
-              {quote.tags.map((entry) => (
-                <Link
-                  key={entry.tag.id}
-                  href={`/tags/${entry.tag.slug}`}
-                  className="group inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-stone-50/90 px-3 py-1 text-xs font-medium text-stone-700 hover:border-stone-400 hover:bg-stone-100 hover:text-stone-900 transition-all shadow-2xs"
-                >
-                  <span className="text-stone-400 group-hover:text-stone-600 font-mono text-[11px]">#</span>
-                  <span>{entry.tag.name}</span>
-                  {entry.tag.type && entry.tag.type !== "TOPIC" && (
-                    <span className="text-[9px] font-mono uppercase text-stone-400 group-hover:text-stone-600">
-                      {entry.tag.type}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          )}
 
           {/* Interactive Actions: Copy, Share, Save */}
           <QuoteActions

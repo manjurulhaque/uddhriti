@@ -42,6 +42,7 @@ interface QuoteActionsProps {
   quoteUrl?: string
   views?: number
   showViews?: boolean
+  className?: string
 }
 
 export function QuoteActions({
@@ -58,6 +59,7 @@ export function QuoteActions({
   quoteUrl,
   views,
   showViews = false,
+  className = "",
 }: QuoteActionsProps) {
   const { copied, copyQuote } = useCopyToClipboard()
   const [shareModalOpen, setShareModalOpen] = React.useState(false)
@@ -206,7 +208,7 @@ export function QuoteActions({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-6 border-t border-stone-200/80 font-sans">
+      <div className={`flex flex-wrap items-center justify-between gap-3 pt-3.5 border-t border-stone-100 font-sans ${className}`}>
         <div className="flex flex-wrap items-center gap-1.5">
           {/* Copy Text Button */}
           <button

@@ -407,6 +407,7 @@ export default function QuoteEditorForm({
   function toggleTag(tagId: string) {
     setForm((prev) => {
       if (prev.tagIds.includes(tagId)) {
+        setError(null)
         return {
           ...prev,
           tagIds: prev.tagIds.filter((id) => id !== tagId),
@@ -414,8 +415,30 @@ export default function QuoteEditorForm({
       }
 
       if (prev.tagIds.length >= MAX_SELECTED_TAGS) {
-        setError(`You can select up to ${MAX_SELECTED_TAGS} tags.`)
+        setError(`Taxonomy limit: You can select up to ${MAX_SELECTED_TAGS} tags total.`)
         return prev
+      }
+
+      const targetTag = tagById.get(tagId)
+      if (targetTag) {
+        const currentTags = prev.tagIds.map((id) => tagById.get(id)).filter(Boolean) as (typeof tags)[number][]
+        const normType = targetTag.type.toUpperCase()
+
+        if (normType === "TOPIC") {
+          const topicCount = currentTags.filter((t) => t.type.toUpperCase() === "TOPIC").length
+          if (topicCount >= 2) {
+            setError("Taxonomy limit: Maximum 2 Topic tags allowed. Please remove a Topic tag first.")
+            return prev
+          }
+        } else {
+          const sameTypeCount = currentTags.filter((t) => t.type.toUpperCase() === normType).length
+          if (sameTypeCount >= 1) {
+            setError(
+              `Taxonomy limit: Only 1 tag allowed for category "${normType}". Please remove the existing "${normType}" tag first.`
+            )
+            return prev
+          }
+        }
       }
 
       setError(null)
@@ -426,26 +449,64 @@ export default function QuoteEditorForm({
     })
   }
 
+  function handleApplyAiTags(tagIds: string[]) {
+    const validIds = Array.from(new Set(tagIds)).slice(0, MAX_SELECTED_TAGS)
+    setForm((prev) => ({
+      ...prev,
+      tagIds: validIds,
+    }))
+    setError(null)
+  }
+
+  function handleClearAllTags() {
+    setForm((prev) => ({
+      ...prev,
+      tagIds: [],
+    }))
+    setError(null)
+  }
+
   function addSuggestedTags() {
     setForm((prev) => {
-      const availableSlots = MAX_SELECTED_TAGS - prev.tagIds.length
-      if (availableSlots <= 0) {
-        setError(`You can select up to ${MAX_SELECTED_TAGS} tags.`)
+      const currentTags = prev.tagIds.map((id) => tagById.get(id)).filter(Boolean) as (typeof tags)[number][]
+      let topicCount = currentTags.filter((t) => t.type.toUpperCase() === "TOPIC").length
+      const countsByType = new Map<string, number>()
+      for (const t of currentTags) {
+        const norm = t.type.toUpperCase()
+        if (norm !== "TOPIC") {
+          countsByType.set(norm, (countsByType.get(norm) || 0) + 1)
+        }
+      }
+
+      const acceptableIds: string[] = []
+      for (const st of suggestedTags) {
+        if (prev.tagIds.includes(st.id)) continue
+        if (prev.tagIds.length + acceptableIds.length >= MAX_SELECTED_TAGS) break
+
+        const normType = st.type.toUpperCase()
+        if (normType === "TOPIC") {
+          if (topicCount < 2) {
+            acceptableIds.push(st.id)
+            topicCount += 1
+          }
+        } else {
+          const currentCount = countsByType.get(normType) || 0
+          if (currentCount < 1) {
+            acceptableIds.push(st.id)
+            countsByType.set(normType, currentCount + 1)
+          }
+        }
+      }
+
+      if (acceptableIds.length === 0) {
+        setError(`No additional suggestions fit the taxonomy rule (max 2 Topics, 1 per other type, 7 total).`)
         return prev
       }
 
-      const suggestedIds = suggestedTags.map((tag) => tag.id).filter((id) => !prev.tagIds.includes(id))
-      const nextIds = suggestedIds.slice(0, availableSlots)
-
-      if (nextIds.length < suggestedIds.length) {
-        setError(`Only ${MAX_SELECTED_TAGS} tags are allowed.`)
-      } else {
-        setError(null)
-      }
-
+      setError(null)
       return {
         ...prev,
-        tagIds: unique([...prev.tagIds, ...nextIds]),
+        tagIds: unique([...prev.tagIds, ...acceptableIds]),
       }
     })
   }
@@ -706,6 +767,12 @@ export default function QuoteEditorForm({
             setTagSearch={setTagSearch}
             toggleTag={toggleTag}
             addSuggestedTags={addSuggestedTags}
+            onApplyAiTags={handleApplyAiTags}
+            onClearAllTags={handleClearAllTags}
+            quoteContent={form.content}
+            quoteMeaning={form.meaning}
+            authorName={selectedAuthorName}
+            categoryName={selectedCategoryName}
           />
 
           {error && (

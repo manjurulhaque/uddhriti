@@ -8,6 +8,7 @@ import { Pagination, EmptyState, ConfirmModal, Button, Badge, Select } from "@/c
 import { QuoteSortOption as SortOption, quoteSortOptions as sortOptions } from "@/lib/quotes/sort"
 import { QuoteContextQuickEditor } from "./QuoteContextQuickEditor"
 import { QuoteVerificationModal } from "./QuoteVerificationModal"
+import { QuotePublishModal } from "./QuotePublishModal"
 
 type QuoteItem = {
   id: string
@@ -186,6 +187,23 @@ export function QuotesListManager({
   const [verificationNoteOverrides, setVerificationNoteOverrides] = useState<Record<string, string | null>>({})
   const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
   const [verificationValue, setVerificationValue] = useState(true)
+  const [publishingQuote, setPublishingQuote] = useState<{
+    id: string
+    content: string
+    authorName: string | null
+    sourceTitle?: string | null
+    categoryName?: string | null
+    tags?: Array<{ id: string; name: string; slug: string }>
+    meaning?: string | null
+    historicalContext?: string | null
+    modernRelevance?: string | null
+    isVerified?: boolean
+    attributionStatus?: string | null
+    isFeatured?: boolean
+    status?: string | null
+    publishedAt?: string | null
+  } | null>(null)
+  const [featuredOverrides, setFeaturedOverrides] = useState<Record<string, boolean>>({})
   const [verifyingQuote, setVerifyingQuote] = useState<{
     id: string
     content: string
@@ -250,6 +268,23 @@ export function QuotesListManager({
     setVerificationNoteOverrides((prev) => ({
       ...prev,
       [updated.id]: updated.verificationNote,
+    }))
+    router.refresh()
+  }
+
+  function handlePublishSaveSuccess(updated: {
+    id: string
+    status: string
+    publishedAt: string | null
+    isFeatured: boolean
+  }) {
+    setStatusOverrides((prev) => ({
+      ...prev,
+      [updated.id]: updated.status,
+    }))
+    setFeaturedOverrides((prev) => ({
+      ...prev,
+      [updated.id]: updated.isFeatured,
     }))
     router.refresh()
   }
@@ -1695,16 +1730,42 @@ export function QuotesListManager({
                     type="button"
                     variant={isPublished ? "outline" : "primary"}
                     size="xs"
-                    disabled={isTogglingStatus}
-                    isLoading={isTogglingStatus}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      toggleQuoteStatus(quote.id, effectiveStatus)
+                      if (e.shiftKey) {
+                        toggleQuoteStatus(quote.id, effectiveStatus)
+                        return
+                      }
+                      setPublishingQuote({
+                        id: quote.id,
+                        content: quote.content,
+                        authorName: quote.authorName,
+                        sourceTitle: quote.sourceTitle,
+                        categoryName: quote.categoryName,
+                        tags: quote.tags,
+                        meaning: effectiveMeaning,
+                        historicalContext: effectiveHistoricalContext,
+                        modernRelevance: effectiveModernRelevance,
+                        isVerified: effectiveVerified,
+                        attributionStatus: effectiveAttribution,
+                        isFeatured: featuredOverrides[quote.id] ?? quote.isFeatured,
+                        status: effectiveStatus,
+                        publishedAt: quote.publishedAt,
+                      })
                     }}
-                    title={isPublished ? "Click to unpublish and move to Draft" : "Click to publish quote immediately"}
+                    title={
+                      isPublished
+                        ? "Published. Click to open AI publishing & social posting assistant (or Shift+Click to quickly unpublish)."
+                        : "Click to open AI publishing readiness audit and multi-channel social post generator."
+                    }
+                    className={
+                      isPublished
+                        ? "text-stone-700 hover:text-stone-900 border-stone-200 hover:bg-stone-100 cursor-pointer"
+                        : "bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer font-medium"
+                    }
                   >
-                    {isPublished ? "Unpublish" : "Publish"}
+                    {isPublished ? "Published" : "✨ Publish"}
                   </Button>
                   <Button
                     href={`/admin/quotes/${quote.id}`}
@@ -1783,6 +1844,13 @@ export function QuotesListManager({
         onClose={() => setVerifyingQuote(null)}
         quote={verifyingQuote}
         onSaveSuccess={handleVerificationSaveSuccess}
+      />
+
+      <QuotePublishModal
+        isOpen={publishingQuote !== null}
+        onClose={() => setPublishingQuote(null)}
+        quote={publishingQuote}
+        onSaveSuccess={handlePublishSaveSuccess}
       />
     </div>
   )

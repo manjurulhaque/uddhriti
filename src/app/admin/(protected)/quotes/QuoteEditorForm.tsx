@@ -23,6 +23,7 @@ import {
   QuoteEditorSidebar,
   QuoteDiffModal,
 } from "./editor"
+import { QuotePublishModal } from "./QuotePublishModal"
 
 export type { QuoteEditorFormState }
 
@@ -62,6 +63,7 @@ export default function QuoteEditorForm({
   } | null>(null)
   const [lastSavedDraftAt, setLastSavedDraftAt] = useState<string | null>(null)
   const [isReviewingDiff, setIsReviewingDiff] = useState(false)
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
 
   const draftStorageKey = useMemo(
     () => (mode === "create" ? "admin:quote-editor:draft:create" : `admin:quote-editor:draft:${quoteId || "unknown"}`),
@@ -725,6 +727,7 @@ export default function QuoteEditorForm({
           lastSavedDraftAt={lastSavedDraftAt}
           onClearDraft={handleClearDraft}
           onReviewDiff={() => setIsReviewingDiff(true)}
+          onOpenPublishAssistant={() => setIsPublishModalOpen(true)}
         />
       </div>
 
@@ -753,6 +756,35 @@ export default function QuoteEditorForm({
         confirmLabel="Delete Quote"
         isDestructive
         isLoading={isDeleting}
+      />
+
+      <QuotePublishModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        quote={{
+          id: quoteId || "new",
+          content: form.content,
+          authorName: selectedAuthorName,
+          categoryName: selectedCategoryName,
+          sourceTitle: form.sourceTitle,
+          tags: selectedTags,
+          meaning: form.meaning,
+          historicalContext: form.historicalContext,
+          modernRelevance: form.modernRelevance,
+          isVerified: form.isVerified,
+          attributionStatus: form.attributionStatus,
+          isFeatured: form.isFeatured,
+          status: form.status,
+          publishedAt: form.publishedAt,
+        }}
+        onSaveSuccess={(updated) => {
+          updateForm("status", updated.status as (typeof STATUSES)[number])
+          updateForm("isFeatured", updated.isFeatured)
+          if (updated.publishedAt) {
+            updateForm("publishedAt", updated.publishedAt)
+          }
+          setIsPublishModalOpen(false)
+        }}
       />
     </>
   )

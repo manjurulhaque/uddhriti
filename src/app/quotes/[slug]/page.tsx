@@ -444,29 +444,6 @@ export default async function IndividualQuotePage({
           />
         )}
 
-        {/* Thematic Tags Section */}
-        {quote.tags.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-              Thematic Motifs &amp; Tags
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {quote.tags.map((entry) => (
-                <Link
-                  key={entry.tag.id}
-                  href={`/tags/${entry.tag.slug}`}
-                  className="rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-medium text-stone-800 hover:border-stone-900 hover:bg-stone-50 transition-all shadow-2xs"
-                >
-                  #{entry.tag.name}{" "}
-                  <span className="text-[10px] text-stone-400 font-mono">
-                    ({entry.tag.type.toLowerCase()})
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* More Wisdom from this Author */}
         {moreAuthorQuotes.length > 0 && (
           <section className="space-y-6 pt-6 border-t border-stone-200/80">

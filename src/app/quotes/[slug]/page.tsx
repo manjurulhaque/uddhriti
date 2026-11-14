@@ -251,7 +251,7 @@ export default async function IndividualQuotePage({
     <PublicLayout>
       <JsonLd data={jsonLd} />
 
-      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-12 font-sans">
+      <div className="mx-auto max-w-6xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 space-y-8 font-sans">
         {/* Breadcrumb Navigation */}
         <Breadcrumb
           items={[
@@ -266,7 +266,7 @@ export default async function IndividualQuotePage({
         />
 
         {/* Master Quotation Hero Card */}
-        <article className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-10 lg:p-12 shadow-sm space-y-5 relative overflow-hidden">
+        <article className="rounded-3xl border border-stone-200/90 bg-white p-5 sm:p-7 lg:p-8 shadow-sm space-y-5 relative overflow-hidden">
           {/* Top Classification Badges & Reading Metrics */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">

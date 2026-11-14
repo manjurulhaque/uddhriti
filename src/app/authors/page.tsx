@@ -289,6 +289,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                         imageUrl={author.imageUrl}
                         size="md"
                         priority={index < 4}
+                        loading={index < 4 ? "eager" : undefined}
                         className="group-hover:border-[var(--accent-rust)]/40 transition-colors"
                       />
 

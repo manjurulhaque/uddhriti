@@ -328,7 +328,7 @@ export default async function IndividualQuotePage({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pt-6 border-t border-stone-100">
             <div className="flex items-center gap-4">
               {/* Author Portrait Thumbnail */}
-              <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" priority />
+              <AuthorAvatar name={authorName} imageUrl={authorImageUrl} size="md" priority loading="eager" />
 
               {/* Author Details */}
               <div className="space-y-0.5">
@@ -435,7 +435,12 @@ export default async function IndividualQuotePage({
         )}
 
         {/* Author Biographical Briefing Card */}
-        {quote.author && <QuoteAuthorBriefing author={quote.author} />}
+        {quote.author && (
+          <QuoteAuthorBriefing
+            author={quote.author}
+            loading={authorImageUrl ? "eager" : undefined}
+          />
+        )}
 
         {/* Thematic Tags Section */}
         {quote.tags.length > 0 && (

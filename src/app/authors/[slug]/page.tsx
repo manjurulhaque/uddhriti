@@ -386,6 +386,7 @@ export default async function AuthorDetailPage({
               imageUrl={authorImageUrl}
               size="xl"
               priority
+              loading="eager"
               showBadge
               badgeLabel="Thinker"
               className="border-2 border-stone-200/90 shadow-md"

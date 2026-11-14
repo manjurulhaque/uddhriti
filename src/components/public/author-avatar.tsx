@@ -57,6 +57,8 @@ export function AuthorAvatar({
   const initials = getAuthorInitials(name)
   const sizeConfig = SIZE_CLASSES[size]
 
+  const effectiveLoading = loading ?? (priority ? "eager" : undefined)
+
   return (
     <div
       className={`relative shrink-0 overflow-hidden border border-stone-200/90 bg-stone-100 shadow-2xs group ${sizeConfig.container} ${className}`}
@@ -69,7 +71,7 @@ export function AuthorAvatar({
           sizes={sizeConfig.imageSizes}
           unoptimized
           priority={priority}
-          loading={priority ? undefined : loading}
+          loading={effectiveLoading}
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

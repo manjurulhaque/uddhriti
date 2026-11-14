@@ -20,9 +20,16 @@ export interface QuoteAuthorInfo {
 export interface QuoteAuthorBriefingProps {
   author: QuoteAuthorInfo
   className?: string
+  loading?: "eager" | "lazy"
+  priority?: boolean
 }
 
-export function QuoteAuthorBriefing({ author, className = "" }: QuoteAuthorBriefingProps) {
+export function QuoteAuthorBriefing({
+  author,
+  className = "",
+  loading,
+  priority,
+}: QuoteAuthorBriefingProps) {
   if (!author) return null
 
   const authorLifespan = formatLifespan(author)
@@ -34,7 +41,13 @@ export function QuoteAuthorBriefing({ author, className = "" }: QuoteAuthorBrief
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
         <div className="flex items-center gap-4">
-          <AuthorAvatar name={author.name} imageUrl={author.imageUrl} size="md" />
+          <AuthorAvatar
+            name={author.name}
+            imageUrl={author.imageUrl}
+            size="md"
+            loading={loading}
+            priority={priority}
+          />
 
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">

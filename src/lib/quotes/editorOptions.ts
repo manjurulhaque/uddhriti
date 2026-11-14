@@ -12,7 +12,15 @@ export interface QuoteEditorOptions {
     quoteCount?: number
   }>
   categories: Array<{ id: string; name: string; slug: string }>
-  sources: Array<{ id: string; title: string }>
+  sources: Array<{
+    id: string
+    title: string
+    slug?: string
+    type?: string
+    year?: number | null
+    authorId?: string | null
+    quoteCount?: number
+  }>
   tags: Array<{ id: string; name: string; type: string; description: string | null }>
 }
 
@@ -47,8 +55,16 @@ export async function getQuoteEditorOptions(): Promise<QuoteEditorOptions> {
       select: { id: true, name: true, slug: true },
     }),
     prisma.source.findMany({
-      orderBy: [{ title: "asc" }, { id: "asc" }],
-      select: { id: true, title: true },
+      orderBy: [{ quoteCount: "desc" }, { title: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        type: true,
+        year: true,
+        authorId: true,
+        quoteCount: true,
+      },
     }),
     prisma.tag.findMany({
       orderBy: [{ type: "asc" }, { name: "asc" }, { id: "asc" }],

@@ -681,6 +681,8 @@ export default function QuoteEditorForm({
             sourceSearch={sourceSearch}
             setSourceSearch={setSourceSearch}
             authors={authors}
+            sources={sources}
+            authorName={selectedAuthorName}
           />
 
           {mode === "edit" && (

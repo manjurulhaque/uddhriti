@@ -18,6 +18,11 @@ export type Category = {
 export type Source = {
   id: string
   title: string
+  slug?: string
+  type?: string
+  year?: number | null
+  authorId?: string | null
+  quoteCount?: number
 }
 
 export type Tag = {

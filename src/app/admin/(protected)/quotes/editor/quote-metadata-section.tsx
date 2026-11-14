@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Author, Category, Source, QuoteEditorFormState, STATUSES, SOURCE_TYPES } from "./types"
 import { AIAuthorSelect } from "./AIAuthorSelect"
+import { AISourceFinder } from "./AISourceFinder"
 
 interface QuoteMetadataSectionProps {
   form: QuoteEditorFormState
@@ -14,6 +15,8 @@ interface QuoteMetadataSectionProps {
   sourceSearch: string
   setSourceSearch: (search: string) => void
   authors?: Author[]
+  sources?: Source[]
+  authorName?: string
 }
 
 export function QuoteMetadataSection({
@@ -28,6 +31,8 @@ export function QuoteMetadataSection({
   sourceSearch,
   setSourceSearch,
   authors,
+  sources,
+  authorName,
 }: QuoteMetadataSectionProps) {
   return (
     <div className="space-y-6">
@@ -121,88 +126,23 @@ export function QuoteMetadataSection({
         </div>
       </section>
 
-      {/* Literary Source Section */}
-      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-100 pb-3">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
-              Source Citation
-            </h2>
-            <p className="text-xs text-stone-500">
-              Link this quote to an existing publication or create a new source record inline.
-            </p>
-          </div>
-          {form.sourceId ? (
-            <button
-              type="button"
-              onClick={() => updateForm("sourceId", "")}
-              className="text-xs text-[var(--accent-rust)] hover:underline font-medium"
-            >
-              Clear source selection
-            </button>
-          ) : null}
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          {/* Existing Source Selector */}
-          <div className="space-y-2 rounded-xl border border-stone-200/80 bg-stone-50/40 p-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-stone-800">
-              Select Existing Source
-            </span>
-            <input
-              type="text"
-              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
-              value={sourceSearch}
-              onChange={(e) => setSourceSearch(e.target.value)}
-              placeholder="Filter existing bibliography..."
-            />
-            <select
-              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
-              value={form.sourceId}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  sourceId: e.target.value,
-                  sourceTitle: e.target.value ? "" : prev.sourceTitle,
-                }))
-              }
-            >
-              <option value="">No Source Linked</option>
-              {filteredSources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Inline New Source */}
-          <div className="space-y-2 rounded-xl border border-stone-200/80 bg-stone-50/40 p-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-stone-800">
-              Or Create Source Inline
-            </span>
-            <input
-              type="text"
-              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all disabled:opacity-50 disabled:bg-stone-100"
-              placeholder="Source title (e.g. Meditations, Republic)"
-              value={form.sourceTitle}
-              onChange={(e) => updateForm("sourceTitle", e.target.value)}
-              disabled={Boolean(form.sourceId)}
-            />
-            <select
-              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs text-stone-800 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all disabled:opacity-50 disabled:bg-stone-100 font-medium"
-              value={form.sourceType}
-              onChange={(e) => updateForm("sourceType", e.target.value as (typeof SOURCE_TYPES)[number])}
-              disabled={Boolean(form.sourceId)}
-            >
-              {SOURCE_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      {/* Literary Source & Primary Locator Section */}
+      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs">
+        <AISourceFinder
+          sources={sources && sources.length > 0 ? sources : filteredSources}
+          selectedSourceId={form.sourceId}
+          sourceTitle={form.sourceTitle}
+          sourceType={form.sourceType}
+          onSelectSource={(sourceId) => updateForm("sourceId", sourceId)}
+          onUpdateSourceTitle={(title) => updateForm("sourceTitle", title)}
+          onUpdateSourceType={(type) => updateForm("sourceType", type)}
+          onUpdateVerificationNote={(note) => updateForm("verificationNote", note)}
+          currentVerificationNote={form.verificationNote}
+          quoteContent={form.content}
+          authorName={authorName}
+          authorId={form.authorId}
+          categoryName={categories.find((c) => c.id === form.categoryId)?.name}
+        />
       </section>
     </div>
   )

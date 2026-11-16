@@ -4,6 +4,7 @@ import { Empty } from "../ui/empty-state"
 import { QuoteCard } from "./quote-card"
 import { TagBadge } from "./tag-badge"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
+import { slugify } from "@/lib/slug"
 
 export interface TrendingQuote {
   id: string
@@ -94,14 +95,17 @@ export function HomeTrendingSection({
             <Empty message="Tags will appear when quote tagging grows." />
           ) : (
             <div className="flex flex-wrap gap-2.5">
-              {topTags.map((tag) => (
-                <TagBadge
-                  key={tag.id}
-                  name={tag.name}
-                  type={tag.type}
-                  href={tag.slug ? `/tags/${tag.slug}` : `/tags`}
-                />
-              ))}
+              {topTags.map((tag) => {
+                const tagSlug = tag.slug || slugify(tag.name)
+                return (
+                  <TagBadge
+                    key={tag.id}
+                    name={tag.name}
+                    type={tag.type}
+                    href={`/tags/${tagSlug}`}
+                  />
+                )
+              })}
             </div>
           )}
         </Panel>

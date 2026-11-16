@@ -453,7 +453,7 @@ export default async function HomePage() {
 // Module-level cached handler
 const getCachedHomePageData = unstable_cache(
   async (todayStr: string) => fetchHomePageDataInternal(todayStr),
-  ["home-page-data-v4"],
+  ["home-page-data-v5"],
   {
     tags: [HOME_PAGE_CACHE_TAG, HOME_TAXONOMIES_CACHE_TAG, "quotes"],
     revalidate: 3600,

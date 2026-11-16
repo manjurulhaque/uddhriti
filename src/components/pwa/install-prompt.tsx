@@ -136,7 +136,7 @@ export function InstallPrompt() {
   return (
     <aside
       aria-label="Install App"
-      className="fixed bottom-5 right-5 left-5 sm:left-auto sm:max-w-md z-50 animate-rise"
+      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:bottom-5 right-5 left-5 md:left-auto md:max-w-md z-50 animate-rise"
     >
       <div className="p-4 rounded-2xl bg-[var(--page-cream)]/95 text-[var(--ink-900)] border border-stone-300/80 shadow-2xl backdrop-blur-md">
         {/* Main Header Row */}

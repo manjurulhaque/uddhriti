@@ -1,6 +1,7 @@
 import * as React from "react"
 import { PublicHeader } from "./public-header"
 import { PublicFooter } from "./public-footer"
+import { MobileBottomNav } from "./mobile-bottom-nav"
 import { SavedQuotesProvider } from "@/lib/saved-quotes"
 
 export interface PublicLayoutProps {
@@ -12,8 +13,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
     <SavedQuotesProvider>
       <div className="min-h-screen flex flex-col bg-[var(--page-cream)] text-[var(--ink-900)]">
         <PublicHeader />
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 pb-16 md:pb-0">{children}</div>
         <PublicFooter />
+        <MobileBottomNav />
       </div>
     </SavedQuotesProvider>
   )

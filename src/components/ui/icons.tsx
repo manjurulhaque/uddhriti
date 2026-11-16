@@ -31,6 +31,52 @@ export function SearchIcon({ className = "w-4 h-4", size, ...props }: IconProps)
   )
 }
 
+export function HomeIcon({ className = "w-4 h-4", size, ...props }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  )
+}
+
+export function DiceIcon({ className = "w-4 h-4", size, ...props }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <path d="M16 8h.01" />
+      <path d="M8 8h.01" />
+      <path d="M8 16h.01" />
+      <path d="M16 16h.01" />
+      <path d="M12 12h.01" />
+    </svg>
+  )
+}
+
 export function MenuIcon({ className = "w-4 h-4", size, ...props }: IconProps) {
   return (
     <svg

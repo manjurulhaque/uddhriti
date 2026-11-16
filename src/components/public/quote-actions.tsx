@@ -10,6 +10,7 @@ import {
   FacebookIcon,
   InstagramIcon,
   PhotoIcon,
+  ShareIcon,
   WhatsAppIcon,
   XIcon,
   ZenRingIcon,
@@ -191,6 +192,28 @@ export function QuoteActions({
     window.open(getInstagramShareUrl(), "_blank", "noopener,noreferrer")
   }
 
+  async function handleNativeShare() {
+    recordShare()
+    const url = quoteUrl || (typeof window !== "undefined" ? window.location.href : "")
+    const author = authorName ? ` — ${authorName}` : ""
+    const shareText = `“${content}”${author}`
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: authorName ? `Quote by ${authorName}` : "Quote from Quotzen",
+          text: shareText,
+          url,
+        })
+        return
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return
+      }
+    }
+
+    setShareModalOpen(true)
+  }
+
   function handleToggleSave() {
     toggleSave({
       id: quoteKey,
@@ -248,11 +271,22 @@ export function QuoteActions({
             <span>Card Image</span>
           </button>
 
-          {/* WhatsApp Direct Share Button */}
+          {/* Primary Mobile Native Share Button (One-touch access to WhatsApp, AirDrop, Messages, etc.) */}
+          <button
+            type="button"
+            onClick={handleNativeShare}
+            className="inline-flex sm:hidden min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--accent-rust)]/40 bg-[#c76b3e]/10 px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--accent-rust)] shadow-2xs transition-all cursor-pointer active:scale-95"
+            aria-label="Share quotation using device apps"
+          >
+            <ShareIcon className="h-3.5 w-3.5 text-[var(--accent-rust)]" />
+            <span>Share</span>
+          </button>
+
+          {/* WhatsApp Direct Share Button (Desktop & Tablet) */}
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-emerald-300/80 bg-emerald-50/80 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-emerald-950 hover:border-emerald-500 hover:bg-emerald-100/90 shadow-2xs transition-all cursor-pointer group"
+            className="hidden sm:inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-emerald-300/80 bg-emerald-50/80 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-emerald-950 hover:border-emerald-500 hover:bg-emerald-100/90 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on WhatsApp"
             title="Share quote on WhatsApp"
           >
@@ -260,11 +294,11 @@ export function QuoteActions({
             <span>WhatsApp</span>
           </button>
 
-          {/* Share on X Button */}
+          {/* Share on X Button (Desktop & Tablet) */}
           <button
             type="button"
             onClick={handleXShare}
-            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer group"
+            className="hidden sm:inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on X"
             title="Share quote on X"
           >
@@ -272,11 +306,11 @@ export function QuoteActions({
             <span>X</span>
           </button>
 
-          {/* Share on Facebook Button */}
+          {/* Share on Facebook Button (Desktop & Tablet) */}
           <button
             type="button"
             onClick={handleFacebookShare}
-            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50/60 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-blue-950 hover:border-blue-400 hover:bg-blue-100/80 shadow-2xs transition-all cursor-pointer group"
+            className="hidden sm:inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50/60 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-blue-950 hover:border-blue-400 hover:bg-blue-100/80 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on Facebook"
             title="Share quote on Facebook"
           >
@@ -284,11 +318,11 @@ export function QuoteActions({
             <span>Facebook</span>
           </button>
 
-          {/* Share on Instagram Button */}
+          {/* Share on Instagram Button (Desktop & Tablet) */}
           <button
             type="button"
             onClick={handleInstagramShare}
-            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-pink-200/80 bg-pink-50/60 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-pink-950 hover:border-pink-400 hover:bg-pink-100/80 shadow-2xs transition-all cursor-pointer group"
+            className="hidden sm:inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-pink-200/80 bg-pink-50/60 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-pink-950 hover:border-pink-400 hover:bg-pink-100/80 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on Instagram"
             title="Share quote on Instagram"
           >

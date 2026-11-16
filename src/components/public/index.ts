@@ -29,6 +29,7 @@ export * from "./thinker-card"
 export * from "./sort-toolbar"
 export * from "./active-filter-banner"
 export * from "./filter-pills"
+export * from "./mobile-bottom-nav"
 export * from "./quote-detail"
 export * from "./saved-quotes-content"
 

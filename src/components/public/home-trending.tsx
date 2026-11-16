@@ -29,6 +29,7 @@ export interface TrendingQuote {
 export interface PopularTag {
   id: string
   name: string
+  slug?: string
   type: string
   quoteCount: number
 }
@@ -98,6 +99,7 @@ export function HomeTrendingSection({
                   key={tag.id}
                   name={tag.name}
                   type={tag.type}
+                  href={tag.slug ? `/tags/${tag.slug}` : `/tags`}
                 />
               ))}
             </div>

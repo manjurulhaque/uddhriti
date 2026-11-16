@@ -164,6 +164,7 @@ async function fetchTaxonomiesInternal() {
       select: {
         id: true,
         name: true,
+        slug: true,
         type: true,
         quoteCount: true,
       },

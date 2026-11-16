@@ -30,7 +30,7 @@ export function TagBadge({
 
   const content = (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-150 ${variantStyles} ${className}`}
+      className={`inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-150 ${variantStyles} ${className}`}
     >
       <span>{name}</span>
       {type && (
@@ -50,7 +50,10 @@ export function TagBadge({
 
   if (href) {
     return (
-      <Link href={href} className="inline-block transition-transform hover:-translate-y-0.5">
+      <Link
+        href={href}
+        className="inline-block transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rust)] rounded-full"
+      >
         {content}
       </Link>
     )

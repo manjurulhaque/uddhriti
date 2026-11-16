@@ -172,36 +172,6 @@ export default async function IndividualQuotePage({
     redirect(`/quotes/${quote.slug}`)
   }
 
-  const [moreAuthorQuotes, relatedCategoryQuotes] = await Promise.all([
-    quote.authorId
-      ? prisma.quote.findMany({
-          where: {
-            authorId: quote.authorId,
-            id: { not: quote.id },
-            status: "PUBLISHED",
-            deletedAt: null,
-          },
-          take: 3,
-          orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
-          select: publicQuoteCardSelect,
-        })
-      : Promise.resolve([]),
-    quote.categoryId
-      ? prisma.quote.findMany({
-          where: {
-            categoryId: quote.categoryId,
-            id: { not: quote.id },
-            ...(quote.authorId ? { authorId: { not: quote.authorId } } : {}),
-            status: "PUBLISHED",
-            deletedAt: null,
-          },
-          take: 3,
-          orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
-          select: publicQuoteCardSelect,
-        })
-      : Promise.resolve([]),
-  ])
-
   const authorName = quote.author?.name || quote.authorName || "Unknown Author"
   const authorImageUrl = normalizeWikimediaThumbnailUrl(quote.author?.imageUrl)
   const authorLifespan = formatLifespan(quote.author)
@@ -444,94 +414,212 @@ export default async function IndividualQuotePage({
           />
         )}
 
-        {/* More Wisdom from this Author */}
-        {moreAuthorQuotes.length > 0 && (
-          <section className="space-y-6 pt-6 border-t border-stone-200/80">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-rust)]">
-                  More From {authorName}
-                </span>
-                <h3 className="font-serif text-2xl font-bold tracking-tight text-stone-900">
-                  Quotations &amp; Excerpts
-                </h3>
-              </div>
-              {quote.author?.slug && (
-                <Link
-                  href={`/authors/${quote.author.slug}`}
-                  className="text-xs font-semibold text-stone-800 hover:text-[var(--accent-rust)] transition-colors"
-                >
-                  View all &rarr;
-                </Link>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {moreAuthorQuotes.map((item) => (
-                <QuoteCard
-                  key={item.id}
-                  id={item.id}
-                  slug={item.slug}
-                  content={item.content}
-                  authorName={item.author?.name || item.authorName}
-                  authorSlug={item.author?.slug}
-                  category={item.category.name}
-                  categorySlug={item.category.slug}
-                  sourceTitle={item.source?.title}
-                  year={item.source?.year ? String(item.source.year) : undefined}
-                  tags={item.tags.map((t) => t.tag.name)}
-                  views={item.views}
-                  variant="paper"
-                  isVerified={item.isVerified}
-                />
-              ))}
-            </div>
-          </section>
+        {/* More Wisdom from this Author (Suspense Streamed) */}
+        {quote.authorId && (
+          <React.Suspense
+            fallback={
+              <RelatedQuotesSkeleton
+                kicker={`More From ${authorName}`}
+                heading="Quotations & Excerpts"
+              />
+            }
+          >
+            <MoreAuthorQuotesSection
+              quoteId={quote.id}
+              authorId={quote.authorId}
+              authorName={authorName}
+              authorSlug={quote.author?.slug}
+            />
+          </React.Suspense>
         )}
 
-        {/* Related Quotes on Same Theme */}
-        {relatedCategoryQuotes.length > 0 && (
-          <section className="space-y-6 pt-6 border-t border-stone-200/80">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-rust)]">
-                  Thematic Exploration
-                </span>
-                <h3 className="font-serif text-2xl font-bold tracking-tight text-stone-900">
-                  More Quotations on Theme: {quote.category.name}
-                </h3>
-              </div>
-              <Link
-                href={`/categories/${quote.category.slug}`}
-                className="text-xs font-semibold text-stone-800 hover:text-[var(--accent-rust)] transition-colors"
-              >
-                Browse theme &rarr;
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedCategoryQuotes.map((item) => (
-                <QuoteCard
-                  key={item.id}
-                  id={item.id}
-                  slug={item.slug}
-                  content={item.content}
-                  authorName={item.author?.name || item.authorName}
-                  authorSlug={item.author?.slug}
-                  category={item.category.name}
-                  categorySlug={item.category.slug}
-                  sourceTitle={item.source?.title}
-                  year={item.source?.year ? String(item.source.year) : undefined}
-                  tags={item.tags.map((t) => t.tag.name)}
-                  views={item.views}
-                  variant="paper"
-                  isVerified={item.isVerified}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Related Quotes on Same Theme (Suspense Streamed) */}
+        <React.Suspense
+          fallback={
+            <RelatedQuotesSkeleton
+              kicker="Thematic Exploration"
+              heading={`More Quotations on Theme: ${quote.category.name}`}
+            />
+          }
+        >
+          <RelatedCategoryQuotesSection
+            quoteId={quote.id}
+            categoryId={quote.categoryId}
+            categoryName={quote.category.name}
+            categorySlug={quote.category.slug}
+            authorId={quote.authorId}
+          />
+        </React.Suspense>
       </div>
     </PublicLayout>
+  )
+}
+
+function RelatedQuotesSkeleton({
+  kicker,
+  heading,
+}: {
+  kicker: string
+  heading: string
+}) {
+  return (
+    <section className="space-y-6 pt-6 border-t border-stone-200/80 animate-pulse" aria-hidden="true">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-rust)]">
+            {kicker}
+          </span>
+          <h3 className="font-serif text-2xl font-bold tracking-tight text-stone-900">
+            {heading}
+          </h3>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-56 rounded-[1.6rem] bg-stone-100/80 border border-stone-200/80" />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+async function MoreAuthorQuotesSection({
+  quoteId,
+  authorId,
+  authorName,
+  authorSlug,
+}: {
+  quoteId: string
+  authorId: string
+  authorName: string
+  authorSlug?: string | null
+}) {
+  const moreAuthorQuotes = await prisma.quote.findMany({
+    where: {
+      authorId,
+      id: { not: quoteId },
+      status: "PUBLISHED",
+      deletedAt: null,
+    },
+    take: 3,
+    orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
+    select: publicQuoteCardSelect,
+  })
+
+  if (moreAuthorQuotes.length === 0) return null
+
+  return (
+    <section className="space-y-6 pt-6 border-t border-stone-200/80" aria-labelledby="more-author-heading">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-rust)]">
+            More From {authorName}
+          </span>
+          <h3 id="more-author-heading" className="font-serif text-2xl font-bold tracking-tight text-stone-900">
+            Quotations &amp; Excerpts
+          </h3>
+        </div>
+        {authorSlug && (
+          <Link
+            href={`/authors/${authorSlug}`}
+            className="text-xs font-semibold text-stone-800 hover:text-[var(--accent-rust)] transition-colors"
+          >
+            View all &rarr;
+          </Link>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {moreAuthorQuotes.map((item) => (
+          <QuoteCard
+            key={item.id}
+            id={item.id}
+            slug={item.slug}
+            content={item.content}
+            authorName={item.author?.name || item.authorName}
+            authorSlug={item.author?.slug}
+            category={item.category.name}
+            categorySlug={item.category.slug}
+            sourceTitle={item.source?.title}
+            year={item.source?.year ? String(item.source.year) : undefined}
+            tags={item.tags.map((t) => t.tag.name)}
+            views={item.views}
+            variant="paper"
+            isVerified={item.isVerified}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+async function RelatedCategoryQuotesSection({
+  quoteId,
+  categoryId,
+  categoryName,
+  categorySlug,
+  authorId,
+}: {
+  quoteId: string
+  categoryId: string
+  categoryName: string
+  categorySlug: string
+  authorId?: string | null
+}) {
+  const relatedCategoryQuotes = await prisma.quote.findMany({
+    where: {
+      categoryId,
+      id: { not: quoteId },
+      ...(authorId ? { authorId: { not: authorId } } : {}),
+      status: "PUBLISHED",
+      deletedAt: null,
+    },
+    take: 3,
+    orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
+    select: publicQuoteCardSelect,
+  })
+
+  if (relatedCategoryQuotes.length === 0) return null
+
+  return (
+    <section className="space-y-6 pt-6 border-t border-stone-200/80" aria-labelledby="related-theme-heading">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-rust)]">
+            Thematic Exploration
+          </span>
+          <h3 id="related-theme-heading" className="font-serif text-2xl font-bold tracking-tight text-stone-900">
+            More Quotations on Theme: {categoryName}
+          </h3>
+        </div>
+        <Link
+          href={`/categories/${categorySlug}`}
+          className="text-xs font-semibold text-stone-800 hover:text-[var(--accent-rust)] transition-colors"
+        >
+          Browse theme &rarr;
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {relatedCategoryQuotes.map((item) => (
+          <QuoteCard
+            key={item.id}
+            id={item.id}
+            slug={item.slug}
+            content={item.content}
+            authorName={item.author?.name || item.authorName}
+            authorSlug={item.author?.slug}
+            category={item.category.name}
+            categorySlug={item.category.slug}
+            sourceTitle={item.source?.title}
+            year={item.source?.year ? String(item.source.year) : undefined}
+            tags={item.tags.map((t) => t.tag.name)}
+            views={item.views}
+            variant="paper"
+            isVerified={item.isVerified}
+          />
+        ))}
+      </div>
+    </section>
   )
 }

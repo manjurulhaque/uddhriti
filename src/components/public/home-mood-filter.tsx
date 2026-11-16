@@ -11,6 +11,7 @@ export type { MoodItem }
 
 export interface DynamicMoodQuote {
   id?: string
+  slug?: string | null
   content: string
   author: string
   authorSlug?: string | null
@@ -29,6 +30,11 @@ export function HomeMoodFilter({ initialMoodQuotes = {} }: HomeMoodFilterProps =
 
   const activeMoodBase = MOODS.find((m) => m.id === selectedMoodId) || MOODS[0]
   const currentQuote = initialMoodQuotes[activeMoodBase.id] || activeMoodBase.quote
+  const quoteHref = currentQuote.slug
+    ? `/quotes/${currentQuote.slug}`
+    : currentQuote.id
+    ? `/quotes/${currentQuote.id}`
+    : undefined
   const quoteKey = initialMoodQuotes[activeMoodBase.id]?.id || `mood-${activeMoodBase.id}-${currentQuote.author}`
   const saved = isSaved(quoteKey)
 
@@ -146,9 +152,20 @@ export function HomeMoodFilter({ initialMoodQuotes = {} }: HomeMoodFilterProps =
               </span>
             </div>
 
-            <blockquote className="font-serif text-xl sm:text-2xl lg:text-3xl text-[var(--ink-900)] leading-relaxed font-normal">
-              “{currentQuote.content}”
-            </blockquote>
+            {quoteHref ? (
+              <Link
+                href={quoteHref}
+                className="group/quote block rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rust)]"
+              >
+                <blockquote className="font-serif text-xl sm:text-2xl lg:text-3xl text-[var(--ink-900)] leading-relaxed font-normal group-hover/quote:text-[var(--accent-rust)] transition-colors">
+                  “{currentQuote.content}”
+                </blockquote>
+              </Link>
+            ) : (
+              <blockquote className="font-serif text-xl sm:text-2xl lg:text-3xl text-[var(--ink-900)] leading-relaxed font-normal">
+                “{currentQuote.content}”
+              </blockquote>
+            )}
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ink-700)]">
               <span className="font-serif font-bold text-stone-900">

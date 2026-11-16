@@ -10,6 +10,8 @@ export interface MoodItem {
   accentBorder: string
   accentText: string
   quote: {
+    id?: string
+    slug?: string
     content: string
     author: string
     authorSlug?: string

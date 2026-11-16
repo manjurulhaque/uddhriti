@@ -75,6 +75,11 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
   const categorySlug = currentQuote.category?.slug
   const quoteKey = currentQuote.id || currentQuote.slug || currentQuote.content
   const saved = isSaved(quoteKey)
+  const quoteHref = currentQuote.slug
+    ? `/quotes/${currentQuote.slug}`
+    : currentQuote.id
+    ? `/quotes/${currentQuote.id}`
+    : undefined
 
   const isDaily = currentIndex === 0
   const hasPool = allQuotes.length > 1
@@ -202,9 +207,20 @@ export function HomeDailyQuote({ initialQuote, serendipityPool = [] }: HomeDaily
             >
               “
             </span>
-            <blockquote className="relative font-serif text-lg sm:text-xl md:text-2xl font-normal leading-relaxed sm:leading-relaxed text-[var(--ink-900)]">
-              “{currentQuote.content}”
-            </blockquote>
+            {quoteHref ? (
+              <Link
+                href={quoteHref}
+                className="group/quote block rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-rust)]"
+              >
+                <blockquote className="relative font-serif text-lg sm:text-xl md:text-2xl font-normal leading-relaxed sm:leading-relaxed text-[var(--ink-900)] group-hover/quote:text-[var(--accent-rust)] transition-colors">
+                  “{currentQuote.content}”
+                </blockquote>
+              </Link>
+            ) : (
+              <blockquote className="relative font-serif text-lg sm:text-xl md:text-2xl font-normal leading-relaxed sm:leading-relaxed text-[var(--ink-900)]">
+                “{currentQuote.content}”
+              </blockquote>
+            )}
           </div>
 
           {/* Attribution & Provenance Row */}

@@ -256,6 +256,7 @@ export default async function HomePage() {
         usedQuoteIds.add(selectedQuote.id)
         initialMoodQuotes[moodId] = {
           id: selectedQuote.id,
+          slug: selectedQuote.slug,
           content: selectedQuote.content,
           author: selectedQuote.author?.name || selectedQuote.authorName || "Unknown Author",
           authorSlug: selectedQuote.author?.slug,

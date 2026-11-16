@@ -231,7 +231,7 @@ export default async function QuotesBrowsePage({
                 name="q"
                 defaultValue={searchQuery}
                 placeholder="Search quotes by text or author name..."
-                className="w-full rounded-2xl border border-stone-300/80 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 shadow-2xs transition-all"
+                className="w-full rounded-2xl border border-stone-300/80 bg-white px-4 py-3 text-base sm:text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 shadow-2xs transition-all"
               />
               {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
               {selectedSort && <input type="hidden" name="sort" value={selectedSort} />}

@@ -65,7 +65,7 @@ export function HeroSearch() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
           aria-label="Search quotations by author or keyword"
-          className="w-full bg-transparent px-2 py-2 text-sm text-white placeholder-white/50 outline-none sm:text-base"
+          className="w-full bg-transparent px-2 py-2 text-base text-white placeholder-white/50 outline-none"
         />
 
         {/* Keyboard Shortcut Indicator */}

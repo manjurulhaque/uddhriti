@@ -205,6 +205,7 @@ export function QuoteShareModal({
               src={previewUrl}
               alt="Quote card preview"
               fill
+              sizes="(max-width: 640px) 100vw, 340px"
               unoptimized
               className="object-contain"
             />

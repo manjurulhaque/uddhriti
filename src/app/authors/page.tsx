@@ -205,7 +205,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                 name="q"
                 defaultValue={searchQuery}
                 placeholder="Search authors by name, profession, or nationality..."
-                className="w-full rounded-2xl border border-stone-300/80 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 shadow-2xs transition-all"
+                className="w-full rounded-2xl border border-stone-300/80 bg-white px-4 py-3 text-base sm:text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 shadow-2xs transition-all"
               />
               <button
                 type="submit"
@@ -225,8 +225,8 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
             )}
           </div>
 
-          {/* Alphabet Bar */}
-          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto scrollbar-none">
+          {/* Alphabet Bar (Horizontal scrolling on mobile with right-edge fade mask) */}
+          <div className="flex flex-nowrap sm:flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto scrollbar-none [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] sm:[mask-image:none]">
             <Link
               href="/authors"
               className={`min-h-[44px] sm:min-h-0 inline-flex items-center rounded-xl px-4 py-2 sm:px-3 sm:py-1.5 text-xs font-medium transition-all ${

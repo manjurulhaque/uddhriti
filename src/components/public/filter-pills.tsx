@@ -27,7 +27,7 @@ export function FilterPills({
   className = "",
 }: FilterPillsProps) {
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 py-1 ${className}`}>
+    <div className={`flex flex-nowrap sm:flex-wrap items-center gap-1.5 py-1 overflow-x-auto scrollbar-none [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] sm:[mask-image:none] ${className}`}>
       {label && (
         <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 mr-1">
           {label}

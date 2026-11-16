@@ -37,7 +37,7 @@ export function FilterPills({
       {allHref && (
         <Link
           href={allHref}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+          className={`inline-flex min-h-[44px] sm:min-h-0 items-center rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-medium transition-all ${
             isAllActive
               ? "bg-stone-900 text-white shadow-2xs"
               : "bg-white border border-stone-200 text-stone-700 hover:border-stone-400"
@@ -51,7 +51,7 @@ export function FilterPills({
         <Link
           key={item.id}
           href={item.href}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-all inline-flex items-center gap-1.5 ${
+          className={`inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-medium transition-all ${
             item.isActive
               ? "bg-stone-900 text-white shadow-2xs"
               : "bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 hover:bg-stone-50"

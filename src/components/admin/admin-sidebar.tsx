@@ -234,11 +234,11 @@ export function AdminSidebar({
             </div>
           </Link>
 
-          {/* Mobile close button */}
+          {/* Mobile close button (WCAG 44x44px touch target) */}
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
-            className="md:hidden p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
             aria-label="Close navigation"
           >
             <CloseIcon className="w-5 h-5" />
@@ -396,7 +396,7 @@ export function AdminSidebar({
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition cursor-pointer"
           aria-label="Open navigation menu"
         >
           <MenuIcon className="w-5 h-5" />

@@ -214,7 +214,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={handleCopy}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
               copied
                 ? "border-emerald-500 bg-emerald-50 text-emerald-800"
                 : "border-stone-300 bg-white text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs"
@@ -241,7 +241,7 @@ export function QuoteActions({
               recordShare()
               setShareModalOpen(true)
             }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
+            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
             aria-label="Export quotation as image card"
           >
             <PhotoIcon className="h-3.5 w-3.5 text-[var(--accent-rust)]" />
@@ -252,7 +252,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/80 bg-emerald-50/80 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-950 hover:border-emerald-500 hover:bg-emerald-100/90 shadow-2xs transition-all cursor-pointer group"
+            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-emerald-300/80 bg-emerald-50/80 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-emerald-950 hover:border-emerald-500 hover:bg-emerald-100/90 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on WhatsApp"
             title="Share quote on WhatsApp"
           >
@@ -264,7 +264,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={handleXShare}
-            className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer group"
+            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on X"
             title="Share quote on X"
           >
@@ -276,7 +276,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={handleFacebookShare}
-            className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50/60 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-blue-950 hover:border-blue-400 hover:bg-blue-100/80 shadow-2xs transition-all cursor-pointer group"
+            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50/60 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-blue-950 hover:border-blue-400 hover:bg-blue-100/80 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on Facebook"
             title="Share quote on Facebook"
           >
@@ -288,7 +288,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={handleInstagramShare}
-            className="inline-flex items-center gap-1.5 rounded-full border border-pink-200/80 bg-pink-50/60 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-pink-950 hover:border-pink-400 hover:bg-pink-100/80 shadow-2xs transition-all cursor-pointer group"
+            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-pink-200/80 bg-pink-50/60 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-pink-950 hover:border-pink-400 hover:bg-pink-100/80 shadow-2xs transition-all cursor-pointer group"
             aria-label="Share quotation on Instagram"
             title="Share quote on Instagram"
           >
@@ -300,7 +300,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={handleToggleSave}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
               saved
                 ? "border-[var(--accent-rust)] bg-[#c76b3e]/10 text-[var(--accent-rust)]"
                 : "border-stone-300 bg-white text-stone-800 hover:border-stone-900 hover:bg-stone-50 shadow-2xs"
@@ -320,7 +320,7 @@ export function QuoteActions({
           <button
             type="button"
             onClick={() => setZenModeOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-50/90 to-orange-50/70 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-950 hover:border-amber-400 hover:bg-amber-100/80 shadow-2xs transition-all cursor-pointer group"
+            className="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-50/90 to-orange-50/70 px-3.5 py-2.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-semibold uppercase tracking-wider text-amber-950 hover:border-amber-400 hover:bg-amber-100/80 shadow-2xs transition-all cursor-pointer group"
             aria-label="Enter distraction-free Zen contemplation mode (Press Z)"
             title="Distraction-Free Zen Contemplation (Shortcut: Z)"
           >

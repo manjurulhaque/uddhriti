@@ -102,20 +102,20 @@ export function PublicHeader() {
               </kbd>
             </button>
 
-            {/* Mobile Search Button */}
+            {/* Mobile Search Button (WCAG 44x44px minimum touch target) */}
             <button
               type="button"
               onClick={() => openCommandPalette()}
-              className="flex sm:hidden h-9 w-9 items-center justify-center rounded-full border border-stone-300/80 bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50"
+              className="flex sm:hidden h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-stone-300/80 bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50 transition-colors cursor-pointer"
               aria-label="Search"
             >
               <SearchIcon className="h-4 w-4" />
             </button>
 
-            {/* Saved Notebook Quick Access */}
+            {/* Saved Notebook Quick Access (WCAG 44x44px touch target on mobile) */}
             <Link
               href="/saved"
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 sm:px-3 py-1.5 text-xs font-medium min-h-[44px] sm:min-h-0 transition-all ${
                 pathname === "/saved"
                   ? "border-[var(--accent-rust)] bg-[#c76b3e]/10 text-[var(--accent-rust)] font-semibold"
                   : "border-stone-300/80 bg-white/80 text-stone-700 hover:border-stone-400 hover:bg-white shadow-2xs"
@@ -137,18 +137,18 @@ export function PublicHeader() {
               )}
             </Link>
 
-            {/* Mobile Menu Toggle Button */}
+            {/* Mobile Menu Toggle Button (WCAG 44x44px minimum touch target) */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="flex md:hidden h-9 w-9 items-center justify-center rounded-full border border-stone-300/80 bg-white text-stone-700 hover:bg-stone-100"
+              className="flex md:hidden h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-stone-300/80 bg-white text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
               aria-expanded={mobileMenuOpen}
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? (
-                <CloseIcon className="h-4 w-4" />
+                <CloseIcon className="h-4.5 w-4.5" />
               ) : (
-                <MenuIcon className="h-4 w-4" />
+                <MenuIcon className="h-4.5 w-4.5" />
               )}
             </button>
           </div>
@@ -159,7 +159,7 @@ export function PublicHeader() {
           <div className="md:hidden border-t border-stone-200/90 bg-[var(--page-cream)] px-5 py-4 shadow-lg animate-rise">
             <nav className="flex flex-col gap-2">
               {!isOnline && (
-                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs font-semibold mb-1">
+                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs font-semibold mb-1 min-h-[44px]">
                   <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
                   <span>Offline Mode • Viewing Cached Quotes</span>
                 </div>
@@ -171,7 +171,7 @@ export function PublicHeader() {
                     key={item.label}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+                    className={`rounded-xl px-4 py-3 min-h-[44px] flex items-center text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-stone-900/8 text-[var(--ink-900)] font-semibold"
                         : "text-stone-800 hover:bg-stone-900/5"

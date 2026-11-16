@@ -28,7 +28,7 @@ export function SortToolbar({
           <Link
             key={opt.key}
             href={buildSortHref(opt.key)}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-xl px-3.5 py-2 sm:px-3 sm:py-1.5 text-xs font-semibold transition-all ${
               isActive
                 ? "bg-stone-900 text-white shadow-xs"
                 : "border border-stone-200/90 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900"

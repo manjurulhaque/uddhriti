@@ -65,7 +65,7 @@ export function QuoteBookmarkButton({
       type="button"
       onClick={handleBookmark}
       aria-label={saved ? "Remove from saved quotes" : "Save quote for offline reading"}
-      className={`p-1.5 rounded-full transition-all cursor-pointer ${
+      className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-full transition-all cursor-pointer ${
         saved
           ? isDark || isFeatured
             ? "text-[var(--accent-gold)] bg-white/15"
@@ -77,7 +77,7 @@ export function QuoteBookmarkButton({
     >
       <BookmarkIcon
         filled={saved}
-        className="h-4 w-4 transition-transform active:scale-125"
+        className="h-4.5 w-4.5 transition-transform active:scale-125"
       />
     </button>
   )

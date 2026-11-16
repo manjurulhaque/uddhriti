@@ -166,12 +166,12 @@ export function InstallPrompt() {
             </p>
           </div>
 
-          {/* Close button */}
+          {/* Close button (WCAG 44x44px touch target) */}
           <button
             type="button"
             onClick={handleDismiss}
             aria-label="Dismiss install prompt"
-            className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer flex-shrink-0 -mt-1 -mr-1"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer flex-shrink-0 -mt-2 -mr-2"
           >
             <CloseIcon className="w-4 h-4" />
           </button>
@@ -183,7 +183,7 @@ export function InstallPrompt() {
             <button
               type="button"
               onClick={handleDismiss}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-200/40 transition-colors cursor-pointer"
+              className="min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-200/40 transition-colors cursor-pointer"
             >
               Not now
             </button>
@@ -191,7 +191,7 @@ export function InstallPrompt() {
               type="button"
               onClick={handleInstallClick}
               disabled={isInstalling}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              className="min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
               <DownloadIcon className="w-3.5 h-3.5" />
               {isInstalling ? "Installing..." : "Install"}
@@ -209,7 +209,7 @@ export function InstallPrompt() {
                 <button
                   type="button"
                   onClick={() => setShowIosGuide(true)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-xs cursor-pointer flex items-center gap-1.5"
+                  className="min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-semibold bg-[var(--accent-rust)] text-white hover:opacity-90 transition-opacity shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
                   <span>How to Add</span>
                   <ChevronDownIcon className="w-3 h-3" />

@@ -229,7 +229,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto scrollbar-none">
             <Link
               href="/authors"
-              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`min-h-[44px] sm:min-h-0 inline-flex items-center rounded-xl px-4 py-2 sm:px-3 sm:py-1.5 text-xs font-medium transition-all ${
                 !selectedLetter || selectedLetter === "ALL"
                   ? "bg-stone-900 text-white shadow-2xs"
                   : "bg-white border border-stone-200 text-stone-700 hover:border-stone-400"
@@ -248,7 +248,7 @@ export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
                 <Link
                   key={char}
                   href={href}
-                  className={`h-8 w-8 rounded-xl text-xs font-mono font-medium flex items-center justify-center transition-all ${
+                  className={`h-11 w-11 sm:h-8 sm:w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl text-xs font-mono font-medium flex items-center justify-center transition-all ${
                     isActive
                       ? "bg-stone-900 text-white shadow-2xs scale-105"
                       : "bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 hover:bg-stone-50"

@@ -376,7 +376,7 @@ export function CommandPalette() {
                   setSelectedIndex(0)
                   inputRef.current?.focus()
                 }}
-                className="rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition cursor-pointer"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition cursor-pointer"
                 aria-label="Clear query"
               >
                 <CloseIcon className="h-4 w-4" />
@@ -390,7 +390,7 @@ export function CommandPalette() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded-full p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition sm:hidden"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition sm:hidden cursor-pointer"
               aria-label="Close"
             >
               ✕

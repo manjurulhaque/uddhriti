@@ -53,7 +53,7 @@ export function Pagination({
       : "bg-white text-[var(--ink-700)] border-[var(--ink-900)]/12 hover:bg-[var(--page-cream)] hover:text-[var(--ink-900)]"
 
     const baseClass =
-      "inline-flex h-9 w-9 items-center justify-center rounded-xl border text-xs transition duration-150 ease-out"
+      "inline-flex h-11 w-11 sm:h-9 sm:w-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center rounded-xl border text-xs transition duration-150 ease-out"
 
     if (buildHref) {
       return (
@@ -87,7 +87,7 @@ export function Pagination({
     enabled: boolean,
     direction: "prev" | "next"
   ) => {
-    const classes = `inline-flex items-center gap-1.5 rounded-xl border border-[var(--ink-900)]/12 px-3.5 py-2 text-xs font-medium transition duration-150 ease-out ${
+    const classes = `inline-flex items-center gap-1.5 rounded-xl border border-[var(--ink-900)]/12 px-4 py-2.5 sm:px-3.5 sm:py-2 min-h-[44px] sm:min-h-0 text-xs font-medium transition duration-150 ease-out ${
       enabled
         ? "bg-white text-[var(--ink-900)] hover:bg-[var(--page-cream)] cursor-pointer"
         : "opacity-40 cursor-not-allowed bg-stone-50 text-[var(--ink-700)] select-none"

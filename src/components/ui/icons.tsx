@@ -185,6 +185,24 @@ export function ArrowUpIcon({ className = "w-4 h-4", size, ...props }: IconProps
   )
 }
 
+export function ArrowDownIcon({ className = "w-4 h-4", size, ...props }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+      {...props}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+    </svg>
+  )
+}
+
 export function ArrowLeftIcon({ className = "w-4 h-4", size, ...props }: IconProps) {
   return (
     <svg

@@ -61,6 +61,8 @@ type BulkActionType =
   | "setStatus"
   | "setVerification"
   | "setAttribution"
+  | "addToCollection"
+  | "removeFromCollection"
 
 type QuoteFilter =
   | "all"
@@ -291,10 +293,12 @@ export function QuotesListManager({
   const [authors, setAuthors] = useState<Option[]>([])
   const [categories, setCategories] = useState<Option[]>(categoryOptions)
   const [sources, setSources] = useState<Option[]>([])
+  const [collections, setCollections] = useState<Option[]>([])
   const [tags, setTags] = useState<TagOption[]>([])
   const [authorId, setAuthorId] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [sourceId, setSourceId] = useState("")
+  const [collectionId, setCollectionId] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [search, setSearch] = useState(initialSearch)
   const [prevInitialSearch, setPrevInitialSearch] = useState(initialSearch)
@@ -445,6 +449,7 @@ export function QuotesListManager({
     if (nextAction === "setAuthor" && authors.length > 0) return
     if (nextAction === "setCategory" && categories.length > 0) return
     if (nextAction === "setSource" && sources.length > 0) return
+    if ((nextAction === "addToCollection" || nextAction === "removeFromCollection") && collections.length > 0) return
     if ((nextAction === "addTags" || nextAction === "removeTags") && tags.length > 0) return
 
     setIsLoadingOptions(true)
@@ -461,6 +466,10 @@ export function QuotesListManager({
         const res = await fetch("/api/admin/sources?select=minimal")
         if (!res.ok) throw new Error("Failed to load sources")
         setSources(await res.json())
+      } else if (nextAction === "addToCollection" || nextAction === "removeFromCollection") {
+        const res = await fetch("/api/admin/collections")
+        if (!res.ok) throw new Error("Failed to load collections")
+        setCollections(await res.json())
       } else {
         const res = await fetch("/api/admin/tags?select=minimal")
         if (!res.ok) throw new Error("Failed to load tags")
@@ -502,6 +511,10 @@ export function QuotesListManager({
       setError("Select a source.")
       return
     }
+    if ((action === "addToCollection" || action === "removeFromCollection") && !collectionId) {
+      setError("Select a collection.")
+      return
+    }
     if ((action === "addTags" || action === "removeTags") && tagIds.length === 0) {
       setError("Select at least one tag.")
       return
@@ -518,6 +531,7 @@ export function QuotesListManager({
           authorId: action === "setAuthor" ? authorId : undefined,
           categoryId: action === "setCategory" ? categoryId : undefined,
           sourceId: action === "setSource" ? sourceId : undefined,
+          collectionId: (action === "addToCollection" || action === "removeFromCollection") ? collectionId : undefined,
           tagIds: action === "addTags" || action === "removeTags" ? tagIds : undefined,
           status: action === "setStatus" ? statusValue : undefined,
           isVerified: action === "setVerification" ? verificationValue : undefined,
@@ -1113,6 +1127,8 @@ export function QuotesListManager({
               <option value="setAuthor">Set Author</option>
               <option value="setSource">Set Source</option>
               <option value="clearSource">Clear Source</option>
+              <option value="addToCollection">Add to Collection</option>
+              <option value="removeFromCollection">Remove from Collection</option>
               <option value="addTags">Add Tags</option>
               <option value="removeTags">Remove Tags</option>
             </select>
@@ -1200,6 +1216,22 @@ export function QuotesListManager({
                 {sources.map((source) => (
                   <option key={source.id} value={source.id}>
                     {source.title}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+
+            {action === "addToCollection" || action === "removeFromCollection" ? (
+              <select
+                className="border rounded px-2 py-1 text-sm min-w-[220px]"
+                value={collectionId}
+                onFocus={() => ensureOptions(action)}
+                onChange={(event) => setCollectionId(event.target.value)}
+              >
+                <option value="">Select Collection</option>
+                {collections.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.title || col.name}
                   </option>
                 ))}
               </select>

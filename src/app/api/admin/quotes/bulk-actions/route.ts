@@ -9,6 +9,7 @@ import {
   recalculateCategoryQuoteCounts,
   recalculateSourceQuoteCounts,
   recalculateTagQuoteCounts,
+  recalculateCollectionQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { revalidatePublicSurfaces } from "@/lib/revalidation"
 import { recordAuditLog } from "@/lib/audit"
@@ -23,6 +24,7 @@ type BulkActionPayload = {
   status?: unknown
   isVerified?: unknown
   attributionStatus?: unknown
+  collectionId?: unknown
 }
 
 function uniqueStringList(value: unknown) {
@@ -67,7 +69,9 @@ export async function POST(req: Request) {
     action !== "removeTags" &&
     action !== "setStatus" &&
     action !== "setVerification" &&
-    action !== "setAttribution"
+    action !== "setAttribution" &&
+    action !== "addToCollection" &&
+    action !== "removeFromCollection"
   ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
@@ -378,6 +382,75 @@ export async function POST(req: Request) {
       })
 
       return NextResponse.json({ success: true, updatedCount: result.count })
+    }
+
+    if (action === "addToCollection" || action === "removeFromCollection") {
+      const collectionId = typeof body.collectionId === "string" ? body.collectionId.trim() : ""
+      if (!isValidUuid(collectionId)) {
+        return NextResponse.json({ error: "A valid collectionId is required" }, { status: 400 })
+      }
+
+      const collection = await prisma.collection.findUnique({
+        where: { id: collectionId },
+        select: { id: true, title: true },
+      })
+      if (!collection) {
+        return NextResponse.json({ error: "Collection not found" }, { status: 404 })
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const targetQuotes = await tx.quote.findMany({
+          where: { id: { in: quoteIds }, deletedAt: null },
+          select: { id: true },
+        })
+        const targetQuoteIds = targetQuotes.map((q) => q.id)
+        if (targetQuoteIds.length === 0) {
+          return { updatedCount: 0 }
+        }
+
+        if (action === "addToCollection") {
+          const maxPos = await tx.quoteCollection.aggregate({
+            where: { collectionId: collection.id },
+            _max: { position: true },
+          })
+          let curPos = (maxPos._max.position ?? 0) + 1
+
+          await tx.quoteCollection.createMany({
+            data: targetQuoteIds.map((quoteId, idx) => ({
+              collectionId: collection.id,
+              quoteId,
+              position: curPos + idx,
+            })),
+            skipDuplicates: true,
+          })
+        } else {
+          await tx.quoteCollection.deleteMany({
+            where: {
+              collectionId: collection.id,
+              quoteId: { in: targetQuoteIds },
+            },
+          })
+        }
+
+        await recalculateCollectionQuoteCounts(tx, [collection.id])
+        return { updatedCount: targetQuoteIds.length }
+      })
+
+      revalidatePublicSurfaces()
+
+      await recordAuditLog({
+        action: "BULK_UPDATE",
+        entityType: "COLLECTION",
+        entityId: collection.id,
+        entityName: collection.title,
+        adminId: admin.id,
+        adminEmail: admin.email,
+        adminName: admin.name,
+        details: { action, collectionId: collection.id, quoteIdsCount: quoteIds.length, updatedCount: result.updatedCount },
+        req,
+      })
+
+      return NextResponse.json({ success: true, updatedCount: result.updatedCount })
     }
 
     const tagIds = uniqueStringList(body.tagIds)

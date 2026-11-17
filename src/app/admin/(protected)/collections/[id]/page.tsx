@@ -13,6 +13,7 @@ import {
   ConfirmModal,
 } from "@/components/ui"
 import { slugify } from "@/lib/slug"
+import { CollectionQuotesManager } from "./CollectionQuotesManager"
 
 const visibilityOptions = [
   { value: "PUBLIC", label: "PUBLIC — Visible to everyone" },
@@ -137,7 +138,7 @@ export default function EditCollectionPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
+    <div className="p-8 max-w-4xl space-y-8">
       <PageHeader
         title={`Edit Collection: ${form.title || "..."}`}
         description="Update collection details, public URL slug, description, or visibility."
@@ -201,6 +202,12 @@ export default function EditCollectionPage() {
           isDeleting={deleting}
         />
       </form>
+
+      {/* Quotes in this Collection */}
+      <CollectionQuotesManager
+        collectionId={id}
+        collectionTitle={form.title}
+      />
 
       <ConfirmModal
         isOpen={isConfirmingDelete}

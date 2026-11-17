@@ -75,3 +75,25 @@ export async function recalculateTagQuoteCounts(tx: Prisma.TransactionClient, ta
     WHERE t.id = counts.id
   `
 }
+
+export async function recalculateCollectionQuoteCounts(
+  tx: Prisma.TransactionClient,
+  collectionIds: Array<string | null | undefined>
+) {
+  const ids = compactIds(collectionIds)
+  if (ids.length === 0) return
+
+  await tx.$executeRaw`
+    UPDATE "Collection" c
+    SET "quoteCount" = counts.cnt
+    FROM (
+      SELECT target.id, COUNT(q.id)::int AS cnt
+      FROM unnest(${ids}::uuid[]) AS target(id)
+      LEFT JOIN "QuoteCollection" qc ON qc."collectionId" = target.id
+      LEFT JOIN "Quote" q ON q.id = qc."quoteId" AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
+      GROUP BY target.id
+    ) counts
+    WHERE c.id = counts.id
+  `
+}
+

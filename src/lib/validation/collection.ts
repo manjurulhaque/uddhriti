@@ -14,12 +14,18 @@ export const collectionSchema = z.object({
 })
 
 export const collectionQuotesAddSchema = z.object({
-  quoteIds: z.array(z.string().uuid("Invalid quote ID")).min(1, "At least one quote must be selected"),
-  position: z.number().int().optional(),
+  quoteIds: z
+    .array(z.string().uuid("Invalid quote ID"))
+    .min(1, "At least one quote must be selected")
+    .max(500, "Cannot add more than 500 quotes at once"),
+  position: z.number().int().min(1).max(1_000_000).optional(),
 })
 
 export const collectionQuotesRemoveSchema = z.object({
-  quoteIds: z.array(z.string().uuid("Invalid quote ID")).min(1, "At least one quote must be selected"),
+  quoteIds: z
+    .array(z.string().uuid("Invalid quote ID"))
+    .min(1, "At least one quote must be selected")
+    .max(500, "Cannot remove more than 500 quotes at once"),
 })
 
 export const collectionQuotesReorderSchema = z.object({
@@ -27,9 +33,10 @@ export const collectionQuotesReorderSchema = z.object({
     .array(
       z.object({
         quoteId: z.string().uuid("Invalid quote ID"),
-        position: z.number().int(),
+        position: z.number().int().min(1).max(1_000_000),
       })
     )
-    .min(1, "Items cannot be empty"),
+    .min(1, "Items cannot be empty")
+    .max(500, "Cannot reorder more than 500 items at once"),
 })
 

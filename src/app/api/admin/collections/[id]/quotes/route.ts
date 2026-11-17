@@ -12,7 +12,7 @@ import {
   collectionQuotesRemoveSchema,
   collectionQuotesReorderSchema,
 } from "@/lib/validation/collection"
-import { parseSafePageNumber } from "@/lib/security/input"
+import { parseSafePageNumber, sanitizeSearchQuery } from "@/lib/security/input"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -46,7 +46,7 @@ export async function GET(req: Request, context: Context) {
   const page = parseSafePageNumber(url.searchParams.get("page"), 1000)
   const limitParam = parseInt(url.searchParams.get("limit") || "50", 10)
   const limit = Math.min(100, Math.max(1, isNaN(limitParam) ? 50 : limitParam))
-  const search = url.searchParams.get("search")?.trim() || ""
+  const search = sanitizeSearchQuery(url.searchParams.get("search"))
 
   const where: Prisma.QuoteCollectionWhereInput = {
     collectionId: id,

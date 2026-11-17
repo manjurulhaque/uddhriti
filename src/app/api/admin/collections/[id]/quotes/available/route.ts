@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { isValidUuid } from "@/lib/api/route-helpers"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSearchQuery } from "@/lib/security/input"
 import { searchQuoteIds } from "@/lib/quotes/search"
 
 type Context = {
@@ -14,8 +16,11 @@ export async function GET(req: Request, context: Context) {
     return NextResponse.json({ error: "Invalid collection ID" }, { status: 400 })
   }
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "diagnostics")
+  if (rateLimited) return rateLimited
 
   const collection = await prisma.collection.findUnique({
     where: { id },
@@ -27,7 +32,7 @@ export async function GET(req: Request, context: Context) {
   }
 
   const url = new URL(req.url)
-  const q = url.searchParams.get("q")?.trim() || ""
+  const q = sanitizeSearchQuery(url.searchParams.get("q"))
   const limitParam = parseInt(url.searchParams.get("limit") || "25", 10)
   const limit = Math.min(50, Math.max(1, isNaN(limitParam) ? 25 : limitParam))
 

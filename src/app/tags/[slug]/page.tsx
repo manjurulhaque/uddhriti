@@ -44,6 +44,10 @@ interface TagDetailPageProps {
 export const revalidate = 300
 
 export async function generateStaticParams() {
+  if (process.env.NODE_ENV === "development") {
+    return []
+  }
+
   try {
     const topTags = await prisma.tag.findMany({
       where: { quoteCount: { gt: 0 } },
@@ -51,7 +55,10 @@ export async function generateStaticParams() {
       take: 30,
       select: { slug: true },
     })
-    return topTags.map((t) => ({ slug: t.slug }))
+    if (!Array.isArray(topTags)) return []
+    return topTags
+      .filter((t) => typeof t?.slug === "string" && t.slug.trim().length > 0)
+      .map((t) => ({ slug: t.slug.trim() }))
   } catch (error) {
     console.error("Failed to generate static params for tags:", error)
     return []

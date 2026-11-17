@@ -27,6 +27,11 @@ interface IndividualQuotePageProps {
 export const revalidate = 300
 
 export async function generateStaticParams() {
+  // In development, skip querying Prisma on every request to avoid dev-server IPC worker overhead
+  if (process.env.NODE_ENV === "development") {
+    return []
+  }
+
   try {
     const topQuotes = await prisma.quote.findMany({
       where: { status: "PUBLISHED", deletedAt: null },
@@ -34,7 +39,10 @@ export async function generateStaticParams() {
       take: 50,
       select: { slug: true },
     })
-    return topQuotes.map((q) => ({ slug: q.slug }))
+    if (!Array.isArray(topQuotes)) return []
+    return topQuotes
+      .filter((q) => typeof q?.slug === "string" && q.slug.trim().length > 0)
+      .map((q) => ({ slug: q.slug.trim() }))
   } catch (error) {
     console.error("Failed to generate static params for quotes:", error)
     return []

@@ -38,12 +38,19 @@ interface CategoryDetailPageProps {
 export const revalidate = 300
 
 export async function generateStaticParams() {
+  if (process.env.NODE_ENV === "development") {
+    return []
+  }
+
   try {
     const categories = await prisma.category.findMany({
       where: { quoteCount: { gt: 0 } },
       select: { slug: true },
     })
-    return categories.map((c) => ({ slug: c.slug }))
+    if (!Array.isArray(categories)) return []
+    return categories
+      .filter((c) => typeof c?.slug === "string" && c.slug.trim().length > 0)
+      .map((c) => ({ slug: c.slug.trim() }))
   } catch (error) {
     console.error("Failed to generate static params for categories:", error)
     return []

@@ -38,6 +38,10 @@ interface AuthorDetailPageProps {
 export const revalidate = 300
 
 export async function generateStaticParams() {
+  if (process.env.NODE_ENV === "development") {
+    return []
+  }
+
   try {
     const topAuthors = await prisma.author.findMany({
       where: { quoteCount: { gt: 0 } },
@@ -45,7 +49,10 @@ export async function generateStaticParams() {
       take: 30,
       select: { slug: true },
     })
-    return topAuthors.map((a) => ({ slug: a.slug }))
+    if (!Array.isArray(topAuthors)) return []
+    return topAuthors
+      .filter((a) => typeof a?.slug === "string" && a.slug.trim().length > 0)
+      .map((a) => ({ slug: a.slug.trim() }))
   } catch (error) {
     console.error("Failed to generate static params for authors:", error)
     return []

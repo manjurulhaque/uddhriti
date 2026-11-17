@@ -43,16 +43,21 @@ export type CandidateQuote = {
 interface CollectionQuotesManagerProps {
   collectionId: string
   collectionTitle: string
+  initialQuotes?: CollectionQuoteItem[]
+  initialTotal?: number
   onQuoteCountChange?: (newCount: number) => void
 }
 
 export function CollectionQuotesManager({
   collectionId,
   collectionTitle,
+  initialQuotes,
+  initialTotal,
   onQuoteCountChange,
 }: CollectionQuotesManagerProps) {
-  const [quotes, setQuotes] = useState<CollectionQuoteItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [quotes, setQuotes] = useState<CollectionQuoteItem[]>(() => initialQuotes || [])
+  const [totalCount, setTotalCount] = useState<number>(() => initialTotal ?? initialQuotes?.length ?? 0)
+  const [loading, setLoading] = useState(() => !initialQuotes)
   const [search, setSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -76,6 +81,9 @@ export function CollectionQuotesManager({
       if (!res.ok) throw new Error("Failed to load collection quotes")
       const data = await res.json()
       setQuotes(data.items || [])
+      if (typeof data.total === "number") {
+        setTotalCount(data.total)
+      }
       if (onQuoteCountChange && typeof data.total === "number") {
         onQuoteCountChange(data.total)
       }
@@ -84,8 +92,9 @@ export function CollectionQuotesManager({
     }
   }, [collectionId, onQuoteCountChange])
 
-  // Load quotes currently in collection
+  // Load quotes currently in collection (only if not provided by server stream)
   useEffect(() => {
+    if (initialQuotes) return
     let ignore = false
 
     async function fetchCollectionQuotes() {
@@ -115,7 +124,7 @@ export function CollectionQuotesManager({
     return () => {
       ignore = true
     }
-  }, [collectionId, onQuoteCountChange])
+  }, [collectionId, initialQuotes, onQuoteCountChange])
 
   // Load candidates for the Add Modal
   useEffect(() => {
@@ -217,6 +226,7 @@ export function CollectionQuotesManager({
       if (!res.ok) throw new Error(data.error || "Failed to remove quote")
 
       setQuotes((prev) => prev.filter((item) => item.quoteId !== quoteId))
+      setTotalCount((prev) => Math.max(0, prev - 1))
       setSuccess("Quote removed from collection.")
       if (onQuoteCountChange) {
         onQuoteCountChange(Math.max(0, quotes.length - 1))
@@ -304,7 +314,7 @@ export function CollectionQuotesManager({
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-stone-900">Quotes in Collection</h2>
               <Badge variant="neutral" size="sm">
-                {quotes.length} {quotes.length === 1 ? "quote" : "quotes"}
+                {totalCount} {totalCount === 1 ? "quote" : "quotes"}
               </Badge>
             </div>
             <p className="text-xs text-stone-500 mt-0.5">

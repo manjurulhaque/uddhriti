@@ -13,6 +13,7 @@ import {
   recalculateCategoryQuoteCounts,
   recalculateSourceQuoteCounts,
   recalculateTagQuoteCounts,
+  recalculateCollectionQuoteCounts,
 } from "@/lib/quoteCountSync"
 
 type Context = {
@@ -52,6 +53,7 @@ export async function POST(req: Request, context: Context) {
       author: { select: { slug: true } },
       category: { select: { slug: true } },
       tags: { select: { tagId: true, tag: { select: { slug: true } } } },
+      collections: { select: { collectionId: true } },
     },
   })
 
@@ -113,6 +115,9 @@ export async function POST(req: Request, context: Context) {
       if (existing.categoryId) await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
       if (existing.tags.length > 0) {
         await recalculateTagQuoteCounts(tx, existing.tags.map((t) => t.tagId))
+      }
+      if (existing.collections.length > 0) {
+        await recalculateCollectionQuoteCounts(tx, existing.collections.map((c) => c.collectionId))
       }
     }
 

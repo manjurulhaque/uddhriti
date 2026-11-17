@@ -176,4 +176,53 @@ describe("Admin Collections: Quotes Management & Count Synchronization", () => {
     assert.ok(collection)
     assert.equal(collection.quoteCount, expectedCount)
   })
+
+  it("syncs collection quoteCount when a member quote status transitions between DRAFT and PUBLISHED", async () => {
+    // Ensure testQuoteId2 is in collection
+    const inCol = await prisma.quoteCollection.findUnique({
+      where: {
+        quoteId_collectionId: {
+          quoteId: testQuoteId2,
+          collectionId: testCollectionId,
+        },
+      },
+    })
+    if (!inCol) {
+      await prisma.quoteCollection.create({
+        data: {
+          quoteId: testQuoteId2,
+          collectionId: testCollectionId,
+          position: 1,
+        },
+      })
+    }
+
+    // Force testQuoteId2 to DRAFT
+    await prisma.quote.update({
+      where: { id: testQuoteId2 },
+      data: { status: "DRAFT" },
+    })
+
+    await recalculateCollectionQuoteCounts(prisma, [testCollectionId])
+
+    let collection = await prisma.collection.findUnique({
+      where: { id: testCollectionId },
+      select: { quoteCount: true },
+    })
+    assert.equal(collection?.quoteCount, 0, "Collection quoteCount should be 0 when member quote is DRAFT")
+
+    // Force testQuoteId2 back to PUBLISHED
+    await prisma.quote.update({
+      where: { id: testQuoteId2 },
+      data: { status: "PUBLISHED" },
+    })
+
+    await recalculateCollectionQuoteCounts(prisma, [testCollectionId])
+
+    collection = await prisma.collection.findUnique({
+      where: { id: testCollectionId },
+      select: { quoteCount: true },
+    })
+    assert.equal(collection?.quoteCount, 1, "Collection quoteCount should be 1 when member quote is PUBLISHED")
+  })
 })

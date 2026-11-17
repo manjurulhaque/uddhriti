@@ -11,6 +11,7 @@ import {
   recalculateCategoryQuoteCounts,
   recalculateSourceQuoteCounts,
   recalculateTagQuoteCounts,
+  recalculateCollectionQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
 import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
@@ -356,6 +357,7 @@ export async function PATCH(
           sourceId: true,
           categoryId: true,
           tags: { select: { tagId: true } },
+          collections: { select: { collectionId: true } },
           publishedAt: true,
           status: true,
         },
@@ -488,6 +490,7 @@ export async function PATCH(
       await recalculateSourceQuoteCounts(tx, [previousQuote.sourceId, sourceId])
       await recalculateCategoryQuoteCounts(tx, [previousQuote.categoryId, category.id])
       await recalculateTagQuoteCounts(tx, [...previousQuote.tags.map((entry) => entry.tagId), ...tags.map((tag) => tag.id)])
+      await recalculateCollectionQuoteCounts(tx, previousQuote.collections.map((c) => c.collectionId))
 
       return {
         quote,
@@ -565,6 +568,7 @@ export async function DELETE(
         author: { select: { slug: true } },
         category: { select: { slug: true } },
         tags: { select: { tag: { select: { slug: true } }, tagId: true } },
+        collections: { select: { collectionId: true } },
         authorId: true,
         sourceId: true,
         categoryId: true,
@@ -611,6 +615,7 @@ export async function DELETE(
     await recalculateSourceQuoteCounts(tx, [existing.sourceId])
     await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
     await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
+    await recalculateCollectionQuoteCounts(tx, existing.collections.map((entry) => entry.collectionId))
 
     return { shouldRevalidateHomepage: shouldRevalidate, deletedQuoteDetails: details }
   })
@@ -667,6 +672,7 @@ export async function POST(
         author: { select: { slug: true } },
         category: { select: { slug: true } },
         tags: { select: { tag: { select: { slug: true } }, tagId: true } },
+        collections: { select: { collectionId: true } },
         authorId: true,
         sourceId: true,
         categoryId: true,
@@ -700,6 +706,7 @@ export async function POST(
       await recalculateSourceQuoteCounts(tx, [existing.sourceId])
       await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
       await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
+      await recalculateCollectionQuoteCounts(tx, existing.collections.map((entry) => entry.collectionId))
     }
 
     return { shouldRevalidateHomepage: shouldRevalidate, restoredQuoteDetails: details }

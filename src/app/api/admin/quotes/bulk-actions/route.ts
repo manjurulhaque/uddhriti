@@ -94,6 +94,7 @@ export async function POST(req: Request) {
             categoryId: true,
             publishedAt: true,
             tags: { select: { tagId: true } },
+            collections: { select: { collectionId: true } },
           },
         })
 
@@ -118,11 +119,13 @@ export async function POST(req: Request) {
         const sourceIds = compactIds(targetQuotes.map((q) => q.sourceId))
         const categoryIds = compactIds(targetQuotes.map((q) => q.categoryId))
         const tagIds = compactIds(targetQuotes.flatMap((q) => q.tags.map((t) => t.tagId)))
+        const collectionIds = compactIds(targetQuotes.flatMap((q) => q.collections.map((c) => c.collectionId)))
 
         await recalculateAuthorQuoteCounts(tx, authorIds)
         await recalculateSourceQuoteCounts(tx, sourceIds)
         await recalculateCategoryQuoteCounts(tx, categoryIds)
         await recalculateTagQuoteCounts(tx, tagIds)
+        await recalculateCollectionQuoteCounts(tx, collectionIds)
 
         return { updatedCount: targetQuotes.length, hadPublished: hadPublished || isPublishing }
       })

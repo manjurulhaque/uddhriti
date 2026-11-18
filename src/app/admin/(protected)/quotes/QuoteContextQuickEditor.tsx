@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useId } from "react"
+import React, { useState, useEffect, useId, useRef } from "react"
 import Link from "next/link"
 import { Button, Badge } from "@/components/ui"
 import { CloseIcon } from "@/components/ui/icons"
@@ -38,9 +38,12 @@ export function QuoteContextQuickEditor({
   const [isSaving, setIsSaving] = useState(false)
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
   const [generatingField, setGeneratingField] = useState<"meaning" | "historicalContext" | "modernRelevance" | null>(null)
+  const [streamingField, setStreamingField] = useState<"meaning" | "historicalContext" | "modernRelevance" | null>(null)
   const [generationProvider, setGenerationProvider] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const meaningId = useId()
   const historyId = useId()
@@ -55,6 +58,9 @@ export function QuoteContextQuickEditor({
       setError(null)
       setSuccessMessage(null)
       setGenerationProvider(null)
+      setStreamingField(null)
+      setGeneratingField(null)
+      setIsGeneratingAll(false)
     })
     return () => window.cancelAnimationFrame(frameId)
   }, [quote])
@@ -62,6 +68,9 @@ export function QuoteContextQuickEditor({
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isOpen && !isSaving) {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+        }
         onClose()
       }
     }
@@ -77,6 +86,14 @@ export function QuoteContextQuickEditor({
     }
   }, [isOpen, isSaving, onClose])
 
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   if (!isOpen || !quote) return null
 
   const isMeaningFilled = meaning.trim().length > 0
@@ -84,25 +101,55 @@ export function QuoteContextQuickEditor({
   const isModernFilled = modernRelevance.trim().length > 0
   const filledCount = Number(isMeaningFilled) + Number(isHistoricalFilled) + Number(isModernFilled)
 
+  function handleStopStreaming() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setIsGeneratingAll(false)
+    setGeneratingField(null)
+    setStreamingField(null)
+  }
+
   async function handleGenerate(field?: "meaning" | "historicalContext" | "modernRelevance") {
     if (!quote) return
+
+    setError(null)
+    setSuccessMessage(null)
+
     if (field) {
       setGeneratingField(field)
+      setStreamingField(field)
+      if (field === "meaning") setMeaning("")
+      if (field === "historicalContext") setHistoricalContext("")
+      if (field === "modernRelevance") setModernRelevance("")
     } else {
       setIsGeneratingAll(true)
+      setStreamingField("meaning")
+      setMeaning("")
+      setHistoricalContext("")
+      setModernRelevance("")
     }
-    setError(null)
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     try {
       const res = await fetch("/api/admin/quotes/suggest-context", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
         body: JSON.stringify({
           quoteId: quote.id,
           content: quote.content,
           authorName: quote.authorName,
           categoryName: quote.categoryName,
+          stream: true,
+          targetField: field,
         }),
+        signal: controller.signal,
       })
 
       if (!res.ok) {
@@ -110,29 +157,89 @@ export function QuoteContextQuickEditor({
         throw new Error(data?.error || "Failed to generate context draft")
       }
 
-      const result = await res.json()
-      const draft = result.draft
-      const providerName =
-        result.provider === "gemini" ? "Google Gemini AI" : "Curator Knowledge Engine"
-
-      if (field === "meaning") {
-        setMeaning(draft.meaning)
-      } else if (field === "historicalContext") {
-        setHistoricalContext(draft.historicalContext)
-      } else if (field === "modernRelevance") {
-        setModernRelevance(draft.modernRelevance)
-      } else {
-        setMeaning(draft.meaning)
-        setHistoricalContext(draft.historicalContext)
-        setModernRelevance(draft.modernRelevance)
+      if (!res.body) {
+        throw new Error("No response body received for streaming")
       }
 
-      setGenerationProvider(providerName)
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let sseBuffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        sseBuffer += decoder.decode(value, { stream: true })
+        const lines = sseBuffer.split("\n")
+        sseBuffer = lines.pop() ?? ""
+
+        let currentEvent = "message"
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) {
+            currentEvent = "message"
+            continue
+          }
+
+          if (trimmed.startsWith("event:")) {
+            currentEvent = trimmed.slice(6).trim()
+            continue
+          }
+
+          if (trimmed.startsWith("data:")) {
+            const jsonStr = trimmed.slice(5).trim()
+            if (!jsonStr) continue
+
+            try {
+              const data = JSON.parse(jsonStr)
+
+              if (currentEvent === "start") {
+                const pName =
+                  data.provider === "gemini"
+                    ? "Google Gemini AI (Streaming)"
+                    : "Curator Knowledge Engine (Streaming)"
+                setGenerationProvider(pName)
+              } else if (currentEvent === "delta") {
+                setStreamingField(data.field)
+                if (data.field === "meaning") {
+                  setMeaning((prev) => prev + data.text)
+                } else if (data.field === "historicalContext") {
+                  setHistoricalContext((prev) => prev + data.text)
+                } else if (data.field === "modernRelevance") {
+                  setModernRelevance((prev) => prev + data.text)
+                }
+              } else if (currentEvent === "complete") {
+                if (data.field === "meaning") setMeaning(data.fullText)
+                if (data.field === "historicalContext") setHistoricalContext(data.fullText)
+                if (data.field === "modernRelevance") setModernRelevance(data.fullText)
+              } else if (currentEvent === "done") {
+                if (data.draft) {
+                  if (data.draft.meaning) setMeaning(data.draft.meaning)
+                  if (data.draft.historicalContext) setHistoricalContext(data.draft.historicalContext)
+                  if (data.draft.modernRelevance) setModernRelevance(data.draft.modernRelevance)
+                }
+                const pName =
+                  data.provider === "gemini" ? "Google Gemini AI" : "Curator Knowledge Engine"
+                setGenerationProvider(pName)
+              } else if (currentEvent === "error") {
+                setError(data.message || "Streaming error encountered")
+              }
+            } catch {
+              // Ignore non-json lines
+            }
+          }
+        }
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to generate suggestion")
+      if ((err as Error)?.name !== "AbortError") {
+        setError(err instanceof Error ? err.message : "Failed to generate suggestion")
+      }
     } finally {
       setIsGeneratingAll(false)
       setGeneratingField(null)
+      setStreamingField(null)
+      abortControllerRef.current = null
     }
   }
 
@@ -219,18 +326,30 @@ export function QuoteContextQuickEditor({
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  onClick={() => handleGenerate()}
-                  disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
-                  isLoading={isGeneratingAll}
-                  className="border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 font-medium text-xs cursor-pointer"
-                  title="Draft all 3 contextual dimensions automatically with AI"
-                >
-                  ✨ Auto-Draft Context
-                </Button>
+                {isGeneratingAll || Boolean(generatingField) ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={handleStopStreaming}
+                    className="border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 font-medium text-xs cursor-pointer"
+                    title="Stop real-time streaming"
+                  >
+                    ⏹ Stop Stream
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => void handleGenerate()}
+                    disabled={isSaving}
+                    className="border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 font-medium text-xs cursor-pointer"
+                    title="Stream all 3 contextual dimensions in real-time with AI"
+                  >
+                    ⚡ Auto-Draft Context
+                  </Button>
+                )}
 
                 <button
                   type="button"
@@ -342,17 +461,27 @@ export function QuoteContextQuickEditor({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleGenerate("meaning")}
-                    disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
-                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50/70 px-2 py-0.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100 transition cursor-pointer disabled:opacity-50"
-                    title="Draft meaning & interpretation"
+                    onClick={() => {
+                      if (generatingField === "meaning") {
+                        handleStopStreaming()
+                      } else {
+                        void handleGenerate("meaning")
+                      }
+                    }}
+                    disabled={isSaving || isGeneratingAll || (Boolean(generatingField) && generatingField !== "meaning")}
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition cursor-pointer disabled:opacity-50 ${
+                      generatingField === "meaning"
+                        ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                        : "border-violet-200 bg-violet-50/70 text-violet-800 hover:bg-violet-100"
+                    }`}
+                    title="Stream meaning & interpretation in real-time"
                   >
-                    {generatingField === "meaning" ? "Drafting..." : "✨ Suggest"}
+                    {generatingField === "meaning" ? "⏹ Stop" : "⚡ Suggest"}
                   </button>
                   <span className="text-[11px] text-stone-400">
                     {meaning.length} / 5,000
                   </span>
-                  {meaning.length > 0 && (
+                  {meaning.length > 0 && !generatingField && !isGeneratingAll && (
                     <button
                       type="button"
                       onClick={() => setMeaning("")}
@@ -373,8 +502,18 @@ export function QuoteContextQuickEditor({
                 value={meaning}
                 onChange={(e) => setMeaning(e.target.value)}
                 placeholder="e.g. This quote reflects the stoic discipline of distinguishing between what is within our control and what is not, urging inner tranquility..."
-                className="w-full rounded-xl border border-stone-200 p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-400"
+                className={`w-full rounded-xl border p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden transition-all duration-200 ${
+                  streamingField === "meaning"
+                    ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/20"
+                    : "border-stone-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-400"
+                }`}
               />
+              {streamingField === "meaning" && (
+                <div className="flex items-center gap-1.5 text-[11px] text-violet-700 font-semibold animate-pulse pt-0.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-violet-600 animate-ping" />
+                  <span>Streaming interpretation in real-time...</span>
+                </div>
+              )}
             </div>
 
             {/* Dimension 2: Historical Context */}
@@ -386,17 +525,27 @@ export function QuoteContextQuickEditor({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleGenerate("historicalContext")}
-                    disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
-                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50/70 px-2 py-0.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100 transition cursor-pointer disabled:opacity-50"
-                    title="Draft historical context"
+                    onClick={() => {
+                      if (generatingField === "historicalContext") {
+                        handleStopStreaming()
+                      } else {
+                        void handleGenerate("historicalContext")
+                      }
+                    }}
+                    disabled={isSaving || isGeneratingAll || (Boolean(generatingField) && generatingField !== "historicalContext")}
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition cursor-pointer disabled:opacity-50 ${
+                      generatingField === "historicalContext"
+                        ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                        : "border-violet-200 bg-violet-50/70 text-violet-800 hover:bg-violet-100"
+                    }`}
+                    title="Stream historical context in real-time"
                   >
-                    {generatingField === "historicalContext" ? "Drafting..." : "✨ Suggest"}
+                    {generatingField === "historicalContext" ? "⏹ Stop" : "⚡ Suggest"}
                   </button>
                   <span className="text-[11px] text-stone-400">
                     {historicalContext.length} / 5,000
                   </span>
-                  {historicalContext.length > 0 && (
+                  {historicalContext.length > 0 && !generatingField && !isGeneratingAll && (
                     <button
                       type="button"
                       onClick={() => setHistoricalContext("")}
@@ -417,8 +566,18 @@ export function QuoteContextQuickEditor({
                 value={historicalContext}
                 onChange={(e) => setHistoricalContext(e.target.value)}
                 placeholder="e.g. Written during the emperor's military campaign along the northern frontier in 170-180 AD as personal private journals..."
-                className="w-full rounded-xl border border-stone-200 p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-400"
+                className={`w-full rounded-xl border p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden transition-all duration-200 ${
+                  streamingField === "historicalContext"
+                    ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/20"
+                    : "border-stone-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-400"
+                }`}
               />
+              {streamingField === "historicalContext" && (
+                <div className="flex items-center gap-1.5 text-[11px] text-violet-700 font-semibold animate-pulse pt-0.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-violet-600 animate-ping" />
+                  <span>Streaming historical context in real-time...</span>
+                </div>
+              )}
             </div>
 
             {/* Dimension 3: Modern Relevance */}
@@ -430,17 +589,27 @@ export function QuoteContextQuickEditor({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleGenerate("modernRelevance")}
-                    disabled={isSaving || isGeneratingAll || Boolean(generatingField)}
-                    className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50/70 px-2 py-0.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100 transition cursor-pointer disabled:opacity-50"
-                    title="Draft modern relevance"
+                    onClick={() => {
+                      if (generatingField === "modernRelevance") {
+                        handleStopStreaming()
+                      } else {
+                        void handleGenerate("modernRelevance")
+                      }
+                    }}
+                    disabled={isSaving || isGeneratingAll || (Boolean(generatingField) && generatingField !== "modernRelevance")}
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition cursor-pointer disabled:opacity-50 ${
+                      generatingField === "modernRelevance"
+                        ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                        : "border-violet-200 bg-violet-50/70 text-violet-800 hover:bg-violet-100"
+                    }`}
+                    title="Stream modern relevance in real-time"
                   >
-                    {generatingField === "modernRelevance" ? "Drafting..." : "✨ Suggest"}
+                    {generatingField === "modernRelevance" ? "⏹ Stop" : "⚡ Suggest"}
                   </button>
                   <span className="text-[11px] text-stone-400">
                     {modernRelevance.length} / 5,000
                   </span>
-                  {modernRelevance.length > 0 && (
+                  {modernRelevance.length > 0 && !generatingField && !isGeneratingAll && (
                     <button
                       type="button"
                       onClick={() => setModernRelevance("")}
@@ -461,8 +630,18 @@ export function QuoteContextQuickEditor({
                 value={modernRelevance}
                 onChange={(e) => setModernRelevance(e.target.value)}
                 placeholder="e.g. In today's hyper-connected, high-distraction world, this principle serves as a cognitive anchor against information overload and social anxiety..."
-                className="w-full rounded-xl border border-stone-200 p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-400"
+                className={`w-full rounded-xl border p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden transition-all duration-200 ${
+                  streamingField === "modernRelevance"
+                    ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/20"
+                    : "border-stone-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-400"
+                }`}
               />
+              {streamingField === "modernRelevance" && (
+                <div className="flex items-center gap-1.5 text-[11px] text-violet-700 font-semibold animate-pulse pt-0.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-violet-600 animate-ping" />
+                  <span>Streaming modern relevance in real-time...</span>
+                </div>
+              )}
             </div>
           </div>
 

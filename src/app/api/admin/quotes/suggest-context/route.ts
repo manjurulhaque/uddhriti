@@ -5,7 +5,9 @@ import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { isValidUuid } from "@/lib/api/route-helpers"
 import {
   generateQuoteContextDraft,
+  streamQuoteContextDraft,
   type QuoteContextDraftInput,
+  type ContextDimensionField,
 } from "@/lib/quotes/context-generator"
 
 export async function POST(req: Request) {
@@ -20,12 +22,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request payload" }, { status: 400 })
   }
 
-  const { quoteId, content, authorName, categoryName, sourceTitle } = body as {
+  const { quoteId, content, authorName, categoryName, sourceTitle, stream, targetField } = body as {
     quoteId?: unknown
     content?: unknown
     authorName?: unknown
     categoryName?: unknown
     sourceTitle?: unknown
+    stream?: unknown
+    targetField?: unknown
   }
 
   let draftInput: QuoteContextDraftInput
@@ -73,6 +77,32 @@ export async function POST(req: Request) {
       { error: "Either a valid quoteId or content string is required" },
       { status: 400 }
     )
+  }
+
+  const wantsStream =
+    stream === true ||
+    req.headers.get("accept")?.includes("text/event-stream") ||
+    new URL(req.url).searchParams.get("stream") === "true"
+
+  const validTargetField: ContextDimensionField | undefined =
+    targetField === "meaning" || targetField === "historicalContext" || targetField === "modernRelevance"
+      ? targetField
+      : undefined
+
+  if (wantsStream) {
+    const sseStream = streamQuoteContextDraft(draftInput, {
+      targetField: validTargetField,
+      signal: req.signal,
+    })
+
+    return new Response(sseStream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    })
   }
 
   const result = await generateQuoteContextDraft(draftInput)

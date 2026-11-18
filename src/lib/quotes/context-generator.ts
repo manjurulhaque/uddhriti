@@ -7,7 +7,7 @@
  * author biographies, philosophical traditions, and thematic categories.
  */
 
-import { callGeminiGenerateContent } from "@/lib/gemini"
+import { callGeminiGenerateContent, callGeminiStreamGenerateContent } from "@/lib/gemini"
 
 export interface QuoteContextDraftInput {
   content: string
@@ -270,3 +270,358 @@ Return ONLY valid JSON with keys: "meaning", "historicalContext", "modernRelevan
     provider: "heuristic",
   }
 }
+
+export type ContextDimensionField = "meaning" | "historicalContext" | "modernRelevance"
+
+export interface StreamContextOptions {
+  targetField?: ContextDimensionField
+  signal?: AbortSignal
+}
+
+/**
+ * Streams contextual interpretation, historical context, and modern relevance
+ * in real-time using Server-Sent Events (SSE).
+ *
+ * Emits:
+ * - 'start': { provider, targetFields }
+ * - 'delta': { field, text }
+ * - 'complete': { field, fullText }
+ * - 'done': { draft, provider }
+ * - 'error': { message }
+ */
+export function streamQuoteContextDraft(
+  input: QuoteContextDraftInput,
+  options?: StreamContextOptions
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder()
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  const targetField = options?.targetField
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let isClosed = false
+      const closeStream = () => {
+        if (!isClosed) {
+          isClosed = true
+          try {
+            controller.close()
+          } catch {
+            // Already closed
+          }
+        }
+      }
+
+      const sendEvent = (event: string, data: unknown) => {
+        if (isClosed) return
+        try {
+          const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+          controller.enqueue(encoder.encode(payload))
+        } catch {
+          // Stream error or aborted
+        }
+      }
+
+      if (options?.signal) {
+        options.signal.addEventListener("abort", () => {
+          closeStream()
+        })
+      }
+
+      if (options?.signal?.aborted) {
+        closeStream()
+        return
+      }
+
+      // Helper to stream heuristic fallback smoothly
+      const streamHeuristic = async () => {
+        sendEvent("start", {
+          provider: "heuristic",
+          targetFields: targetField ? [targetField] : ["meaning", "historicalContext", "modernRelevance"],
+        })
+
+        const draft = generateHeuristicContextDraft(input)
+        const fieldsToStream: ContextDimensionField[] = targetField
+          ? [targetField]
+          : ["meaning", "historicalContext", "modernRelevance"]
+
+        for (const f of fieldsToStream) {
+          if (options?.signal?.aborted || isClosed) break
+
+          const fullText = draft[f]
+          const chunks = fullText.match(/\S+\s*/g) || [fullText]
+
+          let accumulated = ""
+          for (const chunk of chunks) {
+            if (options?.signal?.aborted || isClosed) break
+            accumulated += chunk
+            sendEvent("delta", { field: f, text: chunk })
+            await new Promise((resolve) => setTimeout(resolve, 25))
+          }
+
+          sendEvent("complete", { field: f, fullText: accumulated.trim() })
+          await new Promise((resolve) => setTimeout(resolve, 35))
+        }
+
+        if (!options?.signal?.aborted && !isClosed) {
+          sendEvent("done", { draft, provider: "heuristic" })
+        }
+        closeStream()
+      }
+
+      if (!apiKey) {
+        await streamHeuristic()
+        return
+      }
+
+      // Try Gemini streaming
+      try {
+        let prompt: string
+        if (targetField === "meaning") {
+          prompt = `You are a scholarly philosophical editor and quotation curator.
+Analyze the following quotation and generate a rigorous, comprehensive interpretation explaining the deeper message and principles (around 2-3 sentences).
+
+Quotation details:
+- Content: "${input.content}"
+- Author: "${input.authorName || "Unknown"}"
+- Category: "${input.categoryName || "General"}"
+- Source: "${input.sourceTitle || "N/A"}"
+
+Output ONLY the meaning text directly with no markdown formatting, labels, or introductory phrases.`
+        } else if (targetField === "historicalContext") {
+          prompt = `You are a scholarly philosophical editor and quotation curator.
+Analyze the following quotation and generate author background, historical era, and origin context (around 2-3 sentences).
+
+Quotation details:
+- Content: "${input.content}"
+- Author: "${input.authorName || "Unknown"}"
+- Category: "${input.categoryName || "General"}"
+- Source: "${input.sourceTitle || "N/A"}"
+
+Output ONLY the historical context text directly with no markdown formatting, labels, or introductory phrases.`
+        } else if (targetField === "modernRelevance") {
+          prompt = `You are a scholarly philosophical editor and quotation curator.
+Analyze the following quotation and generate actionable contemporary applications for modern life, mental well-being, or leadership today (around 2-3 sentences).
+
+Quotation details:
+- Content: "${input.content}"
+- Author: "${input.authorName || "Unknown"}"
+- Category: "${input.categoryName || "General"}"
+- Source: "${input.sourceTitle || "N/A"}"
+
+Output ONLY the modern relevance text directly with no markdown formatting, labels, or introductory phrases.`
+        } else {
+          prompt = `You are a scholarly philosophical editor and quotation curator.
+Analyze the following quotation and generate three comprehensive, high-quality paragraphs.
+
+Quotation details:
+- Content: "${input.content}"
+- Author: "${input.authorName || "Unknown"}"
+- Category: "${input.categoryName || "General"}"
+- Source: "${input.sourceTitle || "N/A"}"
+
+Format your response strictly using these exact delimiters:
+<<<MEANING>>>
+(2-3 sentences explaining philosophical meaning and moral message)
+<<<HISTORICAL_CONTEXT>>>
+(2-3 sentences explaining author background, era, and historical setting)
+<<<MODERN_RELEVANCE>>>
+(2-3 sentences explaining contemporary everyday application and relevance)
+
+Do not output any introductory or closing remarks outside these tags.`
+        }
+
+        const timeoutController = new AbortController()
+        const timeoutId = setTimeout(() => timeoutController.abort(), 12000)
+
+        const abortHandler = () => timeoutController.abort()
+        options?.signal?.addEventListener("abort", abortHandler)
+
+        const geminiRes = await callGeminiStreamGenerateContent(apiKey, prompt, {
+          temperature: 0.3,
+          signal: timeoutController.signal,
+        })
+
+        clearTimeout(timeoutId)
+        options?.signal?.removeEventListener("abort", abortHandler)
+
+        if (!geminiRes.ok || !geminiRes.body) {
+          await streamHeuristic()
+          return
+        }
+
+        sendEvent("start", {
+          provider: "gemini",
+          targetFields: targetField ? [targetField] : ["meaning", "historicalContext", "modernRelevance"],
+        })
+
+        const reader = geminiRes.body.getReader()
+        const decoder = new TextDecoder()
+        let sseBuffer = ""
+        let pendingStreamBuffer = ""
+
+        const collected: Record<ContextDimensionField, string> = {
+          meaning: "",
+          historicalContext: "",
+          modernRelevance: "",
+        }
+
+        const completedFields = new Set<ContextDimensionField>()
+        const markFieldComplete = (field: ContextDimensionField) => {
+          if (!completedFields.has(field)) {
+            completedFields.add(field)
+            sendEvent("complete", { field, fullText: collected[field].trim() })
+          }
+        }
+
+        let currentField: ContextDimensionField | null = targetField || null
+        const tagPattern = /<<<\s*(MEANING|HISTORICAL(?:_|\s+)CONTEXT|MODERN(?:_|\s+)RELEVANCE)\s*>>>/i
+
+        while (true) {
+          if (options?.signal?.aborted || isClosed) break
+
+          const { done, value } = await reader.read()
+          if (done) break
+
+          sseBuffer += decoder.decode(value, { stream: true })
+          const lines = sseBuffer.split("\n")
+          sseBuffer = lines.pop() ?? ""
+
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (!trimmedLine.startsWith("data:")) continue
+
+            const jsonStr = trimmedLine.replace(/^data:\s*/, "")
+            if (!jsonStr || jsonStr === "[DONE]") continue
+
+            let textChunk = ""
+            try {
+              const parsed = JSON.parse(jsonStr)
+              textChunk = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || ""
+            } catch {
+              continue
+            }
+
+            if (!textChunk) continue
+
+            if (targetField) {
+              collected[targetField] += textChunk
+              sendEvent("delta", { field: targetField, text: textChunk })
+            } else {
+              pendingStreamBuffer += textChunk
+
+              while (true) {
+                const match = pendingStreamBuffer.match(tagPattern)
+                if (!match || match.index === undefined) break
+
+                const textBefore = pendingStreamBuffer.slice(0, match.index)
+                if (currentField && textBefore) {
+                  collected[currentField] += textBefore
+                  sendEvent("delta", { field: currentField, text: textBefore })
+                }
+                if (currentField) {
+                  markFieldComplete(currentField)
+                }
+
+                const rawTag = match[1].toUpperCase()
+                if (rawTag.includes("MEANING")) {
+                  currentField = "meaning"
+                } else if (rawTag.includes("HISTORICAL")) {
+                  currentField = "historicalContext"
+                } else if (rawTag.includes("MODERN")) {
+                  currentField = "modernRelevance"
+                }
+
+                pendingStreamBuffer = pendingStreamBuffer.slice(match.index + match[0].length)
+              }
+
+              // Emit safe tokens from pending buffer (leaving possible partial tags at end)
+              const lastLtIndex = pendingStreamBuffer.lastIndexOf("<")
+              if (lastLtIndex !== -1 && pendingStreamBuffer.length - lastLtIndex < 35) {
+                const safeToEmit = pendingStreamBuffer.slice(0, lastLtIndex)
+                pendingStreamBuffer = pendingStreamBuffer.slice(lastLtIndex)
+                if (currentField && safeToEmit) {
+                  collected[currentField] += safeToEmit
+                  sendEvent("delta", { field: currentField, text: safeToEmit })
+                }
+              } else if (pendingStreamBuffer && lastLtIndex === -1) {
+                if (currentField) {
+                  collected[currentField] += pendingStreamBuffer
+                  sendEvent("delta", { field: currentField, text: pendingStreamBuffer })
+                }
+                pendingStreamBuffer = ""
+              }
+            }
+          }
+        }
+
+        // Flush remaining buffer at stream end
+        if (!targetField && pendingStreamBuffer) {
+          const finalMatch = pendingStreamBuffer.match(tagPattern)
+          if (finalMatch && finalMatch.index !== undefined) {
+            const textBefore = pendingStreamBuffer.slice(0, finalMatch.index)
+            if (currentField && textBefore) {
+              collected[currentField] += textBefore
+              sendEvent("delta", { field: currentField, text: textBefore })
+            }
+            if (currentField) {
+              markFieldComplete(currentField)
+            }
+            const rawTag = finalMatch[1].toUpperCase()
+            if (rawTag.includes("MEANING")) currentField = "meaning"
+            else if (rawTag.includes("HISTORICAL")) currentField = "historicalContext"
+            else if (rawTag.includes("MODERN")) currentField = "modernRelevance"
+
+            const textAfter = pendingStreamBuffer.slice(finalMatch.index + finalMatch[0].length)
+            if (currentField && textAfter) {
+              collected[currentField] += textAfter
+              sendEvent("delta", { field: currentField, text: textAfter })
+            }
+          } else if (currentField && pendingStreamBuffer) {
+            collected[currentField] += pendingStreamBuffer
+            sendEvent("delta", { field: currentField, text: pendingStreamBuffer })
+          }
+          pendingStreamBuffer = ""
+        }
+
+        const fallback = generateHeuristicContextDraft(input)
+
+        if (targetField) {
+          const targetText = collected[targetField].trim() || fallback[targetField]
+          markFieldComplete(targetField)
+          sendEvent("done", {
+            draft: { [targetField]: targetText },
+            provider: "gemini",
+          })
+        } else {
+          // Ensure all three dimensions have complete events exactly once
+          const fields: ContextDimensionField[] = ["meaning", "historicalContext", "modernRelevance"]
+          for (const f of fields) {
+            if (!collected[f].trim()) {
+              collected[f] = fallback[f]
+              sendEvent("delta", { field: f, text: fallback[f] })
+            }
+            markFieldComplete(f)
+          }
+
+          sendEvent("done", {
+            draft: {
+              meaning: collected.meaning.trim(),
+              historicalContext: collected.historicalContext.trim(),
+              modernRelevance: collected.modernRelevance.trim(),
+            },
+            provider: "gemini",
+          })
+        }
+
+        closeStream()
+      } catch {
+        if (!options?.signal?.aborted && !isClosed) {
+          await streamHeuristic()
+        } else {
+          closeStream()
+        }
+      }
+    },
+  })
+}
+

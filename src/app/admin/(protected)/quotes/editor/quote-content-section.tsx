@@ -74,6 +74,149 @@ export function QuoteContentSection({
     isDuplicate: false,
   })
   const [dismissedForContent, setDismissedForContent] = React.useState<string | null>(null)
+  const [isStreamingContext, setIsStreamingContext] = React.useState(false)
+  const [streamingContextField, setStreamingContextField] = React.useState<"meaning" | "historicalContext" | "modernRelevance" | null>(null)
+  const [contextStreamError, setContextStreamError] = React.useState<string | null>(null)
+  const contextAbortRef = React.useRef<AbortController | null>(null)
+
+  React.useEffect(() => {
+    return () => {
+      if (contextAbortRef.current) {
+        contextAbortRef.current.abort()
+      }
+    }
+  }, [])
+
+  function handleStopContextStream() {
+    if (contextAbortRef.current) {
+      contextAbortRef.current.abort()
+      contextAbortRef.current = null
+    }
+    setIsStreamingContext(false)
+    setStreamingContextField(null)
+  }
+
+  async function handleStreamContext(field?: "meaning" | "historicalContext" | "modernRelevance") {
+    if (!form.content.trim()) return
+
+    setContextStreamError(null)
+    setIsStreamingContext(true)
+    setStreamingContextField(field || "meaning")
+
+    const accumulated = {
+      meaning: field === "meaning" ? "" : form.meaning || "",
+      historicalContext: field === "historicalContext" ? "" : form.historicalContext || "",
+      modernRelevance: field === "modernRelevance" ? "" : form.modernRelevance || "",
+    }
+
+    if (field) {
+      accumulated[field] = ""
+      updateForm(field, "")
+    } else {
+      accumulated.meaning = ""
+      accumulated.historicalContext = ""
+      accumulated.modernRelevance = ""
+      updateForm("meaning", "")
+      updateForm("historicalContext", "")
+      updateForm("modernRelevance", "")
+    }
+
+    const controller = new AbortController()
+    contextAbortRef.current = controller
+
+    try {
+      const res = await fetch("/api/admin/quotes/suggest-context", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({
+          quoteId: quoteId,
+          content: form.content.trim(),
+          authorName: authorName,
+          categoryName: categoryName,
+          sourceTitle: sourceTitle,
+          stream: true,
+          targetField: field,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to generate context")
+      }
+
+      if (!res.body) throw new Error("No response body received")
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let sseBuffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        sseBuffer += decoder.decode(value, { stream: true })
+        const lines = sseBuffer.split("\n")
+        sseBuffer = lines.pop() ?? ""
+
+        let currentEvent = "message"
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) {
+            currentEvent = "message"
+            continue
+          }
+
+          if (trimmed.startsWith("event:")) {
+            currentEvent = trimmed.slice(6).trim()
+            continue
+          }
+
+          if (trimmed.startsWith("data:")) {
+            const jsonStr = trimmed.slice(5).trim()
+            if (!jsonStr) continue
+
+            try {
+              const data = JSON.parse(jsonStr)
+
+              if (currentEvent === "delta") {
+                const targetKey = data.field as "meaning" | "historicalContext" | "modernRelevance"
+                setStreamingContextField(targetKey)
+                accumulated[targetKey] = (accumulated[targetKey] || "") + data.text
+                updateForm(targetKey, accumulated[targetKey])
+              } else if (currentEvent === "complete") {
+                const targetKey = data.field as "meaning" | "historicalContext" | "modernRelevance"
+                accumulated[targetKey] = data.fullText
+                updateForm(targetKey, data.fullText)
+              } else if (currentEvent === "done") {
+                if (data.draft) {
+                  if (data.draft.meaning) updateForm("meaning", data.draft.meaning)
+                  if (data.draft.historicalContext) updateForm("historicalContext", data.draft.historicalContext)
+                  if (data.draft.modernRelevance) updateForm("modernRelevance", data.draft.modernRelevance)
+                }
+              } else if (currentEvent === "error") {
+                setContextStreamError(data.message || "Streaming error encountered")
+              }
+            } catch {
+              // Ignore non-json
+            }
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if ((err as Error)?.name !== "AbortError") {
+        setContextStreamError(err instanceof Error ? err.message : "Failed to stream context")
+      }
+    } finally {
+      setIsStreamingContext(false)
+      setStreamingContextField(null)
+      contextAbortRef.current = null
+    }
+  }
 
   const trimmedContent = form.content.trim()
   const isTooShort = trimmedContent.length < 12
@@ -477,46 +620,163 @@ export function QuoteContentSection({
 
       {/* Literary Interpretation & Context */}
       <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="border-b border-stone-100 pb-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
-            Interpretation &amp; Context
-          </h2>
-          <p className="text-xs text-stone-500">
-            Enrich the quotation with meaning, historical provenance, and contemporary relevance.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+                Interpretation &amp; Context
+              </h2>
+              {isStreamingContext && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-800 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-ping" />
+                  Streaming live...
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-stone-500">
+              Enrich the quotation with meaning, historical provenance, and contemporary relevance.
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-2">
+            {isStreamingContext ? (
+              <button
+                type="button"
+                onClick={handleStopContextStream}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 transition shadow-2xs cursor-pointer"
+                title="Interrupt real-time stream"
+              >
+                ⏹ Stop Stream
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleStreamContext()}
+                disabled={!form.content.trim()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-50 text-violet-800 border border-violet-200 hover:bg-violet-100 disabled:opacity-50 transition shadow-2xs cursor-pointer"
+                title="Stream all 3 contextual dimensions in real-time with AI"
+              >
+                ⚡ AI Stream All 3
+              </button>
+            )}
+          </div>
         </div>
 
+        {contextStreamError && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 font-medium">
+            {contextStreamError}
+          </div>
+        )}
+
         <div className="grid gap-5 lg:grid-cols-3">
+          {/* Quote Meaning */}
           <div className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
-              Quote Meaning
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Quote Meaning
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (streamingContextField === "meaning") {
+                    handleStopContextStream()
+                  } else {
+                    void handleStreamContext("meaning")
+                  }
+                }}
+                disabled={!form.content.trim() || (isStreamingContext && streamingContextField !== "meaning")}
+                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium transition cursor-pointer disabled:opacity-50 ${
+                  streamingContextField === "meaning"
+                    ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                    : "border-violet-200 bg-violet-50/70 text-violet-800 hover:bg-violet-100"
+                }`}
+                title="Stream meaning interpretation"
+              >
+                {streamingContextField === "meaning" ? "⏹ Stop" : "⚡ Suggest"}
+              </button>
+            </div>
             <textarea
-              className="w-full min-h-[130px] rounded-xl border border-stone-300 bg-white p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              className={`w-full min-h-[130px] rounded-xl border p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:outline-none transition-all leading-relaxed ${
+                streamingContextField === "meaning"
+                  ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/20"
+                  : "border-stone-300 bg-white focus:border-stone-900 focus:ring-1 focus:ring-stone-900"
+              }`}
               value={form.meaning}
               onChange={(e) => updateForm("meaning", e.target.value)}
               placeholder="Explain the central idea, moral lesson, or interpretation of this quote..."
             />
           </div>
 
+          {/* Historical Context */}
           <div className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
-              Historical Context
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Historical Context
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (streamingContextField === "historicalContext") {
+                    handleStopContextStream()
+                  } else {
+                    void handleStreamContext("historicalContext")
+                  }
+                }}
+                disabled={!form.content.trim() || (isStreamingContext && streamingContextField !== "historicalContext")}
+                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium transition cursor-pointer disabled:opacity-50 ${
+                  streamingContextField === "historicalContext"
+                    ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                    : "border-violet-200 bg-violet-50/70 text-violet-800 hover:bg-violet-100"
+                }`}
+                title="Stream historical context"
+              >
+                {streamingContextField === "historicalContext" ? "⏹ Stop" : "⚡ Suggest"}
+              </button>
+            </div>
             <textarea
-              className="w-full min-h-[130px] rounded-xl border border-stone-300 bg-white p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              className={`w-full min-h-[130px] rounded-xl border p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:outline-none transition-all leading-relaxed ${
+                streamingContextField === "historicalContext"
+                  ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/20"
+                  : "border-stone-300 bg-white focus:border-stone-900 focus:ring-1 focus:ring-stone-900"
+              }`}
               value={form.historicalContext}
               onChange={(e) => updateForm("historicalContext", e.target.value)}
               placeholder="Background, era, audience, event, speech circumstance, or treaty..."
             />
           </div>
 
+          {/* Modern Relevance */}
           <div className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
-              Modern Relevance
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Modern Relevance
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (streamingContextField === "modernRelevance") {
+                    handleStopContextStream()
+                  } else {
+                    void handleStreamContext("modernRelevance")
+                  }
+                }}
+                disabled={!form.content.trim() || (isStreamingContext && streamingContextField !== "modernRelevance")}
+                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium transition cursor-pointer disabled:opacity-50 ${
+                  streamingContextField === "modernRelevance"
+                    ? "border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100"
+                    : "border-violet-200 bg-violet-50/70 text-violet-800 hover:bg-violet-100"
+                }`}
+                title="Stream modern relevance"
+              >
+                {streamingContextField === "modernRelevance" ? "⏹ Stop" : "⚡ Suggest"}
+              </button>
+            </div>
             <textarea
-              className="w-full min-h-[130px] rounded-xl border border-stone-300 bg-white p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              className={`w-full min-h-[130px] rounded-xl border p-3 text-xs text-stone-800 placeholder:text-stone-400 focus:outline-none transition-all leading-relaxed ${
+                streamingContextField === "modernRelevance"
+                  ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/20"
+                  : "border-stone-300 bg-white focus:border-stone-900 focus:ring-1 focus:ring-stone-900"
+              }`}
               value={form.modernRelevance}
               onChange={(e) => updateForm("modernRelevance", e.target.value)}
               placeholder="Why this timeless wisdom remains impactful today..."

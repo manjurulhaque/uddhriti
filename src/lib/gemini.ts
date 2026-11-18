@@ -67,3 +67,53 @@ export async function callGeminiGenerateContent(
 
   return lastResponse || new Response(JSON.stringify({ error: "Gemini service unavailable" }), { status: 503 })
 }
+
+export async function callGeminiStreamGenerateContent(
+  apiKey: string,
+  prompt: string,
+  options?: GeminiRequestOptions
+): Promise<Response> {
+  const models = options?.model
+    ? [options.model]
+    : DEFAULT_GEMINI_MODELS
+
+  let lastResponse: Response | null = null
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: options?.temperature ?? 0.3,
+            },
+          }),
+          signal: options?.signal,
+        }
+      )
+
+      if (response.ok) {
+        return response
+      }
+
+      lastResponse = response
+
+      if (response.status === 404 || response.status === 503) {
+        continue
+      }
+
+      return response
+    } catch (err: unknown) {
+      if ((err as Error)?.name === "AbortError") {
+        throw err
+      }
+    }
+  }
+
+  return lastResponse || new Response(JSON.stringify({ error: "Gemini streaming unavailable" }), { status: 503 })
+}
+

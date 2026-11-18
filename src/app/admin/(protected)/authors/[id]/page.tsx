@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { PageHeader } from "@/components/admin"
-import { AuthorWikipediaQuickSync, AuthorRichMediaStudio } from "@/components/admin/authors"
+import {
+  AuthorWikipediaQuickSync,
+  AuthorRichMediaStudio,
+  AuthorBioGeneratorModal,
+} from "@/components/admin/authors"
 import {
   Input,
   Textarea,
@@ -66,6 +70,7 @@ export default function EditAuthorPage() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState("")
   const [importError, setImportError] = useState("")
+  const [isBioStudioOpen, setIsBioStudioOpen] = useState(false)
   const [form, setForm] = useState<AuthorForm>(emptyForm)
   const [authorStats, setAuthorStats] = useState<{ quoteCount: number; sourceCount: number } | null>(null)
   const lastAutoImportedWikidataId = useRef<string | null>(null)
@@ -382,14 +387,32 @@ export default function EditAuthorPage() {
             placeholder="e.g. marcus-aurelius"
           />
 
-          <Textarea
-            name="bio"
-            label="Biography"
-            value={form.bio}
-            onChange={handleChange}
-            rows={4}
-            placeholder="Biographical summary..."
-          />
+          <div className="space-y-1.5 font-sans">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="author-bio"
+                className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-700)]"
+              >
+                Biography
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsBioStudioOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 text-indigo-700 hover:text-indigo-900 border border-indigo-200/60 hover:border-indigo-300 transition shadow-2xs cursor-pointer"
+              >
+                <span className="text-amber-600">✨</span>
+                <span>AI Bio Studio</span>
+              </button>
+            </div>
+            <Textarea
+              id="author-bio"
+              name="bio"
+              value={form.bio}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Biographical summary, philosophical background, and key works..."
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -548,6 +571,23 @@ export default function EditAuthorPage() {
         confirmLabel="Delete Author"
         isDestructive
         isLoading={deleting}
+      />
+
+      <AuthorBioGeneratorModal
+        isOpen={isBioStudioOpen}
+        onClose={() => setIsBioStudioOpen(false)}
+        author={{
+          id: id || undefined,
+          name: form.name,
+          profession: form.profession,
+          nationality: form.nationality,
+          birthYear: form.birthYear,
+          deathYear: form.deathYear,
+          currentBio: form.bio,
+        }}
+        onApplyBio={(newBio) => {
+          setForm((prev) => ({ ...prev, bio: newBio }))
+        }}
       />
     </div>
   )

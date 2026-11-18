@@ -21,6 +21,7 @@ import {
   SourcesIcon,
   TagsIcon,
   ToolsIcon,
+  ShieldAlertIcon,
   TrashIcon,
   UploadIcon,
 } from "@/components/ui/icons"
@@ -161,6 +162,11 @@ export const defaultAdminNavSections: AdminNavSection[] = [
         href: "/admin/tools",
         label: "System Health & Tools",
         icon: <ToolsIcon />,
+      },
+      {
+        href: "/admin/tools/hallucination-detector",
+        label: "Hallucination Detector",
+        icon: <ShieldAlertIcon />,
       },
     ],
   },

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Button, ConfirmModal, Badge } from "@/components/ui"
 import type { SystemDiagnosticsReport, DiagnosticCheck } from "@/app/api/admin/tools/diagnostics/route"
 
@@ -139,6 +140,39 @@ export function ToolsClientManager({ initialReport }: ToolsClientManagerProps) {
           >
             {repairing ? "Repairing..." : "Run Auto-Repair & Sync"}
           </Button>
+        </div>
+      </div>
+
+      {/* Curatorial & Archival Integrity Tools Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-white p-5 sm:p-6 rounded-2xl border border-amber-200/80 shadow-2xs">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-stone-900 tracking-tight">
+                🛡️ Public Hallucination & Fake Attribution Detector
+              </h3>
+              <Badge variant="warning" size="xs">
+                Archival Audit
+              </Badge>
+            </div>
+            <p className="text-xs text-stone-600 max-w-2xl leading-relaxed">
+              Detect and resolve viral internet misattributions (Einstein, Monroe, Churchill, Lincoln, Gandhi, Buddha), linguistic anachronisms, and apocryphal citations across your entire quotation library with 1-click scholarly notices.
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0 flex items-center gap-2">
+          <Link
+            href="/admin/tools/hallucination-detector"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 transition shadow-2xs"
+          >
+            Open Hallucination Detector →
+          </Link>
         </div>
       </div>
 

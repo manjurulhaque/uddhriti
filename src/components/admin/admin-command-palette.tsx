@@ -345,6 +345,15 @@ const ADMIN_COMMAND_CATALOG: AdminCommandItem[] = [
     keywords: ["tools", "health", "diagnostics", "maintenance", "repair", "sync", "counters", "integrity"],
   },
   {
+    id: "nav-system-hallucination-detector",
+    title: "Hallucination & Fake Attribution Detector",
+    description: "Audit and resolve apocryphal quotes, misattributions, and linguistic anachronisms",
+    href: "/admin/tools/hallucination-detector",
+    section: "System",
+    badge: "Fact-Check",
+    keywords: ["hallucination", "fake", "detector", "attribution", "apocryphal", "fact check", "misattributed", "disputed"],
+  },
+  {
     id: "nav-dashboard",
     title: "Admin Dashboard",
     description: "Overview metrics, KPIs, and attention queues",

@@ -17,6 +17,7 @@ import {
   QuoteCuratorialNotes,
   QuotePrimarySource,
   QuoteAuthorBriefing,
+  QuoteAttributionWarning,
 } from "@/components/public"
 import { Badge } from "@/components/ui/badge"
 
@@ -68,6 +69,7 @@ const getQuoteBySlug = React.cache(async (slug: string) => {
       verificationNote: true,
       isFeatured: true,
       isVerified: true,
+      attributionStatus: true,
       views: true,
       language: true,
       wordCount: true,
@@ -301,6 +303,14 @@ export default async function IndividualQuotePage({
               {quote.content}
             </blockquote>
           </div>
+
+          {/* Scholarly Attribution Warning / Verification Seal */}
+          <QuoteAttributionWarning
+            attributionStatus={quote.attributionStatus}
+            isVerified={quote.isVerified}
+            authorName={authorName}
+            verificationNote={quote.verificationNote}
+          />
 
           {/* Author Attribution & Thematic Tags Provenance Block */}
           <div className="pt-4 border-t border-stone-100 space-y-3">

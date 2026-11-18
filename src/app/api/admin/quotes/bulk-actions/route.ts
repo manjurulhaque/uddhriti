@@ -416,7 +416,7 @@ export async function POST(req: Request) {
             where: { collectionId: collection.id },
             _max: { position: true },
           })
-          let curPos = (maxPos._max.position ?? 0) + 1
+          const curPos = (maxPos._max.position ?? 0) + 1
 
           await tx.quoteCollection.createMany({
             data: targetQuoteIds.map((quoteId, idx) => ({

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useId } from "react"
 import { Button, Badge } from "@/components/ui"
-import { CloseIcon, CheckIcon } from "@/components/ui/icons"
+import { CloseIcon } from "@/components/ui/icons"
 
 export interface QuoteVerificationModalProps {
   isOpen: boolean
@@ -38,7 +38,6 @@ export function QuoteVerificationModal({
     "CONFIRMED" | "DISPUTED" | "MISATTRIBUTED" | "UNKNOWN"
   >("UNKNOWN")
   const [verificationNote, setVerificationNote] = useState("")
-  const [confidence, setConfidence] = useState<number>(0)
 
   // AI Verification Result State
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -60,7 +59,8 @@ export function QuoteVerificationModal({
   const statusSelectId = useId()
 
   useEffect(() => {
-    if (quote) {
+    if (!quote) return
+    const frameId = window.requestAnimationFrame(() => {
       setIsVerified(Boolean(quote.isVerified))
       const status = (quote.attributionStatus || "UNKNOWN").toUpperCase()
       setAttributionStatus(
@@ -69,12 +69,12 @@ export function QuoteVerificationModal({
           : "UNKNOWN"
       )
       setVerificationNote(quote.verificationNote || "")
-      setConfidence(typeof quote.verificationConfidence === "number" ? quote.verificationConfidence : 0)
       setError(null)
       setSuccessMessage(null)
       setGenerationProvider(null)
       setAiAssessment(null)
-    }
+    })
+    return () => window.cancelAnimationFrame(frameId)
   }, [quote])
 
   useEffect(() => {
@@ -153,7 +153,6 @@ export function QuoteVerificationModal({
       setIsVerified(assessment.isVerified)
       setAttributionStatus(assessment.attributionStatus)
       setVerificationNote(assessment.verificationNote)
-      setConfidence(assessment.confidence)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to run AI verification")
     } finally {

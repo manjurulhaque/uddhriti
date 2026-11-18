@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useId } from "react"
 import { Button, Badge } from "@/components/ui"
-import { CloseIcon, CheckIcon } from "@/components/ui/icons"
+import { CloseIcon } from "@/components/ui/icons"
 import { formatDateTimeLocalInAppTimeZone } from "@/lib/datetime"
 import type {
   PublicationReadiness,
@@ -71,7 +71,8 @@ export function QuotePublishModal({
   const publishTimeId = useId()
 
   useEffect(() => {
-    if (quote) {
+    if (!quote) return
+    const frameId = window.requestAnimationFrame(() => {
       setStatus(
         quote.status === "PUBLISHED" || quote.status === "REVIEW" || quote.status === "DRAFT"
           ? quote.status
@@ -91,7 +92,8 @@ export function QuotePublishModal({
       setSchedule(null)
       setCuratorial(null)
       setCopiedChannel(null)
-    }
+    })
+    return () => window.cancelAnimationFrame(frameId)
   }, [quote])
 
   useEffect(() => {

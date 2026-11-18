@@ -550,7 +550,7 @@ export function matchAuthorsLocal(
 
   // 1. Alias Resolution
   const targetCanonicalFromAlias = AUTHOR_ALIASES[normQuery]
-  let aliasTargetNorm = targetCanonicalFromAlias ? normalizeAuthorName(targetCanonicalFromAlias) : null
+  const aliasTargetNorm = targetCanonicalFromAlias ? normalizeAuthorName(targetCanonicalFromAlias) : null
 
   // Also check if any alias starts with or matches query
   const matchingAliases = Object.entries(AUTHOR_ALIASES).filter(([alias]) => {

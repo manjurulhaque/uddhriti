@@ -4,9 +4,6 @@ import {
   validateTagDistribution,
   balanceTagsToDistribution,
   selectAiAssistedTags,
-  MAX_SELECTED_TAGS,
-  MAX_TOPIC_TAGS,
-  MAX_PER_OTHER_TYPE,
   type BaseTag,
 } from "../../src/lib/quotes/tag-selector"
 

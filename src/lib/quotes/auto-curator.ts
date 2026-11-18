@@ -13,8 +13,8 @@
 
 import { prisma } from "@/lib/prisma"
 import { callGeminiGenerateContent } from "@/lib/gemini"
-import { findMatchingDbAuthor, calculateSimilarity, normalizeAuthorName, AuthorRecord } from "./author-matcher"
-import { balanceTagsToDistribution, BaseTag } from "./tag-selector"
+import { findMatchingDbAuthor, calculateSimilarity } from "./author-matcher"
+import { balanceTagsToDistribution } from "./tag-selector"
 
 export interface AutoCurateInput {
   content: string

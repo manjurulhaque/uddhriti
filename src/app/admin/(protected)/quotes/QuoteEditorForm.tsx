@@ -43,13 +43,12 @@ export default function QuoteEditorForm({
   initialForm,
 }: QuoteEditorFormProps) {
   const router = useRouter()
-  const [availableAuthors, setAvailableAuthors] = useState<Author[]>(authors)
+  const [extraAuthors, setExtraAuthors] = useState<Author[]>([])
+  const availableAuthors = useMemo(
+    () => (extraAuthors.length > 0 ? [...extraAuthors, ...authors] : authors),
+    [extraAuthors, authors]
+  )
   const [form, setForm] = useState<QuoteEditorFormState>(() => buildInitialForm(initialForm))
-
-  useEffect(() => {
-    setAvailableAuthors(authors)
-  }, [authors])
-  const [authorSearch, setAuthorSearch] = useState("")
   const [sourceSearch, setSourceSearch] = useState("")
   const [tagSearch, setTagSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +76,6 @@ export default function QuoteEditorForm({
     [mode, quoteId]
   )
 
-  const deferredAuthorSearch = useDeferredValue(authorSearch)
   const deferredSourceSearch = useDeferredValue(sourceSearch)
   const deferredTagSearch = useDeferredValue(tagSearch)
 
@@ -224,23 +222,13 @@ export default function QuoteEditorForm({
   const charCount = form.content.trim().length
 
   const filteredAuthors = useMemo(() => {
-    const needle = deferredAuthorSearch.trim().toLowerCase()
     const selected = form.authorId ? availableAuthors.find((a) => a.id === form.authorId) : null
-
-    if (!needle) {
-      const initial = availableAuthors.slice(0, 100)
-      if (selected && !initial.some((a) => a.id === selected.id)) {
-        return [selected, ...initial]
-      }
-      return initial
+    const initial = availableAuthors.slice(0, 100)
+    if (selected && !initial.some((a) => a.id === selected.id)) {
+      return [selected, ...initial]
     }
-
-    const matching = availableAuthors.filter((author) => author.name.toLowerCase().includes(needle))
-    if (selected && !matching.some((a) => a.id === selected.id)) {
-      return [selected, ...matching.slice(0, 100)]
-    }
-    return matching.slice(0, 100)
-  }, [availableAuthors, deferredAuthorSearch, form.authorId])
+    return initial
+  }, [availableAuthors, form.authorId])
 
   const filteredSources = useMemo(() => {
     const needle = deferredSourceSearch.trim().toLowerCase()
@@ -729,10 +717,7 @@ export default function QuoteEditorForm({
             form={form}
             setForm={setForm}
             updateForm={updateForm}
-            authors={availableAuthors}
-            categories={categories}
-            tags={tags}
-            onAuthorCreated={(newAuthor) => setAvailableAuthors((prev) => [newAuthor, ...prev])}
+            onAuthorCreated={(newAuthor) => setExtraAuthors((prev) => [newAuthor, ...prev])}
           />
 
           <QuoteContentSection
@@ -750,14 +735,9 @@ export default function QuoteEditorForm({
           <QuoteMetadataSection
             form={form}
             updateForm={updateForm}
-            setForm={setForm}
             categories={categories}
             filteredAuthors={filteredAuthors}
-            authorSearch={authorSearch}
-            setAuthorSearch={setAuthorSearch}
             filteredSources={filteredSources}
-            sourceSearch={sourceSearch}
-            setSourceSearch={setSourceSearch}
             authors={availableAuthors}
             sources={sources}
             authorName={selectedAuthorName}
@@ -775,7 +755,6 @@ export default function QuoteEditorForm({
           )}
 
           <QuoteTagsSection
-            mode={mode}
             form={form}
             selectedTags={selectedTags}
             suggestedTags={suggestedTags}

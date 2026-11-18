@@ -183,11 +183,9 @@ export function QuotesListManager({
   const [statusValue, setStatusValue] = useState<"PUBLISHED" | "DRAFT" | "ARCHIVED">("PUBLISHED")
   const [attributionValue, setAttributionValue] = useState<"CONFIRMED" | "DISPUTED" | "MISATTRIBUTED" | "UNKNOWN">("CONFIRMED")
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({})
-  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null)
   const [verificationOverrides, setVerificationOverrides] = useState<Record<string, boolean>>({})
   const [attributionOverrides, setAttributionOverrides] = useState<Record<string, string>>({})
   const [verificationNoteOverrides, setVerificationNoteOverrides] = useState<Record<string, string | null>>({})
-  const [togglingVerificationId, setTogglingVerificationId] = useState<string | null>(null)
   const [verificationValue, setVerificationValue] = useState(true)
   const [publishingQuote, setPublishingQuote] = useState<{
     id: string
@@ -580,7 +578,6 @@ export function QuotesListManager({
   async function toggleQuoteStatus(quoteId: string, currentStatus: string) {
     const nextStatus = currentStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED"
     setError("")
-    setTogglingStatusId(quoteId)
     setStatusOverrides((prev) => ({ ...prev, [quoteId]: nextStatus }))
 
     try {
@@ -607,43 +604,6 @@ export function QuotesListManager({
         return copy
       })
       setError(err instanceof Error ? err.message : "Failed to toggle status")
-    } finally {
-      setTogglingStatusId(null)
-    }
-  }
-
-  async function toggleQuoteVerification(quoteId: string, currentVerified: boolean) {
-    const nextVerified = !currentVerified
-    setError("")
-    setTogglingVerificationId(quoteId)
-    setVerificationOverrides((prev) => ({ ...prev, [quoteId]: nextVerified }))
-
-    try {
-      const res = await fetch("/api/admin/quotes/bulk-actions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quoteIds: [quoteId],
-          action: "setVerification",
-          isVerified: nextVerified,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        throw new Error(data?.error || "Failed to update verification status")
-      }
-
-      router.refresh()
-    } catch (err: unknown) {
-      setVerificationOverrides((prev) => {
-        const copy = { ...prev }
-        delete copy[quoteId]
-        return copy
-      })
-      setError(err instanceof Error ? err.message : "Failed to toggle verification")
-    } finally {
-      setTogglingVerificationId(null)
     }
   }
 
@@ -1313,8 +1273,6 @@ export function QuotesListManager({
             verificationNoteOverrides[quote.id] !== undefined
               ? verificationNoteOverrides[quote.id]
               : quote.verificationNote ?? null
-          const isTogglingStatus = togglingStatusId === quote.id
-          const isTogglingVerification = togglingVerificationId === quote.id
           const isPublished = effectiveStatus === "PUBLISHED"
           const effectiveMeaning = contextOverrides[quote.id]?.meaning ?? quote.meaning ?? null
           const effectiveHistoricalContext =

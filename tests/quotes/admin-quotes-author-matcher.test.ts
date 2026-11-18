@@ -6,8 +6,6 @@ import {
   calculateSimilarity,
   matchAuthorsLocal,
   detectAuthorFromQuoteContent,
-  semanticSearchAuthors,
-  AUTHOR_ALIASES,
   type AuthorRecord,
 } from "../../src/lib/quotes/author-matcher"
 

@@ -1,19 +1,14 @@
 import * as React from "react"
-import { Author, Category, Source, QuoteEditorFormState, STATUSES, SOURCE_TYPES } from "./types"
+import { Author, Category, Source, QuoteEditorFormState, STATUSES } from "./types"
 import { AIAuthorSelect } from "./AIAuthorSelect"
 import { AISourceFinder } from "./AISourceFinder"
 
 interface QuoteMetadataSectionProps {
   form: QuoteEditorFormState
   updateForm: <K extends keyof QuoteEditorFormState>(key: K, value: QuoteEditorFormState[K]) => void
-  setForm: React.Dispatch<React.SetStateAction<QuoteEditorFormState>>
   categories: Category[]
   filteredAuthors: Author[]
-  authorSearch: string
-  setAuthorSearch: (search: string) => void
   filteredSources: Source[]
-  sourceSearch: string
-  setSourceSearch: (search: string) => void
   authors?: Author[]
   sources?: Source[]
   authorName?: string
@@ -22,14 +17,9 @@ interface QuoteMetadataSectionProps {
 export function QuoteMetadataSection({
   form,
   updateForm,
-  setForm,
   categories,
   filteredAuthors,
-  authorSearch,
-  setAuthorSearch,
   filteredSources,
-  sourceSearch,
-  setSourceSearch,
   authors,
   sources,
   authorName,

@@ -1,17 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { Tag, QuoteEditorFormState, QuoteEditorMode } from "./types"
+import { Tag, QuoteEditorFormState } from "./types"
 import { SuggestedTag } from "@/lib/tagSuggestions"
 import {
   MAX_SELECTED_TAGS,
   MAX_TOPIC_TAGS,
   MAX_PER_OTHER_TYPE,
-  validateTagDistribution,
 } from "@/lib/quotes/tag-selector"
 
 interface QuoteTagsSectionProps {
-  mode: QuoteEditorMode
   form: QuoteEditorFormState
   selectedTags: Tag[]
   suggestedTags: SuggestedTag<Tag>[]
@@ -29,7 +27,6 @@ interface QuoteTagsSectionProps {
 }
 
 export function QuoteTagsSection({
-  mode,
   form,
   selectedTags,
   suggestedTags,
@@ -133,32 +130,6 @@ export function QuoteTagsSection({
       })
     } finally {
       setIsAiSelecting(false)
-    }
-  }
-
-  // Tag type color badge helper
-  const getTagTypeBadgeClass = (type: string, isSelected: boolean) => {
-    if (isSelected) {
-      return "bg-stone-900 text-white border-stone-800"
-    }
-    const norm = type.toUpperCase()
-    switch (norm) {
-      case "TOPIC":
-        return "bg-amber-50 text-amber-900 border-amber-200"
-      case "EMOTION":
-        return "bg-rose-50 text-rose-900 border-rose-200"
-      case "ACTION":
-        return "bg-blue-50 text-blue-900 border-blue-200"
-      case "VALUE":
-        return "bg-purple-50 text-purple-900 border-purple-200"
-      case "VIRTUE":
-        return "bg-emerald-50 text-emerald-900 border-emerald-200"
-      case "STATE":
-        return "bg-cyan-50 text-cyan-900 border-cyan-200"
-      case "TIME":
-        return "bg-orange-50 text-orange-900 border-orange-200"
-      default:
-        return "bg-stone-50 text-stone-800 border-stone-200"
     }
   }
 

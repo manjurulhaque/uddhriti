@@ -2,11 +2,7 @@
 
 import * as React from "react"
 import { Source, SOURCE_TYPES } from "./types"
-import {
-  matchSourceInDatabase,
-  type PrimarySourceRecommendation,
-  type WorkType,
-} from "@/lib/quotes/source-finder"
+import type { PrimarySourceRecommendation } from "@/lib/quotes/source-finder"
 import { normalizeAuthorName, calculateSimilarity } from "@/lib/quotes/author-matcher"
 
 interface AISourceFinderProps {
@@ -54,7 +50,6 @@ export function AISourceFinder({
   const [isAiSearching, setIsAiSearching] = React.useState(false)
   const [isCreatingSource, setIsCreatingSource] = React.useState(false)
   const [recommendation, setRecommendation] = React.useState<PrimarySourceRecommendation | null>(null)
-  const [candidates, setCandidates] = React.useState<PrimarySourceRecommendation[]>([])
   const [notification, setNotification] = React.useState<{
     text: string
     type: "success" | "info" | "warning"
@@ -66,7 +61,10 @@ export function AISourceFinder({
 
   // Keep sources list in sync with props
   React.useEffect(() => {
-    setSourcesList(initialSources)
+    const frameId = window.requestAnimationFrame(() => {
+      setSourcesList(initialSources)
+    })
+    return () => window.cancelAnimationFrame(frameId)
   }, [initialSources])
 
   // Selected source object
@@ -205,7 +203,6 @@ export function AISourceFinder({
       const data = await res.json()
       if (data.primarySource) {
         setRecommendation(data.primarySource)
-        setCandidates(data.candidates || [data.primarySource])
 
         const matchedInDb = data.primarySource.existingSourceId
         setNotification({
@@ -697,6 +694,7 @@ export function AISourceFinder({
                 {/* Option to clear/unlink */}
                 <li
                   role="option"
+                  aria-selected={!selectedSourceId}
                   onClick={handleClear}
                   className="px-3 py-2 text-xs text-stone-500 hover:bg-stone-50 cursor-pointer rounded-lg flex items-center justify-between"
                 >

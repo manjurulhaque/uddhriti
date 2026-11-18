@@ -47,14 +47,16 @@ export function QuoteContextQuickEditor({
   const modernId = useId()
 
   useEffect(() => {
-    if (quote) {
+    if (!quote) return
+    const frameId = window.requestAnimationFrame(() => {
       setMeaning(quote.meaning ?? "")
       setHistoricalContext(quote.historicalContext ?? "")
       setModernRelevance(quote.modernRelevance ?? "")
       setError(null)
       setSuccessMessage(null)
       setGenerationProvider(null)
-    }
+    })
+    return () => window.cancelAnimationFrame(frameId)
   }, [quote])
 
   useEffect(() => {
@@ -406,7 +408,7 @@ export function QuoteContextQuickEditor({
                 </div>
               </div>
               <p className="text-xs text-stone-500">
-                Contextualize the time period, historical circumstances, author's life situation, or publication origin.
+                Contextualize the time period, historical circumstances, author&apos;s life situation, or publication origin.
               </p>
               <textarea
                 id={historyId}

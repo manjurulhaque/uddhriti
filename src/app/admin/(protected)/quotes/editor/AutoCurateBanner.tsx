@@ -1,16 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { QuoteEditorFormState, Author, Category, Tag, SOURCE_TYPES, ATTRIBUTION_STATUSES } from "./types"
+import { QuoteEditorFormState, Author, SOURCE_TYPES, ATTRIBUTION_STATUSES } from "./types"
 import type { AutoCurateResult, SuggestedNewAuthor } from "@/lib/quotes/auto-curator"
 
 interface AutoCurateBannerProps {
   form: QuoteEditorFormState
   setForm: React.Dispatch<React.SetStateAction<QuoteEditorFormState>>
   updateForm: <K extends keyof QuoteEditorFormState>(key: K, value: QuoteEditorFormState[K]) => void
-  authors: Author[]
-  categories: Category[]
-  tags: Tag[]
   onAuthorCreated?: (newAuthor: Author) => void
 }
 
@@ -18,9 +15,6 @@ export function AutoCurateBanner({
   form,
   setForm,
   updateForm,
-  authors,
-  categories,
-  tags,
   onAuthorCreated,
 }: AutoCurateBannerProps) {
   const [isCurating, setIsCurating] = React.useState(false)
@@ -69,14 +63,16 @@ export function AutoCurateBanner({
           categoryId: result.categoryId || prev.categoryId,
           sourceId: result.sourceId || "",
           sourceTitle: result.sourceTitle || "",
-          sourceType: (SOURCE_TYPES.includes(result.sourceType as any)
-            ? result.sourceType
-            : "BOOK") as (typeof SOURCE_TYPES)[number],
+          sourceType: SOURCE_TYPES.includes(result.sourceType as (typeof SOURCE_TYPES)[number])
+            ? (result.sourceType as (typeof SOURCE_TYPES)[number])
+            : "BOOK",
           tagIds: result.tagIds && result.tagIds.length > 0 ? result.tagIds : prev.tagIds,
           isVerified: result.isVerified ?? prev.isVerified,
-          attributionStatus: (ATTRIBUTION_STATUSES.includes(result.attributionStatus as any)
-            ? result.attributionStatus
-            : "CONFIRMED") as (typeof ATTRIBUTION_STATUSES)[number],
+          attributionStatus: ATTRIBUTION_STATUSES.includes(
+            result.attributionStatus as (typeof ATTRIBUTION_STATUSES)[number]
+          )
+            ? (result.attributionStatus as (typeof ATTRIBUTION_STATUSES)[number])
+            : "CONFIRMED",
           verificationNote: result.verificationNote || prev.verificationNote,
         }
 

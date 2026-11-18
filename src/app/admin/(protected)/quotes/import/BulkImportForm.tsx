@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { getRowValue, readItemsFromJsonOrCsv, readItemsFromJsonOrCsvText } from "@/lib/import/clientFile"
 import { BulkFileUploadInput, BulkImportResultCard } from "@/components/admin/bulk-import"
 import { Badge } from "@/components/ui/badge"
+import { UnstructuredTextExtractor } from "./UnstructuredTextExtractor"
 
 type Author = {
   id: string
@@ -127,6 +128,7 @@ export default function BulkImportForm({
   categories: Category[]
   tags: Tag[]
 }) {
+  const [ingestionTab, setIngestionTab] = useState<"ai" | "files" | "harvester" | "payload">("ai")
   const [payload, setPayload] = useState("[]")
   const [defaultCategoryId, setDefaultCategoryId] = useState("")
   const [defaultAuthorId, setDefaultAuthorId] = useState("")
@@ -415,6 +417,45 @@ export default function BulkImportForm({
       }
     }
     return selected
+  }
+
+  async function handleDirectImportFromAI(items: ImportItemPayload[]) {
+    setLoading(true)
+    setError(null)
+    setResult(null)
+
+    const res = await fetch("/api/admin/quotes/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items,
+        defaultCategoryId: defaultCategoryId || null,
+        defaultAuthorId: defaultAuthorId || null,
+        defaultTagIds,
+        publish: publishByDefault,
+        autoCreateAuthors,
+        verifiedOnly,
+        maxQuotesPerPage: Number(maxQuotesPerPage || 80),
+      }),
+    })
+
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      setLoading(false)
+      const errorMsg = data?.error || "Direct bulk import failed."
+      setError(errorMsg)
+      throw new Error(errorMsg)
+    }
+
+    setResult(data as ImportResult)
+    setLoading(false)
+  }
+
+  function handleSendToPayload(items: ImportItemPayload[]) {
+    setUploadedItems(items)
+    setPayload(JSON.stringify(items, null, 2))
+    setError(null)
+    setIngestionTab("payload")
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -723,200 +764,289 @@ export default function BulkImportForm({
         </div>
       </section>
 
-      {/* Card 2: Web Harvesters */}
-      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="border-b border-stone-100 pb-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
-              Web Source Harvesters
-            </h2>
-            <p className="text-xs text-stone-500">
-              Scrape validated literary quotes from Wikimedia Wikiquote, Project Gutenberg, and Wikisource.
-            </p>
-          </div>
-          <Badge variant="neutral" size="xs">
-            Web Scraper
+      {/* Ingestion Mode Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 pb-3">
+        <button
+          type="button"
+          onClick={() => setIngestionTab("ai")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            ingestionTab === "ai"
+              ? "bg-stone-900 text-white shadow-xs"
+              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+          }`}
+        >
+          <span>✨</span>
+          <span>AI Text Extractor</span>
+          <Badge variant={ingestionTab === "ai" ? "warm" : "neutral"} size="xs">
+            Gemini
           </Badge>
-        </div>
+        </button>
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
-                Wikiquote URLs
-              </label>
-              <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+        <button
+          type="button"
+          onClick={() => setIngestionTab("files")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            ingestionTab === "files"
+              ? "bg-stone-900 text-white shadow-xs"
+              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+          }`}
+        >
+          <span>📁</span>
+          <span>Batch File &amp; Paste</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIngestionTab("harvester")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            ingestionTab === "harvester"
+              ? "bg-stone-900 text-white shadow-xs"
+              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+          }`}
+        >
+          <span>🌐</span>
+          <span>Web Harvesters</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIngestionTab("payload")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer sm:ml-auto ${
+            ingestionTab === "payload"
+              ? "bg-stone-900 text-white shadow-xs"
+              : "bg-white text-stone-700 border border-stone-200 hover:bg-stone-50"
+          }`}
+        >
+          <span>📋</span>
+          <span>Active Ingest Payload</span>
+          {preflightReport && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-mono ${
+                ingestionTab === "payload"
+                  ? "bg-stone-700 text-stone-100"
+                  : "bg-stone-100 text-stone-700"
+              }`}
+            >
+              {preflightReport.validCount} valid
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Mode View: AI Unstructured Text Extractor */}
+      {ingestionTab === "ai" && (
+        <UnstructuredTextExtractor
+          authors={authors}
+          categories={categories}
+          tags={tags}
+          defaultCategoryId={defaultCategoryId}
+          defaultAuthorId={defaultAuthorId}
+          publishByDefault={publishByDefault}
+          onSendToPayload={handleSendToPayload}
+          onDirectImport={handleDirectImportFromAI}
+        />
+      )}
+
+      {/* Card 2: Web Harvesters */}
+      {ingestionTab === "harvester" && (
+        <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-4">
+          <div className="border-b border-stone-100 pb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+                Web Source Harvesters
+              </h2>
+              <p className="text-xs text-stone-500">
+                Scrape validated literary quotes from Wikimedia Wikiquote, Project Gutenberg, and Wikisource.
+              </p>
             </div>
-            <textarea
-              className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
-              value={wikiquoteUrlsInput}
-              onChange={(e) => setWikiquoteUrlsInput(e.target.value)}
-              placeholder={"https://en.wikiquote.org/wiki/Rumi\nhttps://en.wikiquote.org/wiki/Rabindranath_Tagore"}
-            />
+            <Badge variant="neutral" size="xs">
+              Web Scraper
+            </Badge>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
-                Project Gutenberg Ebooks
-              </label>
-              <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+          <div className="grid gap-5 lg:grid-cols-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                  Wikiquote URLs
+                </label>
+                <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+              </div>
+              <textarea
+                className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+                value={wikiquoteUrlsInput}
+                onChange={(e) => setWikiquoteUrlsInput(e.target.value)}
+                placeholder={"https://en.wikiquote.org/wiki/Rumi\nhttps://en.wikiquote.org/wiki/Rabindranath_Tagore"}
+              />
             </div>
-            <textarea
-              className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
-              value={gutenbergUrlsInput}
-              onChange={(e) => setGutenbergUrlsInput(e.target.value)}
-              placeholder={"https://www.gutenberg.org/ebooks/1342\nhttps://www.gutenberg.org/ebooks/2701"}
-            />
-          </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
-                Wikisource Texts
-              </label>
-              <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                  Project Gutenberg Ebooks
+                </label>
+                <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+              </div>
+              <textarea
+                className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+                value={gutenbergUrlsInput}
+                onChange={(e) => setGutenbergUrlsInput(e.target.value)}
+                placeholder={"https://www.gutenberg.org/ebooks/1342\nhttps://www.gutenberg.org/ebooks/2701"}
+              />
             </div>
-            <textarea
-              className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
-              value={wikisourceUrlsInput}
-              onChange={(e) => setWikisourceUrlsInput(e.target.value)}
-              placeholder={"https://en.wikisource.org/wiki/The_Raven\nhttps://en.wikisource.org/wiki/If%E2%80%94"}
-            />
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                  Wikisource Texts
+                </label>
+                <span className="text-[10px] font-mono text-stone-400">1 per line</span>
+              </div>
+              <textarea
+                className="w-full min-h-[110px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+                value={wikisourceUrlsInput}
+                onChange={(e) => setWikisourceUrlsInput(e.target.value)}
+                placeholder={"https://en.wikisource.org/wiki/The_Raven\nhttps://en.wikisource.org/wiki/If%E2%80%94"}
+              />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Card 3: File Upload & Pasted Data */}
-      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
-        <div className="border-b border-stone-100 pb-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
-            Batch File &amp; Paste Ingestion
-          </h2>
-          <p className="text-xs text-stone-500">
-            Upload CSV or JSON files or paste tabular data directly from spreadsheets.
-          </p>
-        </div>
+      {ingestionTab === "files" && (
+        <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+          <div className="border-b border-stone-100 pb-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+              Batch File &amp; Paste Ingestion
+            </h2>
+            <p className="text-xs text-stone-500">
+              Upload CSV or JSON files or paste tabular data directly from spreadsheets.
+            </p>
+          </div>
 
-        {/* File Upload Component */}
-        <BulkFileUploadInput
-          onFileChange={onFileChange}
-          loadedCount={uploadedItems?.length}
-          label="Choose JSON or CSV Dataset"
-        />
+          {/* File Upload Component */}
+          <BulkFileUploadInput
+            onFileChange={onFileChange}
+            loadedCount={uploadedItems?.length}
+            label="Choose JSON or CSV Dataset"
+          />
 
-        {/* Pasted Input Area */}
-        <div className="space-y-2 pt-2 border-t border-stone-100">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
-              Or Paste Delimited Rows / JSON
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-stone-400">
-                Format:{" "}
-                <span className="font-mono font-bold uppercase text-stone-700">
-                  {pastedFormatHint === "empty" ? "none" : pastedFormatHint}
+          {/* Pasted Input Area */}
+          <div className="space-y-2 pt-2 border-t border-stone-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                Or Paste Delimited Rows / JSON
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-stone-400">
+                  Format:{" "}
+                  <span className="font-mono font-bold uppercase text-stone-700">
+                    {pastedFormatHint === "empty" ? "none" : pastedFormatHint}
+                  </span>
                 </span>
-              </span>
-              {pastedLineCount > 0 && (
-                <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-mono text-stone-600">
-                  {pastedLineCount} lines
-                </span>
-              )}
+                {pastedLineCount > 0 && (
+                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-mono text-stone-600">
+                    {pastedLineCount} lines
+                  </span>
+                )}
+              </div>
             </div>
+
+            <textarea
+              className="w-full min-h-[140px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+              value={pastedInput}
+              onChange={(e) => {
+                const next = e.target.value
+                setPastedInput(next)
+                const trimmed = next.trim()
+                if (!trimmed) {
+                  setPastedFormatHint("empty")
+                } else if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                  setPastedFormatHint("json")
+                } else if (trimmed.includes("\t")) {
+                  setPastedFormatHint("tsv")
+                } else {
+                  setPastedFormatHint("csv")
+                }
+              }}
+              placeholder={`content,meaning,authorName,categoryName,sourceTitle,sourceType,tagSlugs,publish\n"The unexamined life is not worth living.","A life without reflection lacks true value.",Socrates,Philosophy,Apology,BOOK,"philosophy|self-knowledge",true`}
+            />
+
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <button
+                type="button"
+                className="rounded-xl bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-black transition-all cursor-pointer"
+                onClick={onParsePastedInput}
+              >
+                Parse Pasted Text
+              </button>
+              <button
+                type="button"
+                className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-all cursor-pointer"
+                onClick={() => setPastedTemplate("csv")}
+              >
+                CSV Example
+              </button>
+              <button
+                type="button"
+                className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-all cursor-pointer"
+                onClick={() => setPastedTemplate("json")}
+              >
+                JSON Example
+              </button>
+              <button
+                type="button"
+                className="text-xs text-stone-500 hover:text-stone-800 underline underline-offset-2 ml-auto cursor-pointer"
+                onClick={() => {
+                  setPastedInput("")
+                  setPastedFormatHint("empty")
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Card 4: JSON Payload Inspector */}
+      {(ingestionTab === "payload" || ingestionTab === "files" || ingestionTab === "harvester") && (
+        <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
+                Active Import Payload
+              </h2>
+              <p className="text-xs text-stone-500">
+                Structured JSON submitted to the ingestion engine.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="text-xs text-[var(--accent-rust)] hover:underline font-medium"
+              onClick={() => {
+                setPayload(JSON.stringify(EXAMPLE, null, 2))
+                setUploadedItems(null)
+              }}
+            >
+              Load Sample Payload
+            </button>
           </div>
 
           <textarea
-            className="w-full min-h-[140px] rounded-xl border border-stone-300 bg-white p-3 font-mono text-xs text-stone-800 placeholder:text-stone-300 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
-            value={pastedInput}
+            className="w-full min-h-[160px] rounded-xl border border-stone-300 bg-stone-50/50 p-3 font-mono text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
+            value={payload}
             onChange={(e) => {
-              const next = e.target.value
-              setPastedInput(next)
-              const trimmed = next.trim()
-              if (!trimmed) {
-                setPastedFormatHint("empty")
-              } else if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
-                setPastedFormatHint("json")
-              } else if (trimmed.includes("\t")) {
-                setPastedFormatHint("tsv")
-              } else {
-                setPastedFormatHint("csv")
-              }
-            }}
-            placeholder={`content,meaning,authorName,categoryName,sourceTitle,sourceType,tagSlugs,publish\n"The unexamined life is not worth living.","A life without reflection lacks true value.",Socrates,Philosophy,Apology,BOOK,"philosophy|self-knowledge",true`}
-          />
-
-          <div className="flex flex-wrap items-center gap-2.5 pt-1">
-            <button
-              type="button"
-              className="rounded-xl bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-black transition-all cursor-pointer"
-              onClick={onParsePastedInput}
-            >
-              Parse Pasted Text
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-all cursor-pointer"
-              onClick={() => setPastedTemplate("csv")}
-            >
-              CSV Example
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 transition-all cursor-pointer"
-              onClick={() => setPastedTemplate("json")}
-            >
-              JSON Example
-            </button>
-            <button
-              type="button"
-              className="text-xs text-stone-500 hover:text-stone-800 underline underline-offset-2 ml-auto cursor-pointer"
-              onClick={() => {
-                setPastedInput("")
-                setPastedFormatHint("empty")
-              }}
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Card 4: JSON Payload Inspector */}
-      <section className="rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs space-y-3">
-        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-900">
-              Active Import Payload
-            </h2>
-            <p className="text-xs text-stone-500">
-              Structured JSON submitted to the ingestion engine.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="text-xs text-[var(--accent-rust)] hover:underline font-medium"
-            onClick={() => {
-              setPayload(JSON.stringify(EXAMPLE, null, 2))
+              setPayload(e.target.value)
               setUploadedItems(null)
             }}
-          >
-            Load Sample Payload
-          </button>
-        </div>
-
-        <textarea
-          className="w-full min-h-[160px] rounded-xl border border-stone-300 bg-stone-50/50 p-3 font-mono text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all leading-relaxed"
-          value={payload}
-          onChange={(e) => {
-            setPayload(e.target.value)
-            setUploadedItems(null)
-          }}
-        />
-      </section>
+          />
+        </section>
+      )}
 
       {/* Pre-Flight Validation Summary */}
-      {preflightReport && (
+      {preflightReport && ingestionTab !== "ai" && (
         <div
           className={`rounded-2xl border p-4 sm:p-5 space-y-3 transition-all ${
             preflightReport.missingContentCount > 0
@@ -986,35 +1116,37 @@ export default function BulkImportForm({
       )}
 
       {/* Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-stone-200/90 bg-stone-50/80 p-4 sm:p-5">
-        <label className="flex items-center gap-2 text-xs font-medium text-stone-800 cursor-pointer">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
-            checked={useSelectedPreviewOnly}
-            onChange={(e) => setUseSelectedPreviewOnly(e.target.checked)}
-          />
-          <span>Import only selected preview candidates</span>
-        </label>
+      {(ingestionTab !== "ai" || (uploadedItems && uploadedItems.length > 0)) && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-stone-200/90 bg-stone-50/80 p-4 sm:p-5">
+          <label className="flex items-center gap-2 text-xs font-medium text-stone-800 cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+              checked={useSelectedPreviewOnly}
+              onChange={(e) => setUseSelectedPreviewOnly(e.target.checked)}
+            />
+            <span>Import only selected preview candidates</span>
+          </label>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            disabled={previewLoading}
-            onClick={onPreview}
-            className="rounded-xl border border-stone-300 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-stone-800 shadow-2xs hover:bg-stone-50 disabled:opacity-50 transition-all cursor-pointer"
-          >
-            {previewLoading ? "Scraping..." : "Preview Source Imports"}
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-xl bg-stone-900 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:bg-black disabled:opacity-50 transition-all cursor-pointer"
-          >
-            {loading ? "Importing Quotes..." : "Run Bulk Import"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={previewLoading}
+              onClick={onPreview}
+              className="rounded-xl border border-stone-300 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-stone-800 shadow-2xs hover:bg-stone-50 disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {previewLoading ? "Scraping..." : "Preview Source Imports"}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-xl bg-stone-900 px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:bg-black disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {loading ? "Importing Quotes..." : "Run Bulk Import"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Preview Result Display */}
       {preview && (

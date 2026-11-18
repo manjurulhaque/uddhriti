@@ -20,6 +20,9 @@ export interface AutoCurateInput {
   content: string
   currentAuthorId?: string | null
   currentCategoryId?: string | null
+  authorName?: string | null
+  categoryName?: string | null
+  sourceTitle?: string | null
 }
 
 export interface SuggestedNewAuthor {
@@ -137,10 +140,17 @@ export async function autoCurateQuote(input: AutoCurateInput): Promise<AutoCurat
 
   // 2. Query Gemini if API key is present
   if (apiKey) {
+    const knownAuthor =
+      input.authorName ||
+      (input.currentAuthorId ? dbAuthors.find((a) => a.id === input.currentAuthorId)?.name : null)
+    const authorLine = knownAuthor ? `Known Author Attribution: "${knownAuthor}"\n` : ""
+    const sourceLine = input.sourceTitle ? `Known Source Work: "${input.sourceTitle}"\n` : ""
+    const categoryLine = input.categoryName ? `Known Category: "${input.categoryName}"\n` : ""
+
     const prompt = `You are a world-class literary archivist and quotation curator.
 Analyze the following quotation text:
 """${rawContent}"""
-
+${authorLine}${sourceLine}${categoryLine}
 Available Database Categories: [${categoryNamesList}]
 Available Tag Types: TOPIC, EMOTION, VIRTUE, VALUE, TIME, STATE, ACTION
 Available Source Work Types: BOOK, SPEECH, ARTICLE, ESSAY, LETTER, POEM, PLAY, INTERVIEW, SCRIPTURE, OTHER

@@ -9,6 +9,7 @@ import { QuoteSortOption as SortOption, quoteSortOptions as sortOptions } from "
 import { QuoteContextQuickEditor } from "./QuoteContextQuickEditor"
 import { QuoteVerificationModal } from "./QuoteVerificationModal"
 import { QuotePublishModal } from "./QuotePublishModal"
+import { BatchAIEnrichModal } from "./BatchAIEnrichModal"
 
 type QuoteItem = {
   id: string
@@ -235,6 +236,13 @@ export function QuotesListManager({
       }
     >
   >({})
+
+  const [isBatchEnrichOpen, setIsBatchEnrichOpen] = useState(false)
+
+  function handleBatchEnrichSuccess() {
+    router.refresh()
+    setSelectedIds([])
+  }
 
   function handleContextSaveSuccess(updated: {
     id: string
@@ -1044,6 +1052,15 @@ export function QuotesListManager({
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-stone-900">{selectedCount} quotes selected</span>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBatchEnrichOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-stone-900 hover:bg-black rounded-lg shadow-2xs transition cursor-pointer"
+                title="Batch enrich selected quotes with Gemini AI"
+              >
+                <span>🪄</span>
+                <span>Batch AI Enrich ({selectedCount})</span>
+              </button>
               <a
                 href={`/api/admin/quotes/export?format=csv&ids=${selectedIds.join(",")}`}
                 download
@@ -1251,10 +1268,21 @@ export function QuotesListManager({
 
       <div className="space-y-2">
         {visibleQuotes.length > 0 ? (
-          <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} />
-            Select all on page
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} className="cursor-pointer" />
+              <span>Select all on page</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setIsBatchEnrichOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 border border-stone-200/90 rounded-lg px-2.5 py-1 transition cursor-pointer"
+              title="Launch Batch AI Enrichment tool"
+            >
+              <span>🪄</span>
+              <span>Batch AI Enricher</span>
+            </button>
+          </div>
         ) : null}
 
         {quotes.length > 0 && visibleQuotes.length === 0 ? (
@@ -1841,6 +1869,13 @@ export function QuotesListManager({
         onClose={() => setPublishingQuote(null)}
         quote={publishingQuote}
         onSaveSuccess={handlePublishSaveSuccess}
+      />
+
+      <BatchAIEnrichModal
+        isOpen={isBatchEnrichOpen}
+        onClose={() => setIsBatchEnrichOpen(false)}
+        selectedQuoteIds={selectedIds}
+        onEnrichSuccess={handleBatchEnrichSuccess}
       />
     </div>
   )

@@ -206,11 +206,9 @@ export function AISourceFinder({
 
         const matchedInDb = data.primarySource.existingSourceId
         setNotification({
-          text: `✨ Identified Primary Work: "${data.primarySource.title}" (${
-            data.primarySource.year ? `${data.primarySource.year} • ` : ""
-          }${data.primarySource.workType})${
-            matchedInDb ? " — Already in bibliography!" : " — Novel source."
-          }`,
+          text: `✨ Identified Primary Work: "${data.primarySource.title}" (${data.primarySource.year ? `${data.primarySource.year} • ` : ""
+            }${data.primarySource.workType})${matchedInDb ? " — Already in bibliography!" : " — Novel source."
+            }`,
           type: "success",
         })
       } else {
@@ -259,9 +257,8 @@ export function AISourceFinder({
     }
 
     setNotification({
-      text: `✓ Applied "${rec.title}" as primary source citation.${
-        appendToVerification ? " Added locator to Verification Note." : ""
-      }`,
+      text: `✓ Applied "${rec.title}" as primary source citation.${appendToVerification ? " Added locator to Verification Note." : ""
+        }`,
       type: "success",
     })
   }
@@ -340,11 +337,10 @@ export function AISourceFinder({
                 ? "Auto-discover primary source publication and locator"
                 : "Enter quote text first to enable primary source discovery"
             }
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all shadow-2xs ${
-              quoteContent.trim()
-                ? "bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95 cursor-pointer"
-                : "bg-stone-50 text-stone-400 border border-stone-200 cursor-not-allowed opacity-60"
-            }`}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all shadow-2xs ${quoteContent.trim()
+              ? "bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95 cursor-pointer"
+              : "bg-stone-50 text-stone-400 border border-stone-200 cursor-not-allowed opacity-60"
+              }`}
           >
             {isAiSearching ? (
               <>
@@ -397,13 +393,12 @@ export function AISourceFinder({
       {/* Notification Banner */}
       {notification && (
         <div
-          className={`flex items-start justify-between p-3 rounded-xl text-xs transition-all ${
-            notification.type === "success"
-              ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
-              : notification.type === "warning"
+          className={`flex items-start justify-between p-3 rounded-xl text-xs transition-all ${notification.type === "success"
+            ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+            : notification.type === "warning"
               ? "bg-amber-50 text-amber-900 border border-amber-200"
               : "bg-stone-100 text-stone-800 border border-stone-200"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2 min-w-0 pr-2">
             <span className="shrink-0">{notification.type === "success" ? "✓" : "ℹ"}</span>
@@ -650,8 +645,8 @@ export function AISourceFinder({
                     selectedSource
                       ? `Linked: ${selectedSource.title} (type to search bibliography...)`
                       : authorName
-                      ? `Search works by ${authorName} or entire bibliography...`
-                      : "Search published works, speeches, letters..."
+                        ? `Search works by ${authorName} or entire bibliography...`
+                        : "Search published works, speeches, letters..."
                   }
                   className="w-full rounded-xl border border-stone-300 bg-white pl-8 pr-16 py-2.5 text-xs text-stone-800 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-all"
                 />
@@ -715,13 +710,12 @@ export function AISourceFinder({
                         aria-selected={isSelected}
                         onClick={() => handleSelectSource(source)}
                         onMouseEnter={() => setActiveIndex(index)}
-                        className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors text-xs ${
-                          isActive
-                            ? "bg-stone-100 text-stone-900"
-                            : isSelected
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors text-xs ${isActive
+                          ? "bg-stone-100 text-stone-900"
+                          : isSelected
                             ? "bg-stone-50 font-medium text-stone-900"
                             : "text-stone-700 hover:bg-stone-50"
-                        }`}
+                          }`}
                       >
                         <div className="min-w-0 flex items-center gap-2">
                           <span className="text-xs shrink-0">📖</span>

@@ -10,6 +10,7 @@
  */
 
 import { formatDateTimeLocalInAppTimeZone } from "@/lib/datetime"
+import { callGeminiGenerateContent } from "@/lib/gemini"
 
 export type PublicationReadinessLevel = "EXCELLENT" | "GOOD" | "NEEDS_ATTENTION" | "BLOCKED"
 
@@ -595,21 +596,10 @@ Return ONLY valid JSON. No markdown backticks or commentary.`
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.2,
-            },
-          }),
-          signal: controller.signal,
-        }
-      )
+      const response = await callGeminiGenerateContent(apiKey, prompt, {
+        temperature: 0.2,
+        signal: controller.signal,
+      })
 
       clearTimeout(timeoutId)
 

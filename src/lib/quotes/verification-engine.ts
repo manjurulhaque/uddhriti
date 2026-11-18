@@ -8,6 +8,8 @@
  * and historical anachronisms.
  */
 
+import { callGeminiGenerateContent } from "@/lib/gemini"
+
 export type QuoteAttributionStatus = "CONFIRMED" | "DISPUTED" | "MISATTRIBUTED" | "UNKNOWN"
 
 export interface QuoteVerificationInput {
@@ -519,21 +521,10 @@ Return ONLY the raw JSON object. Do not wrap in markdown code blocks or add intr
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.1,
-            },
-          }),
-          signal: controller.signal,
-        }
-      )
+      const response = await callGeminiGenerateContent(apiKey, prompt, {
+        temperature: 0.1,
+        signal: controller.signal,
+      })
 
       clearTimeout(timeoutId)
 

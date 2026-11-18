@@ -8,6 +8,8 @@
  * 4. Semantic attribute/role search (e.g. "Roman stoic emperor", "author of 1984").
  */
 
+import { callGeminiGenerateContent } from "@/lib/gemini"
+
 export interface AuthorRecord {
   id: string
   name: string
@@ -749,21 +751,10 @@ Return ONLY the raw JSON object without markdown fences.`
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.1,
-            },
-          }),
-          signal: controller.signal,
-        }
-      )
+      const response = await callGeminiGenerateContent(apiKey, prompt, {
+        temperature: 0.1,
+        signal: controller.signal,
+      })
 
       clearTimeout(timeoutId)
 
@@ -883,21 +874,10 @@ Return ONLY the JSON object without markdown fences.`
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.1,
-            },
-          }),
-          signal: controller.signal,
-        }
-      )
+      const response = await callGeminiGenerateContent(apiKey, prompt, {
+        temperature: 0.1,
+        signal: controller.signal,
+      })
 
       clearTimeout(timeoutId)
 

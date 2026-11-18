@@ -6,6 +6,7 @@ import { tagTypeOptions } from "@/lib/tags/catalog"
 import { suggestTags } from "@/lib/tagSuggestions"
 import { ConfirmModal } from "@/components/ui"
 import {
+  Author,
   QuoteEditorFormProps,
   QuoteEditorFormState,
   FORM_DEFAULTS_STORAGE_KEY,
@@ -22,6 +23,7 @@ import {
   QuoteTagsSection,
   QuoteEditorSidebar,
   QuoteDiffModal,
+  AutoCurateBanner,
 } from "./editor"
 import { QuotePublishModal } from "./QuotePublishModal"
 
@@ -41,7 +43,12 @@ export default function QuoteEditorForm({
   initialForm,
 }: QuoteEditorFormProps) {
   const router = useRouter()
+  const [availableAuthors, setAvailableAuthors] = useState<Author[]>(authors)
   const [form, setForm] = useState<QuoteEditorFormState>(() => buildInitialForm(initialForm))
+
+  useEffect(() => {
+    setAvailableAuthors(authors)
+  }, [authors])
   const [authorSearch, setAuthorSearch] = useState("")
   const [sourceSearch, setSourceSearch] = useState("")
   const [tagSearch, setTagSearch] = useState("")
@@ -205,7 +212,7 @@ export default function QuoteEditorForm({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [mode])
 
-  const authorById = useMemo(() => new Map(authors.map((author) => [author.id, author])), [authors])
+  const authorById = useMemo(() => new Map(availableAuthors.map((author) => [author.id, author])), [availableAuthors])
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
@@ -218,22 +225,22 @@ export default function QuoteEditorForm({
 
   const filteredAuthors = useMemo(() => {
     const needle = deferredAuthorSearch.trim().toLowerCase()
-    const selected = form.authorId ? authors.find((a) => a.id === form.authorId) : null
+    const selected = form.authorId ? availableAuthors.find((a) => a.id === form.authorId) : null
 
     if (!needle) {
-      const initial = authors.slice(0, 100)
+      const initial = availableAuthors.slice(0, 100)
       if (selected && !initial.some((a) => a.id === selected.id)) {
         return [selected, ...initial]
       }
       return initial
     }
 
-    const matching = authors.filter((author) => author.name.toLowerCase().includes(needle))
+    const matching = availableAuthors.filter((author) => author.name.toLowerCase().includes(needle))
     if (selected && !matching.some((a) => a.id === selected.id)) {
       return [selected, ...matching.slice(0, 100)]
     }
     return matching.slice(0, 100)
-  }, [authors, deferredAuthorSearch, form.authorId])
+  }, [availableAuthors, deferredAuthorSearch, form.authorId])
 
   const filteredSources = useMemo(() => {
     const needle = deferredSourceSearch.trim().toLowerCase()
@@ -718,6 +725,16 @@ export default function QuoteEditorForm({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
+          <AutoCurateBanner
+            form={form}
+            setForm={setForm}
+            updateForm={updateForm}
+            authors={availableAuthors}
+            categories={categories}
+            tags={tags}
+            onAuthorCreated={(newAuthor) => setAvailableAuthors((prev) => [newAuthor, ...prev])}
+          />
+
           <QuoteContentSection
             form={form}
             updateForm={updateForm}
@@ -741,7 +758,7 @@ export default function QuoteEditorForm({
             filteredSources={filteredSources}
             sourceSearch={sourceSearch}
             setSourceSearch={setSourceSearch}
-            authors={authors}
+            authors={availableAuthors}
             sources={sources}
             authorName={selectedAuthorName}
           />
@@ -752,7 +769,7 @@ export default function QuoteEditorForm({
               updateForm={updateForm}
               derivedVerificationConfidence={derivedVerificationConfidence}
               derivedAdminSortKey={derivedAdminSortKey}
-              authorName={authors.find((a) => a.id === form.authorId)?.name}
+              authorName={availableAuthors.find((a) => a.id === form.authorId)?.name}
               quoteId={quoteId}
             />
           )}
@@ -811,7 +828,7 @@ export default function QuoteEditorForm({
         isSaving={loading}
         initialForm={buildInitialForm(initialForm)}
         currentForm={form}
-        authors={authors}
+        authors={availableAuthors}
         categories={categories}
         sources={sources}
         tags={tags}

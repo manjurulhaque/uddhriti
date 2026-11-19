@@ -114,6 +114,21 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(cleaned.includes("dedication"), "Should preserve 'dedication'")
       assert.ok(cleaned.includes("history"), "Should preserve 'history'")
     })
+
+    it("strips section boundary delimiters (such as <<<BIO>>>) and markdown markers", () => {
+      const bioWithDelimiters =
+        "<<<BIO>>>\nRalph Waldo Emerson was an American essayist and philosopher.\n<<<THESIS>>>\nTrust thyself."
+      const cleaned = sanitizeHumanBioText(bioWithDelimiters)
+
+      assert.ok(!cleaned.includes("<<<BIO>>>"), "Should strip <<<BIO>>> delimiter")
+      assert.ok(!cleaned.includes("<<<THESIS>>>"), "Should strip <<<THESIS>>> delimiter")
+      assert.ok(cleaned.includes("Ralph Waldo Emerson was an American essayist"), "Should preserve biography text")
+
+      const markdownBio = "**<<<BIO>>>**\nFriedrich Nietzsche challenged the moral foundations of Western culture."
+      const cleanedMarkdown = sanitizeHumanBioText(markdownBio)
+      assert.ok(!cleanedMarkdown.includes("<<<BIO>>>"), "Should strip bolded <<<BIO>>> delimiter")
+      assert.ok(cleanedMarkdown.includes("Friedrich Nietzsche challenged"), "Should preserve biography text")
+    })
   })
 
   describe("Perspective Framing Angles (generateCuratorAuthorBio)", () => {

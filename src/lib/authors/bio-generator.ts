@@ -322,6 +322,12 @@ function normalizeKey(str?: string | null): string {
 export function sanitizeHumanBioText(text: string): string {
   if (!text) return ""
   let cleaned = text.trim()
+  // Strip any leaked section boundary delimiter tags from LLM output
+  cleaned = cleaned
+    .replace(/<<<\s*(?:BIO|THESIS|CRUCIBLE|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS|COMPANION(?:_|\s+)THINKERS|FAQS)\s*>>>/gi, "")
+    .replace(/^(?:\*{1,2}|#{1,3})?\s*<<<\s*BIO\s*>>>\s*(?:\*{1,2})?\s*/i, "")
+    .trim()
+
   for (const { pattern, replacement } of HUMAN_PHRASE_REPLACEMENTS) {
     cleaned = cleaned.replace(pattern, replacement)
   }
@@ -942,7 +948,7 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 4. Vary sentence lengths for human rhythm and burstiness (combine short declarative sentences with nuanced reflections).
 5. Ensure distinct narrative paragraphs are separated by double newlines (\n\n).
 
-Format your response strictly using these exact delimiters:
+Format your response strictly using these exact delimiters. Begin immediately with "<<<BIO>>>" on the very first line without preambles:
 <<<BIO>>>
 (The narrative biography text with distinct paragraphs separated by double newlines)
 <<<THESIS>>>
@@ -995,6 +1001,7 @@ A: 1-2 sentence authoritative answer.`
         let pendingStreamBuffer = ""
 
         let currentSection:
+          | "INIT"
           | "BIO"
           | "THESIS"
           | "CRUCIBLE"
@@ -1002,7 +1009,7 @@ A: 1-2 sentence authoritative answer.`
           | "THEMES"
           | "WORKS"
           | "COMPANIONS"
-          | "FAQS" = "BIO"
+          | "FAQS" = "INIT"
         let accumulatedBio = ""
         let accumulatedThesis = ""
         let accumulatedCrucible = ""
@@ -1012,6 +1019,28 @@ A: 1-2 sentence authoritative answer.`
         let accumulatedCompanions = ""
         let accumulatedFaqs = ""
         let hasBioCompleted = false
+
+        const appendSectionText = (section: typeof currentSection, text: string) => {
+          if (!text) return
+          if (section === "BIO") {
+            accumulatedBio += text
+            sendEvent("delta", { text })
+          } else if (section === "THESIS") {
+            accumulatedThesis += text
+          } else if (section === "CRUCIBLE") {
+            accumulatedCrucible += text
+          } else if (section === "SEO") {
+            accumulatedSeo += text
+          } else if (section === "THEMES") {
+            accumulatedThemes += text
+          } else if (section === "WORKS") {
+            accumulatedWorks += text
+          } else if (section === "COMPANIONS") {
+            accumulatedCompanions += text
+          } else if (section === "FAQS") {
+            accumulatedFaqs += text
+          }
+        }
 
         const tagPattern =
           /<<<\s*(BIO|THESIS|CRUCIBLE|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS|COMPANION(?:_|\s+)THINKERS|FAQS)\s*>>>/i
@@ -1071,32 +1100,17 @@ A: 1-2 sentence authoritative answer.`
 
               const textBefore = pendingStreamBuffer.slice(0, match.index)
               if (textBefore) {
-                if (currentSection === "BIO") {
-                  accumulatedBio += textBefore
-                  sendEvent("delta", { text: textBefore })
-                } else if (currentSection === "THESIS") {
-                  accumulatedThesis += textBefore
-                } else if (currentSection === "CRUCIBLE") {
-                  accumulatedCrucible += textBefore
-                } else if (currentSection === "SEO") {
-                  accumulatedSeo += textBefore
-                } else if (currentSection === "THEMES") {
-                  accumulatedThemes += textBefore
-                } else if (currentSection === "WORKS") {
-                  accumulatedWorks += textBefore
-                } else if (currentSection === "COMPANIONS") {
-                  accumulatedCompanions += textBefore
-                } else if (currentSection === "FAQS") {
-                  accumulatedFaqs += textBefore
-                }
+                appendSectionText(currentSection, textBefore)
               }
 
-              if (currentSection === "BIO" && !hasBioCompleted) {
+              const rawTag = match[1].toUpperCase()
+
+              // Transitioning out of BIO section into metadata sections
+              if (currentSection === "BIO" && !rawTag.includes("BIO") && !hasBioCompleted) {
                 hasBioCompleted = true
                 sendEvent("complete_bio", { bio: sanitizeHumanBioText(accumulatedBio) })
               }
 
-              const rawTag = match[1].toUpperCase()
               if (rawTag.includes("BIO")) {
                 currentSection = "BIO"
               } else if (rawTag.includes("THESIS")) {
@@ -1118,42 +1132,35 @@ A: 1-2 sentence authoritative answer.`
               pendingStreamBuffer = pendingStreamBuffer.slice(match.index + match[0].length)
             }
 
-            // Emit safe text tokens while in BIO
-            if (currentSection === "BIO") {
-              const lastLtIndex = pendingStreamBuffer.lastIndexOf("<")
-              if (lastLtIndex !== -1 && pendingStreamBuffer.length - lastLtIndex < 30) {
-                const safeToEmit = pendingStreamBuffer.slice(0, lastLtIndex)
-                pendingStreamBuffer = pendingStreamBuffer.slice(lastLtIndex)
-                if (safeToEmit) {
-                  accumulatedBio += safeToEmit
-                  sendEvent("delta", { text: safeToEmit })
-                }
-              } else if (pendingStreamBuffer && lastLtIndex === -1) {
+            if (currentSection === "INIT") {
+              // We haven't matched <<<BIO>>> yet
+              const firstLtIndex = pendingStreamBuffer.indexOf("<")
+              if (firstLtIndex === -1 && pendingStreamBuffer.length > 30) {
+                // If model skipped <<<BIO>>> and began writing bio prose directly
+                currentSection = "BIO"
                 accumulatedBio += pendingStreamBuffer
                 sendEvent("delta", { text: pendingStreamBuffer })
                 pendingStreamBuffer = ""
+              } else if (firstLtIndex > 0) {
+                // Discard any conversational preamble before the first delimiter tag
+                pendingStreamBuffer = pendingStreamBuffer.slice(firstLtIndex)
               }
             } else {
-              const lastLtIndex = pendingStreamBuffer.lastIndexOf("<")
-              if (lastLtIndex !== -1 && pendingStreamBuffer.length - lastLtIndex < 30) {
-                const safeToAppend = pendingStreamBuffer.slice(0, lastLtIndex)
-                pendingStreamBuffer = pendingStreamBuffer.slice(lastLtIndex)
-                if (currentSection === "THESIS") accumulatedThesis += safeToAppend
-                else if (currentSection === "CRUCIBLE") accumulatedCrucible += safeToAppend
-                else if (currentSection === "SEO") accumulatedSeo += safeToAppend
-                else if (currentSection === "THEMES") accumulatedThemes += safeToAppend
-                else if (currentSection === "WORKS") accumulatedWorks += safeToAppend
-                else if (currentSection === "COMPANIONS") accumulatedCompanions += safeToAppend
-                else if (currentSection === "FAQS") accumulatedFaqs += safeToAppend
-              } else if (pendingStreamBuffer && lastLtIndex === -1) {
-                if (currentSection === "THESIS") accumulatedThesis += pendingStreamBuffer
-                else if (currentSection === "CRUCIBLE") accumulatedCrucible += pendingStreamBuffer
-                else if (currentSection === "SEO") accumulatedSeo += pendingStreamBuffer
-                else if (currentSection === "THEMES") accumulatedThemes += pendingStreamBuffer
-                else if (currentSection === "WORKS") accumulatedWorks += pendingStreamBuffer
-                else if (currentSection === "COMPANIONS") accumulatedCompanions += pendingStreamBuffer
-                else if (currentSection === "FAQS") accumulatedFaqs += pendingStreamBuffer
+              // In BIO or subsequent sections: hold text from the FIRST '<' to avoid tag truncation
+              const firstLtIndex = pendingStreamBuffer.indexOf("<")
+              if (firstLtIndex !== -1 && pendingStreamBuffer.length - firstLtIndex < 40) {
+                const safeToProcess = pendingStreamBuffer.slice(0, firstLtIndex)
+                pendingStreamBuffer = pendingStreamBuffer.slice(firstLtIndex)
+                if (safeToProcess) {
+                  appendSectionText(currentSection, safeToProcess)
+                }
+              } else if (firstLtIndex === -1 && pendingStreamBuffer) {
+                appendSectionText(currentSection, pendingStreamBuffer)
                 pendingStreamBuffer = ""
+              } else if (firstLtIndex !== -1 && pendingStreamBuffer.length - firstLtIndex >= 40) {
+                const safeToProcess = pendingStreamBuffer.slice(0, firstLtIndex + 1)
+                pendingStreamBuffer = pendingStreamBuffer.slice(firstLtIndex + 1)
+                appendSectionText(currentSection, safeToProcess)
               }
             }
           }
@@ -1161,23 +1168,14 @@ A: 1-2 sentence authoritative answer.`
 
         // Flush remaining buffer at stream end
         if (pendingStreamBuffer) {
-          if (currentSection === "BIO") {
-            accumulatedBio += pendingStreamBuffer
-            sendEvent("delta", { text: pendingStreamBuffer })
-          } else if (currentSection === "THESIS") {
-            accumulatedThesis += pendingStreamBuffer
-          } else if (currentSection === "CRUCIBLE") {
-            accumulatedCrucible += pendingStreamBuffer
-          } else if (currentSection === "SEO") {
-            accumulatedSeo += pendingStreamBuffer
-          } else if (currentSection === "THEMES") {
-            accumulatedThemes += pendingStreamBuffer
-          } else if (currentSection === "WORKS") {
-            accumulatedWorks += pendingStreamBuffer
-          } else if (currentSection === "COMPANIONS") {
-            accumulatedCompanions += pendingStreamBuffer
-          } else if (currentSection === "FAQS") {
-            accumulatedFaqs += pendingStreamBuffer
+          if (currentSection === "INIT" || currentSection === "BIO") {
+            const clean = pendingStreamBuffer.replace(/<<<\s*BIO\s*>>>/gi, "")
+            if (clean) {
+              accumulatedBio += clean
+              sendEvent("delta", { text: clean })
+            }
+          } else {
+            appendSectionText(currentSection, pendingStreamBuffer)
           }
           pendingStreamBuffer = ""
         }

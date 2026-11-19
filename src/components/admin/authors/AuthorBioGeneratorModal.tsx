@@ -213,14 +213,16 @@ function AuthorBioModalInner({
               if (currentEvent === "start") {
                 setProvider(data.provider === "gemini" ? "Google Gemini AI" : "Curator Knowledge Engine")
               } else if (currentEvent === "delta") {
-                setGeneratedBio((prev) => prev + data.text)
+                setGeneratedBio((prev) => (prev + data.text).replace(/<<<\s*BIO\s*>>>/gi, ""))
               } else if (currentEvent === "complete_bio") {
-                setGeneratedBio(data.bio)
-                setProposedBioSnapshot(data.bio)
+                const cleanBio = typeof data.bio === "string" ? data.bio.replace(/<<<\s*BIO\s*>>>/gi, "").trim() : ""
+                setGeneratedBio(cleanBio)
+                setProposedBioSnapshot(cleanBio)
               } else if (currentEvent === "done") {
                 if (data.bio) {
-                  setGeneratedBio(data.bio)
-                  setProposedBioSnapshot(data.bio)
+                  const cleanBio = typeof data.bio === "string" ? data.bio.replace(/<<<\s*BIO\s*>>>/gi, "").trim() : ""
+                  setGeneratedBio(cleanBio)
+                  setProposedBioSnapshot(cleanBio)
                 }
                 if (data.seoDescription) setSeoDescription(data.seoDescription)
                 if (Array.isArray(data.keyThemes)) setKeyThemes(data.keyThemes)

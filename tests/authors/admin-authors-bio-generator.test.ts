@@ -73,6 +73,57 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(!cleaned.includes("in conclusion"), "Should not contain 'in conclusion'")
       assert.ok(!cleaned.includes("it is worth noting"), "Should not contain 'it is worth noting'")
     })
+
+    it("strips expanded subtle AI tropes and cleans orphaned punctuation", () => {
+      const subtleAIText =
+        "His work is a cornerstone of modern thought, showing quintessential brilliance and unwavering resolve. It left an indelible mark on society, serves as a reminder of our potential, and explores the dynamic interplay across every realm with an enduring legacy etched into history."
+      const cleaned = sanitizeHumanBioText(subtleAIText)
+
+      assert.ok(!cleaned.includes("cornerstone"), "Should not contain 'cornerstone'")
+      assert.ok(!cleaned.includes("quintessential"), "Should not contain 'quintessential'")
+      assert.ok(!cleaned.includes("unwavering"), "Should not contain 'unwavering'")
+      assert.ok(!cleaned.includes("indelible mark"), "Should not contain 'indelible mark'")
+      assert.ok(!cleaned.includes("serves as a reminder"), "Should not contain 'serves as a reminder'")
+      assert.ok(!cleaned.includes("dynamic interplay"), "Should not contain 'dynamic interplay'")
+      assert.ok(!cleaned.includes("enduring legacy"), "Should not contain 'enduring legacy'")
+      assert.ok(!cleaned.includes("etched into"), "Should not contain 'etched into'")
+      assert.ok(!cleaned.includes("realm"), "Should not contain 'realm'")
+      assert.ok(!cleaned.includes(",,"), "Should not contain double commas")
+      assert.ok(!cleaned.includes(" ,"), "Should not contain space before comma")
+    })
+  })
+
+  describe("Perspective Framing Angles (generateCuratorAuthorBio)", () => {
+    it("adapts narrative when perspective is crucible", () => {
+      const result = generateCuratorAuthorBio({
+        name: "Hypatia of Alexandria",
+        profession: "Mathematician & Philosopher",
+        perspective: "crucible",
+      })
+
+      assert.ok(result.bio.includes("crisis and historical turbulence"), "Should mention crisis and turbulence")
+      assert.ok(result.bio.includes("tested by circumstance"), "Should reference testing by circumstance")
+    })
+
+    it("adapts narrative when perspective is modern", () => {
+      const result = generateCuratorAuthorBio({
+        name: "Michel de Montaigne",
+        profession: "Essayist & Philosopher",
+        perspective: "modern",
+      })
+
+      assert.ok(result.bio.includes("hyper-connectivity"), "Should emphasize modern fragmentation and hyper-connectivity")
+    })
+
+    it("adapts narrative when perspective is paradox", () => {
+      const result = generateCuratorAuthorBio({
+        name: "Arthur Schopenhauer",
+        profession: "Philosopher",
+        perspective: "paradox",
+      })
+
+      assert.ok(result.bio.includes("unresolved contradictions"), "Should emphasize human contradictions")
+    })
   })
 
   describe("Canonical Author Knowledge Base (generateCuratorAuthorBio)", () => {

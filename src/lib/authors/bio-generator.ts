@@ -16,6 +16,7 @@ import { callGeminiGenerateContent, callGeminiStreamGenerateContent } from "@/li
 
 export type BioTone = "humanized" | "philosophical" | "punchy"
 export type BioLength = "balanced" | "concise" | "comprehensive"
+export type BioPerspective = "literary" | "crucible" | "modern" | "paradox"
 
 export interface AuthorBioInput {
   name: string
@@ -31,6 +32,7 @@ export interface AuthorBioInput {
   sampleQuotes?: string[]
   tone?: BioTone
   length?: BioLength
+  perspective?: BioPerspective
 }
 
 export interface AuthorBioResult {
@@ -42,18 +44,27 @@ export interface AuthorBioResult {
   wordCount: number
 }
 
-// Banned robotic clichés for post-generation sanitization
-const BANNED_AI_WORDS = [
-  /\bdelve\b/gi,
+// Banned robotic clichés and subtle AI tells for post-generation sanitization
+const BANNED_AI_WORDS: RegExp[] = [
+  /\bdelv(?:e|es|ing)\b/gi,
+  /\brich\s+tapestry\b/gi,
   /\btapestry\b/gi,
-  /\brich tapestry\b/gi,
-  /\bbeacon\b/gi,
-  /\btestament\b/gi,
+  /\bbeacon(?:s)?\b/gi,
+  /\btestament(?:\s+to)?\b/gi,
   /\bmultifaceted\b/gi,
   /\bpivotal\b/gi,
-  /\bin conclusion\b/gi,
-  /\bit is important to note\b/gi,
-  /\bit is worth noting\b/gi,
+  /\bcornerstone(?:s)?\b/gi,
+  /\bquintessential(?:ly)?\b/gi,
+  /\bunwavering\b/gi,
+  /\bindelible\s+mark\b/gi,
+  /\bserves?\s+as\s+a\s+reminder\b/gi,
+  /\bdynamic\s+interplay\b/gi,
+  /\benduring\s+legacy\b/gi,
+  /\betched\s+into\b/gi,
+  /\brealm(?:s)?\b/gi,
+  /\bin\s+conclusion\b/gi,
+  /\bit\s+is\s+important\s+to\s+note\b/gi,
+  /\bit\s+is\s+worth\s+noting\b/gi,
 ]
 
 // Curated canonical knowledge base for premier thinkers
@@ -138,6 +149,10 @@ export function sanitizeHumanBioText(text: string): string {
   }
   return cleaned
     .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s*,(\s*,)+/g, ",")
+    .replace(/[ \t]+,/g, ",")
+    .replace(/\b(a|an|the)\s+of\b/gi, "of")
+    .replace(/\b(a|an)\s+(a|an)\b/gi, "a")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/([ \t]*\r?\n){3,}/g, "\n\n")
     .trim()
@@ -184,9 +199,23 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
       ? `Their reflections—addressing themes of discipline, moral clarity, and authentic conviction—exemplify a sustained commitment to intellectual honesty.`
       : `Their philosophy explores the delicate balance between personal autonomy and social responsibility, offering enduring insight for thoughtful living.`
 
-  const p2 = `${worksClause}reveals an unwavering commitment to exploring fundamental human dilemmas. ${quotesClause}`
+  let p2 = ""
+  if (input.perspective === "crucible") {
+    p2 = `${worksClause}reflects ideas forged not in serene detachment, but in the heat of personal crisis and historical turbulence. ${quotesClause} Rather than offering comfortable dogmas, their writing challenges readers to confront adversity with unflinching resolve.`
+  } else if (input.perspective === "paradox") {
+    p2 = `${worksClause}draws enduring power from the unresolved contradictions of human experience. ${quotesClause} By confronting the distance between noble aspiration and human fallibility, their work rejects easy answers in favor of genuine self-examination.`
+  } else {
+    p2 = `${worksClause}reflects a disciplined pursuit of life's fundamental dilemmas. ${quotesClause}`
+  }
 
-  const p3 = `Today, the timeless quotes and ideas of ${input.name} remain widely cited across literature, leadership, and personal philosophy, serving as a contemplative compass for readers navigating modern uncertainty.`
+  let p3 = ""
+  if (input.perspective === "modern") {
+    p3 = `In an era of hyper-connectivity, fragmented attention, and rapid uncertainty, the timeless quotes of ${input.name} offer modern readers immediate cognitive grounding—a practical mental framework for integrity and clarity.`
+  } else if (input.perspective === "crucible") {
+    p3 = `Today, the timeless reflections of ${input.name} endure as essential reading for anyone seeking emotional fortitude and moral courage when tested by circumstance.`
+  } else {
+    p3 = `Today, the timeless quotes and ideas of ${input.name} remain widely cited across literature, leadership, and personal philosophy, challenging readers to align their daily actions with core convictions.`
+  }
 
   const fullBio = `${p1}\n\n${p2}\n\n${p3}`
 
@@ -206,6 +235,20 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
     notableWorks: input.knownWorks || [],
     provider: "curator",
     wordCount: fullBio.split(/\s+/).length,
+  }
+}
+
+function getPerspectiveGuidance(perspective?: BioPerspective): string {
+  switch (perspective) {
+    case "crucible":
+      return "Crucible & Origins: Center the biography around the defining personal crisis, exile, illness, war, or psychological turning point that forged their worldview. Ground their insights in what they personally endured."
+    case "modern":
+      return "Modern Relevance: Highlight why contemporary readers, founders, thinkers, and seekers search for their quotes today. Connect their insights directly to navigating modern anxiety, cognitive overload, and decision-making."
+    case "paradox":
+      return "Human Paradox: Explore the tension between their philosophical ideals and flawed human reality. Portray them with human vulnerability, internal struggle, and moral complexity rather than sterile hagiography."
+    case "literary":
+    default:
+      return "Literary Profile: Craft a rich biographical profile balancing their primary intellectual obsession, key written works, and lasting cultural resonance."
   }
 }
 
@@ -239,13 +282,21 @@ Representative Themes: "${input.sampleQuotes?.slice(0, 3).join(" | ") || "N/A"}"
 
 STYLE INSTRUCTIONS:
 - Tone: ${toneLabel}
+- Perspective: ${getPerspectiveGuidance(input.perspective)}
 - Length: ${lengthInstruction}
 
 CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
-1. STRICTLY BANNED WORDS: DO NOT USE "delve", "tapestry", "rich tapestry", "beacon", "testament", "multifaceted", "pivotal", "in conclusion", "it is worth noting", or "journey".
-2. No dry encyclopedia resumes: Do not start with "X was born on date and went to school". Start with their defining intellectual obsession, personal struggle, or the psychological question at the heart of their life.
-3. Natural SEO Integration: Seamlessly embed their name, seminal works, and philosophical motifs so Google search algorithms recognize high topical authority without keyword stuffing.
-4. Human Voice: Sound like an insightful human biographer who understands the author's flaws, triumphs, and lasting cultural resonance.
+1. STRICTLY BANNED VOCABULARY: DO NOT USE "delve", "delving", "tapestry", "rich tapestry", "beacon", "testament", "multifaceted", "pivotal", "cornerstone", "quintessential", "unwavering", "indelible mark", "serves as a reminder", "realm", "dynamic interplay", "enduring legacy", "in conclusion", "it is worth noting", or "journey".
+2. BANNED SYNTACTIC PATTERNS:
+   - NEVER begin sentences with participial clauses (e.g. avoid "Bridging high philosophy and daily struggle, he..." or "Standing at the intersection of..."). Use direct, active subject-verb statements.
+   - NEVER use formulaic closing platitudes (e.g. avoid "...serves as a compass for readers navigating modern uncertainty"). End with a sharp, concrete reflection on their intellectual challenge to the reader.
+   - No dry resume chronologies ("X was born on date and went to school"). Open immediately with their core intellectual conflict or driving existential question.
+3. HUMAN VOICE & BURSTINESS:
+   - Vary sentence lengths dynamically: mix short, punchy 5-to-9 word declarative statements with deeper analytical reflections.
+   - Use concrete, sensory details and historical specificity over empty praise adjectives.
+4. NATURAL TOPICAL AUTHORITY (SEO):
+   - The first sentence of Paragraph 1 must be a compelling, self-contained hook that immediately conveys who they are and why their thoughts endure.
+   - Seamlessly embed seminal works and concepts without keyword stuffing.
 
 Output strictly valid JSON with this exact structure:
 {
@@ -270,8 +321,11 @@ export async function generateAuthorBio(
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 12000)
 
+      const temperature =
+        input.tone === "philosophical" ? 0.32 : input.tone === "punchy" ? 0.45 : 0.38
+
       const response = await callGeminiGenerateContent(apiKey, prompt, {
-        temperature: 0.35,
+        temperature,
         signal: controller.signal,
       })
 
@@ -403,12 +457,16 @@ Profession: "${input.profession || "Thinker & Writer"}"
 Nationality: "${input.nationality || "Global"}"
 Lifespan: "${input.birthYear ? input.birthYear : ""}${input.deathYear ? ` – ${input.deathYear}` : ""}"
 Tone: ${input.tone || "humanized"}
+Perspective: ${getPerspectiveGuidance(input.perspective)}
+Length: ${input.length || "balanced"}
 
-RULES:
-1. STRICTLY BANNED WORDS: Do not use "delve", "tapestry", "rich tapestry", "beacon", "testament", "multifaceted", "pivotal", "in conclusion".
-2. Open with their core intellectual conflict or philosophical question.
-3. Include natural paragraph breaks with double newlines.
-4. Output ONLY the narrative biography text directly. Do not include markdown headers, quotes, or JSON formatting.`
+CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
+1. STRICTLY BANNED WORDS: Do not use "delve", "delving", "tapestry", "rich tapestry", "beacon", "testament", "multifaceted", "pivotal", "cornerstone", "quintessential", "unwavering", "indelible mark", "serves as a reminder", "realm", "dynamic interplay", "enduring legacy", or "in conclusion".
+2. BANNED SYNTACTIC PATTERNS: Do not open sentences with participial clauses ("Bridging...", "Standing at..."). Do not conclude with generic platitudes ("...serves as a compass...").
+3. Open directly with their central intellectual obsession, moral conflict, or the historical friction that shaped their thought.
+4. Vary sentence lengths for human rhythm and burstiness (combine short declarative sentences with nuanced reflections).
+5. Include natural paragraph breaks with double newlines.
+6. Output ONLY the narrative biography text directly. Do not include markdown headers, quotes, or JSON formatting.`
 
         const timeoutController = new AbortController()
         const timeoutId = setTimeout(() => timeoutController.abort(), 12000)
@@ -416,8 +474,11 @@ RULES:
         const abortHandler = () => timeoutController.abort()
         options?.signal?.addEventListener("abort", abortHandler)
 
+        const streamTemp =
+          input.tone === "philosophical" ? 0.32 : input.tone === "punchy" ? 0.45 : 0.38
+
         const geminiRes = await callGeminiStreamGenerateContent(apiKey, streamPrompt, {
-          temperature: 0.35,
+          temperature: streamTemp,
           signal: timeoutController.signal,
         })
 

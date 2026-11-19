@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react"
 import { Button, Badge } from "@/components/ui"
 import { CloseIcon, CopyIcon, CheckIcon } from "@/components/ui/icons"
-import type { BioTone, BioLength } from "@/lib/authors/bio-generator"
+import type { BioTone, BioLength, BioPerspective } from "@/lib/authors/bio-generator"
 
 export interface AuthorBioGeneratorModalProps {
   isOpen: boolean
@@ -31,6 +31,7 @@ function AuthorBioModalInner({
   onApplyBio,
 }: AuthorBioGeneratorModalProps) {
   const [tone, setTone] = useState<BioTone>("humanized")
+  const [perspective, setPerspective] = useState<BioPerspective>("literary")
   const [length, setLength] = useState<BioLength>("balanced")
   const [generatedBio, setGeneratedBio] = useState(author.currentBio || "")
   const [seoDescription, setSeoDescription] = useState("")
@@ -88,6 +89,7 @@ function AuthorBioModalInner({
           birthYear: author.birthYear ? Number(author.birthYear) : undefined,
           deathYear: author.deathYear ? Number(author.deathYear) : undefined,
           tone,
+          perspective,
           length,
           stream: true,
         }),
@@ -231,121 +233,182 @@ function AuthorBioModalInner({
           </button>
         </div>
 
-        {/* Toolbar: Tone & Length Selectors */}
-        <div className="px-6 py-3.5 bg-stone-50/80 border-b border-stone-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-          {/* Tone Selector */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-stone-500 font-medium uppercase tracking-wider text-[10px]">
-              Tone:
-            </span>
-            <div className="inline-flex bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setTone("humanized")}
-                disabled={isStreaming}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  tone === "humanized"
-                    ? "bg-violet-600 text-white shadow-2xs font-semibold"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Humanized (Literary)
-              </button>
-              <button
-                type="button"
-                onClick={() => setTone("philosophical")}
-                disabled={isStreaming}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  tone === "philosophical"
-                    ? "bg-violet-600 text-white shadow-2xs font-semibold"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Philosophical &amp; Deep
-              </button>
-              <button
-                type="button"
-                onClick={() => setTone("punchy")}
-                disabled={isStreaming}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  tone === "punchy"
-                    ? "bg-violet-600 text-white shadow-2xs font-semibold"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Punchy &amp; Modern
-              </button>
+        {/* Toolbar: Tone, Length & Perspective Selectors */}
+        <div className="px-6 py-3.5 bg-stone-50/80 border-b border-stone-200/80 space-y-2.5 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Tone Selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-stone-500 font-medium uppercase tracking-wider text-[10px]">
+                Tone:
+              </span>
+              <div className="inline-flex bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setTone("humanized")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    tone === "humanized"
+                      ? "bg-violet-600 text-white shadow-2xs font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Humanized (Literary)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTone("philosophical")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    tone === "philosophical"
+                      ? "bg-violet-600 text-white shadow-2xs font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Philosophical &amp; Deep
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTone("punchy")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    tone === "punchy"
+                      ? "bg-violet-600 text-white shadow-2xs font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Punchy &amp; Modern
+                </button>
+              </div>
+            </div>
+
+            {/* Length Selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-stone-500 font-medium uppercase tracking-wider text-[10px]">
+                Length:
+              </span>
+              <div className="inline-flex bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setLength("concise")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    length === "concise"
+                      ? "bg-stone-900 text-white font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Concise (1 Par.)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLength("balanced")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    length === "balanced"
+                      ? "bg-stone-900 text-white font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Balanced (2 Par.)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLength("comprehensive")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    length === "comprehensive"
+                      ? "bg-stone-900 text-white font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Comprehensive (3 Par.)
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Length Selector */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-stone-500 font-medium uppercase tracking-wider text-[10px]">
-              Length:
-            </span>
-            <div className="inline-flex bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setLength("concise")}
-                disabled={isStreaming}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  length === "concise"
-                    ? "bg-stone-900 text-white font-semibold"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Concise (1 Par.)
-              </button>
-              <button
-                type="button"
-                onClick={() => setLength("balanced")}
-                disabled={isStreaming}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  length === "balanced"
-                    ? "bg-stone-900 text-white font-semibold"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Balanced (2 Par.)
-              </button>
-              <button
-                type="button"
-                onClick={() => setLength("comprehensive")}
-                disabled={isStreaming}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  length === "comprehensive"
-                    ? "bg-stone-900 text-white font-semibold"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Comprehensive (3 Par.)
-              </button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-stone-200/60">
+            {/* Perspective / Angle Selector */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-stone-500 font-medium uppercase tracking-wider text-[10px]">
+                Angle:
+              </span>
+              <div className="inline-flex flex-wrap bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setPerspective("literary")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    perspective === "literary"
+                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Literary Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPerspective("crucible")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    perspective === "crucible"
+                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Crucible &amp; Origins
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPerspective("modern")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    perspective === "modern"
+                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Modern Relevance
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPerspective("paradox")}
+                  disabled={isStreaming}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    perspective === "paradox"
+                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  Human Paradox
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Generate / Interupt Control */}
-          <div>
-            {isStreaming ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                onClick={handleStopStream}
-                className="border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 font-semibold cursor-pointer"
-              >
-                ⏹ Stop Stream
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="primary"
-                size="xs"
-                onClick={handleStartStream}
-                className="bg-violet-600 hover:bg-violet-700 font-semibold cursor-pointer shadow-2xs"
-              >
-                ⚡ Generate Bio Stream
-              </Button>
-            )}
+            {/* Generate / Interupt Control */}
+            <div>
+              {isStreaming ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={handleStopStream}
+                  className="border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 font-semibold cursor-pointer"
+                >
+                  ⏹ Stop Stream
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="xs"
+                  onClick={handleStartStream}
+                  className="bg-violet-600 hover:bg-violet-700 font-semibold cursor-pointer shadow-2xs"
+                >
+                  ⚡ Generate Bio Stream
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import {
   type AuthorBioInput,
   type BioTone,
   type BioLength,
+  type BioPerspective,
 } from "@/lib/authors/bio-generator"
 
 export async function POST(req: Request) {
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
     dateOfDeath,
     existingBio,
     tone,
+    perspective,
     length,
     stream,
   } = body as Record<string, unknown>
@@ -58,6 +60,7 @@ export async function POST(req: Request) {
     dateOfDeath: typeof dateOfDeath === "string" ? dateOfDeath.trim() : undefined,
     existingBio: typeof existingBio === "string" ? existingBio.trim() : undefined,
     tone: (tone === "philosophical" || tone === "punchy" || tone === "humanized") ? tone as BioTone : "humanized",
+    perspective: (perspective === "crucible" || perspective === "modern" || perspective === "paradox" || perspective === "literary") ? perspective as BioPerspective : "literary",
     length: (length === "concise" || length === "comprehensive" || length === "balanced") ? length as BioLength : "balanced",
   }
 
@@ -95,6 +98,7 @@ export async function POST(req: Request) {
         knownWorks: dbAuthor.sources.map((s) => s.title),
         sampleQuotes: dbAuthor.quotes.map((q) => q.content),
         tone: bioInput.tone,
+        perspective: bioInput.perspective,
         length: bioInput.length,
       }
     }

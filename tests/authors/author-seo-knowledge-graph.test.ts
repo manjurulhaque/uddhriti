@@ -5,6 +5,7 @@ import {
   generateAuthorPageTitle,
   buildAuthorKnowledgeGraph,
 } from "../../src/lib/authors/seo"
+import { getAuthorCompanionThinkers } from "../../src/lib/authors/bio-generator"
 
 describe("🔍 SEO & Knowledge Graph Entity Optimization", () => {
   describe("extractAuthorMetaDescription", () => {
@@ -241,6 +242,27 @@ Marcus Aurelius (121–180 CE) ruled Rome at its imperial zenith, yet his greate
         answer0.text,
         "He practiced late Roman Stoicism, emphasizing duty and the dichotomy of control."
       )
+    })
+
+    it("integrates canonical companion thinkers into buildAuthorKnowledgeGraph via getAuthorCompanionThinkers", () => {
+      const companionThinkers = getAuthorCompanionThinkers("Marcus Aurelius")
+      assert.ok(companionThinkers !== null, "Should resolve canonical companion thinkers")
+      assert.ok(companionThinkers.influences.includes("Epictetus"))
+
+      const graphResult = buildAuthorKnowledgeGraph({
+        name: "Marcus Aurelius",
+        slug: "marcus-aurelius",
+        profession: "Roman Emperor & Stoic Philosopher",
+        companionThinkers: companionThinkers || undefined,
+      })
+
+      const graph = graphResult["@graph"] as Array<Record<string, unknown>>
+      const person = graph.find((node) => node["@type"] === "Person")
+      assert.ok(person)
+      const relatedTo = person.relatedTo as Array<{ "@type": string; name: string }>
+      assert.ok(Array.isArray(relatedTo) && relatedTo.length >= 3)
+      assert.ok(relatedTo.some((p) => p.name === "Epictetus"), "Should link Epictetus as relatedTo")
+      assert.ok(relatedTo.some((p) => p.name === "Epicurus"), "Should link Epicurus as relatedTo contrast")
     })
   })
 })

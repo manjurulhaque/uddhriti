@@ -24,6 +24,7 @@ import {
   generateAuthorPageTitle,
   buildAuthorKnowledgeGraph,
 } from "@/lib/authors/seo"
+import { getAuthorCompanionThinkers } from "@/lib/authors/bio-generator"
 
 const QUOTES_PER_PAGE = 12
 const MAX_AUTHOR_CACHE_ENTRIES = 120
@@ -458,11 +459,14 @@ export default async function AuthorDetailPage({
   const dateOfBirthFormatted = formatDateOfRecord(author.dateOfBirth)
   const dateOfDeathFormatted = formatDateOfRecord(author.dateOfDeath)
 
+  const companionThinkers = getAuthorCompanionThinkers(author.name)
+
   const jsonLd = buildAuthorKnowledgeGraph({
     ...author,
     topCategories,
     sources: author.sources,
     faqs: authorFaqs,
+    companionThinkers: companionThinkers || undefined,
   })
 
   return (

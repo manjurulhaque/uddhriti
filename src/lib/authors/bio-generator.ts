@@ -317,6 +317,19 @@ function normalizeKey(str?: string | null): string {
 }
 
 /**
+ * Resolves verified companion thinkers (intellectual lineage) for canonical authors
+ */
+export function getAuthorCompanionThinkers(authorName: string): CompanionThinkers | null {
+  const norm = normalizeKey(authorName)
+  for (const [key, record] of Object.entries(CANONICAL_AUTHOR_KNOWLEDGE)) {
+    if (norm.includes(key) || key.includes(norm)) {
+      return record.companionThinkers
+    }
+  }
+  return null
+}
+
+/**
  * Removes typical AI fluff and ensures natural, fluent human phrasing without dropping words
  */
 export function sanitizeHumanBioText(text: string): string {

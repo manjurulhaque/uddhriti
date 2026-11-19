@@ -413,22 +413,20 @@ function AuthorBioModalInner({
                 <button
                   type="button"
                   onClick={() => setViewMode("editor")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    viewMode === "editor"
-                      ? "bg-white text-stone-900 shadow-2xs font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${viewMode === "editor"
+                    ? "bg-white text-stone-900 shadow-2xs font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   ✍️ Studio
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode("diff")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                    viewMode === "diff"
-                      ? "bg-white text-stone-900 shadow-2xs font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${viewMode === "diff"
+                    ? "bg-white text-stone-900 shadow-2xs font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   <span>⚖️ Diff &amp; Merge</span>
                   {generatedBio !== author.currentBio && (
@@ -463,11 +461,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setTone("humanized")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    tone === "humanized"
-                      ? "bg-violet-600 text-white shadow-2xs font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${tone === "humanized"
+                    ? "bg-violet-600 text-white shadow-2xs font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Humanized (Literary)
                 </button>
@@ -475,11 +472,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setTone("philosophical")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    tone === "philosophical"
-                      ? "bg-violet-600 text-white shadow-2xs font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${tone === "philosophical"
+                    ? "bg-violet-600 text-white shadow-2xs font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Philosophical &amp; Deep
                 </button>
@@ -487,11 +483,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setTone("punchy")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    tone === "punchy"
-                      ? "bg-violet-600 text-white shadow-2xs font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${tone === "punchy"
+                    ? "bg-violet-600 text-white shadow-2xs font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Punchy &amp; Modern
                 </button>
@@ -508,11 +503,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setLength("concise")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    length === "concise"
-                      ? "bg-stone-900 text-white font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${length === "concise"
+                    ? "bg-stone-900 text-white font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Concise (1 Par.)
                 </button>
@@ -520,11 +514,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setLength("balanced")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    length === "balanced"
-                      ? "bg-stone-900 text-white font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${length === "balanced"
+                    ? "bg-stone-900 text-white font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Balanced (2 Par.)
                 </button>
@@ -532,11 +525,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setLength("comprehensive")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    length === "comprehensive"
-                      ? "bg-stone-900 text-white font-semibold"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${length === "comprehensive"
+                    ? "bg-stone-900 text-white font-semibold"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Comprehensive (3 Par.)
                 </button>
@@ -555,11 +547,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setPerspective("literary")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    perspective === "literary"
-                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${perspective === "literary"
+                    ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Literary Profile
                 </button>
@@ -567,11 +558,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setPerspective("crucible")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    perspective === "crucible"
-                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${perspective === "crucible"
+                    ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Crucible &amp; Origins
                 </button>
@@ -579,11 +569,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setPerspective("modern")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    perspective === "modern"
-                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${perspective === "modern"
+                    ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Modern Relevance
                 </button>
@@ -591,11 +580,10 @@ function AuthorBioModalInner({
                   type="button"
                   onClick={() => setPerspective("paradox")}
                   disabled={isStreaming}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                    perspective === "paradox"
-                      ? "bg-amber-600 text-white font-semibold shadow-2xs"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${perspective === "paradox"
+                    ? "bg-amber-600 text-white font-semibold shadow-2xs"
+                    : "text-stone-600 hover:text-stone-900"
+                    }`}
                 >
                   Human Paradox
                 </button>
@@ -766,11 +754,10 @@ function AuthorBioModalInner({
                   value={generatedBio}
                   onChange={(e) => setGeneratedBio(e.target.value)}
                   placeholder="Click 'Generate Bio Stream' to write an insightful, humanized biography for this author..."
-                  className={`w-full rounded-xl border p-4 text-sm font-serif leading-relaxed text-stone-900 placeholder:text-stone-400 placeholder:font-sans focus:outline-hidden transition-all duration-200 ${
-                    isStreaming
-                      ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/10"
-                      : "border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-white"
-                  }`}
+                  className={`w-full rounded-xl border p-4 text-sm font-serif leading-relaxed text-stone-900 placeholder:text-stone-400 placeholder:font-sans focus:outline-hidden transition-all duration-200 ${isStreaming
+                    ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/10"
+                    : "border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-white"
+                    }`}
                 />
               </div>
 
@@ -802,11 +789,10 @@ function AuthorBioModalInner({
                       return (
                         <div
                           key={pIdx}
-                          className={`rounded-xl border p-3.5 bg-white transition-all ${
-                            isEditing
-                              ? "border-violet-400 ring-2 ring-violet-100 shadow-xs"
-                              : "border-stone-200 hover:border-stone-300 shadow-2xs"
-                          }`}
+                          className={`rounded-xl border p-3.5 bg-white transition-all ${isEditing
+                            ? "border-violet-400 ring-2 ring-violet-100 shadow-xs"
+                            : "border-stone-200 hover:border-stone-300 shadow-2xs"
+                            }`}
                         >
                           <div className="flex items-center justify-between pb-1.5">
                             <div className="flex items-center gap-2">
@@ -853,11 +839,10 @@ function AuthorBioModalInner({
                                     key={preset}
                                     type="button"
                                     onClick={() => setParagraphInstruction(preset)}
-                                    className={`px-2 py-0.5 rounded-full border text-[11px] transition cursor-pointer ${
-                                      paragraphInstruction === preset
-                                        ? "bg-violet-600 text-white border-violet-600 font-medium"
-                                        : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
-                                    }`}
+                                    className={`px-2 py-0.5 rounded-full border text-[11px] transition cursor-pointer ${paragraphInstruction === preset
+                                      ? "bg-violet-600 text-white border-violet-600 font-medium"
+                                      : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
+                                      }`}
                                   >
                                     {preset}
                                   </button>

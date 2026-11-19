@@ -64,6 +64,8 @@ export interface CompanionThinkers {
 
 export interface AuthorBioResult {
   bio: string
+  thesis: string
+  crucible: string
   seoDescription: string
   keyThemes: string[]
   notableWorks: string[]
@@ -138,6 +140,8 @@ const CANONICAL_AUTHOR_KNOWLEDGE: Record<
   string,
   {
     bio: string
+    thesis: string
+    crucible: string
     seoDescription: string
     keyThemes: string[]
     notableWorks: string[]
@@ -151,6 +155,10 @@ const CANONICAL_AUTHOR_KNOWLEDGE: Record<
 Rather than offering abstract doctrine, Aurelius practiced Stoicism as daily cognitive armor. His writings confront the relentless friction of leadership, the vanity of fame, and the radical freedom found in mastering one’s own judgments rather than lamenting external circumstance. By viewing existence through cosmic perspective ("sub specie aeternitatis"), he cultivated profound inner tranquility without escaping worldly responsibility.
 
 Today, his insights on emotional fortitude, resilience under duress, and integrity when unwatched serve as essential reading for modern leaders, thinkers, and anyone navigating cognitive overwhelm in a volatile world.`,
+    thesis:
+      "True serenity is found not by retreating from public duty, but by mastering one's internal perception of external chaos.",
+    crucible:
+      "The Danube Campaigns & Antonine Plague (166–180 CE): Stationed along a frozen military frontier while governing an empire ravaged by pestilence, he kept private journal reminders to practice justice, patience, and unyielding self-command.",
     seoDescription:
       "Explore the Stoic philosophy of Marcus Aurelius, Roman Emperor and author of Meditations. Read his timeless quotes on resilience, duty, and inner peace.",
     keyThemes: ["Stoic Resilience", "Dichotomy of Control", "Mortality (Memento Mori)", "Public Duty"],
@@ -179,6 +187,10 @@ Today, his insights on emotional fortitude, resilience under duress, and integri
 Seneca’s enduring genius lies in his conversational epistolary prose, particularly his Letters from a Stoic (Epistulae Morales ad Lucilium). Addressing everyday anxieties—the dread of poverty, the agony of grief, the illusion of time shortage, and the poison of anger—he offered vivid psychological advice that reads with astonishing modern freshness. He argued that we suffer far more often in imagination than in reality.
 
 His moral essays and letters bridge high philosophy and human vulnerability, offering a practical manual for cultivating equanimity amidst political peril and societal chaos.`,
+    thesis:
+      "We suffer far more often in imagination than in reality, and true freedom begins with deliberate mastery over finite time and destructive impulses.",
+    crucible:
+      "Exile to Corsica & Nero's Imperial Court (41–65 AD): Banished to a rocky Mediterranean island for eight years before returning to advise an increasingly tyrannical emperor, Seneca wrestled with the high-stakes friction between philosophical ideals and mortal survival.",
     seoDescription:
       "Discover the wisdom of Seneca, Roman Stoic philosopher and statesman. Explore his essays, Letters from a Stoic, and enduring quotes on time and anxiety.",
     keyThemes: ["Brevity of Life", "Anxiety & Imagination", "Anger Management", "Tranquility of Mind"],
@@ -207,6 +219,10 @@ His moral essays and letters bridge high philosophy and human vulnerability, off
 Nietzsche diagnosed the modern crisis of nihilism with startling prescience, proclaiming the "death of God" not as a triumph, but as a cultural earthquake demanding radical human revaluation. Rather than surrendering to despair, he championed "amor fati"—the fervent love of one's fate, including its anguish—and conceived the Übermensch as a creator who molds personal meaning through artistic discipline and self-overcoming.
 
 Written with poetic fury and sharp psychological diagnostic precision, his works like Thus Spoke Zarathustra and Beyond Good and Evil continue to electrify contemporary debates on authenticity, creativity, and the courage to endure.`,
+    thesis:
+      "Meaning is not discovered in transcendent dogmas, but forged through radical self-overcoming, artistic courage, and the passionate love of one's fate (Amor Fati).",
+    crucible:
+      "Chronic Illness & Alpine Solitude (1879–1889): Resigning his professorship due to relentless migraines and near-blindness, Nietzsche wandered between Swiss high peaks and Mediterranean ports, turning physical agony into a crucible for incandescent creative rebellion.",
     seoDescription:
       "Read the biography and philosophical ideas of Friedrich Nietzsche, author of Thus Spoke Zarathustra. Discover his quotes on Amor Fati and self-overcoming.",
     keyThemes: ["Amor Fati", "The Will to Power", "Self-Overcoming", "Critique of Nihilism"],
@@ -235,6 +251,10 @@ Written with poetic fury and sharp psychological diagnostic precision, his works
 In seminal essays like "Self-Reliance" and "Nature," Emerson challenged readers to abandon conformity, trust internal intuition, and reject secondhand beliefs. "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment," he famously observed. His philosophy was fundamentally democratic, urging each soul to recognize their direct communion with universal truth.
 
 Emerson’s luminous prose shaped generations of thinkers—including his mentee Henry David Thoreau and poet Walt Whitman—and remains a touchstone of creative courage and spiritual self-determination.`,
+    thesis:
+      "To trust your own conscience in a world demanding conformity is the supreme human achievement, unlocking direct communion with universal truth.",
+    crucible:
+      "Resignation from the Pulpit & Grief (1831–1832): Devastated by the early death of his wife Ellen, Emerson resigned his Boston ministry, broke with institutional religious dogma, and sailed for Europe to construct a radical philosophy of inner spiritual self-reliance.",
     seoDescription:
       "Discover Ralph Waldo Emerson, American essayist, poet, and champion of Transcendentalism. Explore his quotes on Self-Reliance, nature, and creative courage.",
     keyThemes: ["Radical Self-Reliance", "Individual Conscience", "Communion with Nature", "Transcendentalism"],
@@ -263,6 +283,10 @@ Emerson’s luminous prose shaped generations of thinkers—including his mentee
 His core doctrine of Satyagraha ("truth-force") rejected violence not out of passivity, but as active spiritual courage that sought to awaken the moral conscience of the oppressor. Coupled with Ahimsa (universal non-harm) and radical personal simplicity, his campaigns—from the historic Salt March to sustained nationwide civil disobedience—proved that principled moral solidarity could dismantle imperial dominion.
 
 Gandhi’s philosophical legacy extended far beyond Indian independence, directly inspiring Martin Luther King Jr., Nelson Mandela, and civil liberties struggles across the globe.`,
+    thesis:
+      "Principled nonviolence (Ahimsa) is not passive compliance, but active spiritual truth-force (Satyagraha) capable of awakening the moral conscience of an adversary.",
+    crucible:
+      "The Pietermaritzburg Train Station Ejection (1893): Thrown from a first-class carriage onto a freezing South African railway platform due to racial discrimination, Gandhi spent a shivering night resolving to conquer prejudice through disciplined moral resistance.",
     seoDescription:
       "Explore the life and philosophy of Mahatma Gandhi. Read his quotes on nonviolent resistance, Satyagraha, truth, and moral leadership in the modern world.",
     keyThemes: ["Satyagraha (Truth-Force)", "Ahimsa (Nonviolence)", "Ethical Leadership", "Simplicity & Self-Discipline"],
@@ -326,6 +350,8 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
     if (norm.includes(key) || key.includes(norm)) {
       return {
         bio: record.bio,
+        thesis: record.thesis,
+        crucible: record.crucible,
         seoDescription: record.seoDescription,
         keyThemes: record.keyThemes,
         notableWorks: record.notableWorks,
@@ -408,8 +434,18 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
     contrasts: ["Dogmatic Traditionalism", "Material Cynicism"],
   }
 
+  const defaultThesis = input.primaryQuote
+    ? `"${input.primaryQuote.content.slice(0, 80)}" — living with authentic conviction requires aligning everyday action with inward moral discipline.`
+    : `${input.name} champions the conviction that human dignity is forged through intellectual integrity, personal resilience, and living in deliberate service of truth.`
+
+  const defaultCrucible = input.authorityGroundingSummary
+    ? `Tested by the historical pressures of their era, ${input.name} grounded their insights not in serene detachment, but in the friction of lived responsibility.`
+    : `Facing the intellectual conflicts and social challenges of their era, ${input.name} refused comfortable convention, testing their ideas through rigorous engagement with human adversity.`
+
   return {
     bio: sanitizeHumanBioText(fullBio),
+    thesis: defaultThesis,
+    crucible: defaultCrucible,
     seoDescription: seoDescription.slice(0, 160),
     keyThemes:
       input.linkedCategories && input.linkedCategories.length > 0
@@ -522,6 +558,8 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
    - Use concrete, sensory details and historical specificity over empty praise adjectives.
 4. NATURAL TOPICAL AUTHORITY & KNOWLEDGE GRAPH (SEO):
    - The first sentence of Paragraph 1 must be a compelling, self-contained hook that immediately conveys who they are and why their thoughts endure.
+   - Core Worldview Thesis: Synthesize their central worldview into exactly 1 punchy, memorable crystallization sentence.
+   - Defining Crucible: Identify the single historical turning point, exile, battle, illness, or trial in 1 to 2 sentences that tested and forged their ideas.
    - Seamlessly embed seminal works and concepts without keyword stuffing.
    - Highlight intellectual lineage: 2 to 3 figures who influenced them, 2 to 3 figures they influenced, and 1 to 2 contrasting philosophical voices.
    - Formulate 2 high-intent FAQ pairs directly answering common questions searchers ask about this author's philosophy or legacy (concise, factual, authoritative 1-2 sentence answers).
@@ -529,6 +567,8 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 Output strictly valid JSON with this exact structure:
 {
   "bio": "Multi-paragraph narrative biography text separated by double newlines (\\n\\n)",
+  "thesis": "Strictly 1 punchy, memorable sentence crystallizing the author's primary philosophical worldview or life thesis",
+  "crucible": "Strictly 1 to 2 sentences identifying the defining historical crisis, exile, trial, or turning point that tested and forged their thinking",
   "seoDescription": "Strictly 140 to 160 characters search engine snippet summarizing who they are and why readers search for their quotes",
   "keyThemes": ["3 to 5 core thematic phrases"],
   "notableWorks": ["2 to 4 major publication or speech titles"],
@@ -648,8 +688,20 @@ export async function generateAuthorBio(
               }
             }
 
+            const thesis =
+              typeof parsed.thesis === "string" && parsed.thesis.trim().length > 15
+                ? sanitizeHumanBioText(parsed.thesis.trim())
+                : fallback.thesis
+
+            const crucible =
+              typeof parsed.crucible === "string" && parsed.crucible.trim().length > 15
+                ? sanitizeHumanBioText(parsed.crucible.trim())
+                : fallback.crucible
+
             return {
               bio,
+              thesis,
+              crucible,
               seoDescription,
               keyThemes,
               notableWorks,
@@ -830,6 +882,8 @@ export function streamAuthorBio(
           sendEvent("complete_bio", { bio: accumulated.trim() })
           sendEvent("done", {
             bio: accumulated.trim(),
+            thesis: result.thesis,
+            crucible: result.crucible,
             seoDescription: result.seoDescription,
             keyThemes: result.keyThemes,
             notableWorks: result.notableWorks,
@@ -891,6 +945,10 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 Format your response strictly using these exact delimiters:
 <<<BIO>>>
 (The narrative biography text with distinct paragraphs separated by double newlines)
+<<<THESIS>>>
+(Strictly 1 memorable sentence crystallizing their primary worldview)
+<<<CRUCIBLE>>>
+(Strictly 1-2 sentences highlighting their defining historical trial or turning point)
 <<<SEO_DESCRIPTION>>>
 (Strictly 140 to 160 characters summary for Google search result meta description)
 <<<KEY_THEMES>>>
@@ -936,8 +994,18 @@ A: 1-2 sentence authoritative answer.`
         let sseBuffer = ""
         let pendingStreamBuffer = ""
 
-        let currentSection: "BIO" | "SEO" | "THEMES" | "WORKS" | "COMPANIONS" | "FAQS" = "BIO"
+        let currentSection:
+          | "BIO"
+          | "THESIS"
+          | "CRUCIBLE"
+          | "SEO"
+          | "THEMES"
+          | "WORKS"
+          | "COMPANIONS"
+          | "FAQS" = "BIO"
         let accumulatedBio = ""
+        let accumulatedThesis = ""
+        let accumulatedCrucible = ""
         let accumulatedSeo = ""
         let accumulatedThemes = ""
         let accumulatedWorks = ""
@@ -946,7 +1014,7 @@ A: 1-2 sentence authoritative answer.`
         let hasBioCompleted = false
 
         const tagPattern =
-          /<<<\s*(BIO|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS|COMPANION(?:_|\s+)THINKERS|FAQS)\s*>>>/i
+          /<<<\s*(BIO|THESIS|CRUCIBLE|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS|COMPANION(?:_|\s+)THINKERS|FAQS)\s*>>>/i
 
         while (true) {
           if (options?.signal?.aborted || isClosed) break
@@ -1006,6 +1074,10 @@ A: 1-2 sentence authoritative answer.`
                 if (currentSection === "BIO") {
                   accumulatedBio += textBefore
                   sendEvent("delta", { text: textBefore })
+                } else if (currentSection === "THESIS") {
+                  accumulatedThesis += textBefore
+                } else if (currentSection === "CRUCIBLE") {
+                  accumulatedCrucible += textBefore
                 } else if (currentSection === "SEO") {
                   accumulatedSeo += textBefore
                 } else if (currentSection === "THEMES") {
@@ -1027,6 +1099,10 @@ A: 1-2 sentence authoritative answer.`
               const rawTag = match[1].toUpperCase()
               if (rawTag.includes("BIO")) {
                 currentSection = "BIO"
+              } else if (rawTag.includes("THESIS")) {
+                currentSection = "THESIS"
+              } else if (rawTag.includes("CRUCIBLE")) {
+                currentSection = "CRUCIBLE"
               } else if (rawTag.includes("SEO")) {
                 currentSection = "SEO"
               } else if (rawTag.includes("THEME")) {
@@ -1062,13 +1138,17 @@ A: 1-2 sentence authoritative answer.`
               if (lastLtIndex !== -1 && pendingStreamBuffer.length - lastLtIndex < 30) {
                 const safeToAppend = pendingStreamBuffer.slice(0, lastLtIndex)
                 pendingStreamBuffer = pendingStreamBuffer.slice(lastLtIndex)
-                if (currentSection === "SEO") accumulatedSeo += safeToAppend
+                if (currentSection === "THESIS") accumulatedThesis += safeToAppend
+                else if (currentSection === "CRUCIBLE") accumulatedCrucible += safeToAppend
+                else if (currentSection === "SEO") accumulatedSeo += safeToAppend
                 else if (currentSection === "THEMES") accumulatedThemes += safeToAppend
                 else if (currentSection === "WORKS") accumulatedWorks += safeToAppend
                 else if (currentSection === "COMPANIONS") accumulatedCompanions += safeToAppend
                 else if (currentSection === "FAQS") accumulatedFaqs += safeToAppend
               } else if (pendingStreamBuffer && lastLtIndex === -1) {
-                if (currentSection === "SEO") accumulatedSeo += pendingStreamBuffer
+                if (currentSection === "THESIS") accumulatedThesis += pendingStreamBuffer
+                else if (currentSection === "CRUCIBLE") accumulatedCrucible += pendingStreamBuffer
+                else if (currentSection === "SEO") accumulatedSeo += pendingStreamBuffer
                 else if (currentSection === "THEMES") accumulatedThemes += pendingStreamBuffer
                 else if (currentSection === "WORKS") accumulatedWorks += pendingStreamBuffer
                 else if (currentSection === "COMPANIONS") accumulatedCompanions += pendingStreamBuffer
@@ -1084,6 +1164,10 @@ A: 1-2 sentence authoritative answer.`
           if (currentSection === "BIO") {
             accumulatedBio += pendingStreamBuffer
             sendEvent("delta", { text: pendingStreamBuffer })
+          } else if (currentSection === "THESIS") {
+            accumulatedThesis += pendingStreamBuffer
+          } else if (currentSection === "CRUCIBLE") {
+            accumulatedCrucible += pendingStreamBuffer
           } else if (currentSection === "SEO") {
             accumulatedSeo += pendingStreamBuffer
           } else if (currentSection === "THEMES") {
@@ -1100,6 +1184,10 @@ A: 1-2 sentence authoritative answer.`
 
         const fallback = generateCuratorAuthorBio(input)
         const cleanBio = sanitizeHumanBioText(accumulatedBio.trim()) || fallback.bio
+        const finalThesis =
+          sanitizeHumanBioText(accumulatedThesis.trim()) || fallback.thesis
+        const finalCrucible =
+          sanitizeHumanBioText(accumulatedCrucible.trim()) || fallback.crucible
 
         const seoSnippet = extractAuthorMetaDescription({
           name: input.name,
@@ -1138,6 +1226,8 @@ A: 1-2 sentence authoritative answer.`
         }
         sendEvent("done", {
           bio: cleanBio,
+          thesis: finalThesis,
+          crucible: finalCrucible,
           seoDescription: finalSeo,
           keyThemes: finalThemes,
           notableWorks: finalWorks,

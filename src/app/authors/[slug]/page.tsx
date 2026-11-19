@@ -313,6 +313,61 @@ function renderBioParagraphWithLinks(text: string): React.ReactNode {
   return parts
 }
 
+function renderBioParagraph(paragraph: string, index: number): React.ReactNode {
+  const trimmed = paragraph.trim()
+  if (trimmed.startsWith(">")) {
+    const rawLines = trimmed
+      .split("\n")
+      .map((line) => line.replace(/^>\s?/, "").trim())
+      .filter(Boolean)
+
+    return (
+      <blockquote
+        key={index}
+        className="my-3 rounded-r-xl border-l-4 border-[var(--accent-rust,#991b1b)] bg-amber-50/50 p-3.5 text-stone-800 shadow-2xs font-serif leading-relaxed text-sm sm:text-base space-y-2"
+      >
+        {rawLines.map((line, lIdx) => {
+          // Check for bold title like **Core Worldview**: or **Defining Crucible**:
+          const titleMatch = line.match(/^(\*\*.*?\*\*[:]?)\s*(.*)$/)
+          if (titleMatch) {
+            const rawTitle = titleMatch[1].replace(/\*\*/g, "")
+            let restText = titleMatch[2].trim()
+            // Strip outer italics markers if present: *text* or _text_
+            if (
+              (restText.startsWith("*") && restText.endsWith("*")) ||
+              (restText.startsWith("_") && restText.endsWith("_"))
+            ) {
+              restText = restText.slice(1, -1).trim()
+            }
+            return (
+              <div key={lIdx} className="space-y-0.5">
+                <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-amber-900/90 block">
+                  {rawTitle}
+                </span>
+                <p className="italic text-stone-900 font-serif text-sm sm:text-base">
+                  {renderBioParagraphWithLinks(restText)}
+                </p>
+              </div>
+            )
+          }
+
+          return (
+            <div key={lIdx}>
+              {renderBioParagraphWithLinks(line)}
+            </div>
+          )
+        })}
+      </blockquote>
+    )
+  }
+
+  return (
+    <p key={index}>
+      {renderBioParagraphWithLinks(paragraph)}
+    </p>
+  )
+}
+
 export default async function AuthorDetailPage({
   params,
   searchParams,
@@ -511,9 +566,9 @@ export default async function AuthorDetailPage({
               {/* Biography */}
               {author.bio && (
                 <div className="text-sm sm:text-base text-stone-700 leading-relaxed font-serif max-w-3xl border-l-2 border-[var(--accent-rust)]/40 pl-4 py-1 space-y-2">
-                  {author.bio.split("\n\n").map((paragraph, index) => (
-                    <p key={index}>{renderBioParagraphWithLinks(paragraph)}</p>
-                  ))}
+                  {author.bio.split("\n\n").map((paragraph, index) =>
+                    renderBioParagraph(paragraph, index)
+                  )}
                 </div>
               )}
 

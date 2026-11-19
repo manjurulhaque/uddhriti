@@ -93,6 +93,11 @@ function AuthorBioModalInner({
   const [error, setError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
   const [isSeoCopied, setIsSeoCopied] = useState(false)
+  const [thesis, setThesis] = useState("")
+  const [crucible, setCrucible] = useState("")
+  const [isThesisCopied, setIsThesisCopied] = useState(false)
+  const [isCrucibleCopied, setIsCrucibleCopied] = useState(false)
+  const [calloutsInserted, setCalloutsInserted] = useState(false)
 
   // Pillar 4 Admin UX State: Diff / Merge & Paragraph Regeneration
   const [viewMode, setViewMode] = useState<"editor" | "diff">("editor")
@@ -131,6 +136,9 @@ function AuthorBioModalInner({
     setCompanionThinkers(null)
     setFaqs([])
     setFaqsPublished(false)
+    setThesis("")
+    setCrucible("")
+    setCalloutsInserted(false)
     setProvider(null)
 
     const controller = new AbortController()
@@ -222,6 +230,12 @@ function AuthorBioModalInner({
                 }
                 if (Array.isArray(data.faqs)) {
                   setFaqs(data.faqs)
+                }
+                if (typeof data.thesis === "string") {
+                  setThesis(data.thesis)
+                }
+                if (typeof data.crucible === "string") {
+                  setCrucible(data.crucible)
                 }
                 setProvider(data.provider === "gemini" ? "Google Gemini AI" : "Curator Knowledge Engine")
               }
@@ -371,6 +385,44 @@ function AuthorBioModalInner({
     navigator.clipboard.writeText(textToCopy)
     setIsSeoCopied(true)
     setTimeout(() => setIsSeoCopied(false), 2000)
+  }
+
+  function handleCopyThesis() {
+    if (!thesis) return
+    navigator.clipboard.writeText(thesis)
+    setIsThesisCopied(true)
+    setTimeout(() => setIsThesisCopied(false), 2000)
+  }
+
+  function handleCopyCrucible() {
+    if (!crucible) return
+    navigator.clipboard.writeText(crucible)
+    setIsCrucibleCopied(true)
+    setTimeout(() => setIsCrucibleCopied(false), 2000)
+  }
+
+  function handleInsertCalloutsToBio() {
+    if (!thesis && !crucible) return
+
+    const calloutLines: string[] = []
+    if (thesis) {
+      calloutLines.push(`> **Core Worldview**: *${thesis}*`)
+    }
+    if (crucible) {
+      calloutLines.push(`> **Defining Crucible**: *${crucible}*`)
+    }
+    const calloutsBlock = calloutLines.join("\n>\n")
+
+    setGeneratedBio((prev) => {
+      // If callouts already exist at top of bio, replace them cleanly
+      const cleanPrev = prev.replace(/^(?:> \*\*(?:Core Worldview|Defining Crucible)\*\*:[^\n]*(?:\n>)?\n*)+/, "").trim()
+      const updated = cleanPrev ? `${calloutsBlock}\n\n${cleanPrev}` : calloutsBlock
+      setProposedBioSnapshot(updated)
+      return updated
+    })
+
+    setCalloutsInserted(true)
+    setTimeout(() => setCalloutsInserted(false), 2500)
   }
 
   async function handleCopyFaqs() {
@@ -945,6 +997,126 @@ function AuthorBioModalInner({
                         </div>
                       )
                     })}
+                  </div>
+                </div>
+              )}
+
+              {/* Editorial Callouts: Core Worldview & Defining Crucible */}
+              {(thesis || crucible) && (
+                <div className="rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-stone-50/40 to-orange-50/50 p-4 space-y-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🏛️</span>
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-amber-900 block">
+                          Philosophical Axioms &amp; Defining Crucible
+                        </span>
+                        <span className="text-[11px] text-stone-500">
+                          Memorable one-sentence thesis and formative historical crisis
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        onClick={handleInsertCalloutsToBio}
+                        className={`text-[11px] font-semibold transition cursor-pointer ${
+                          calloutsInserted
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
+                            : "bg-white hover:bg-stone-50 text-stone-700 border-stone-200 shadow-2xs"
+                        }`}
+                      >
+                        {calloutsInserted ? (
+                          <>
+                            <CheckIcon className="w-3 h-3 text-emerald-600 inline mr-1" />
+                            <span>Inserted into Bio!</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>📌 Insert Callouts into Bio</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    {/* Core Worldview Thesis */}
+                    {thesis && (
+                      <div className="rounded-xl border border-amber-200/90 bg-white p-3.5 space-y-2 shadow-2xs flex flex-col justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                              <span>💡</span> Core Worldview Thesis
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyThesis}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-500 hover:text-stone-900 transition cursor-pointer"
+                              title="Copy worldview thesis"
+                            >
+                              {isThesisCopied ? (
+                                <>
+                                  <CheckIcon className="w-3 h-3 text-emerald-600" />
+                                  <span className="text-emerald-700">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CopyIcon className="w-3 h-3 text-stone-400" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <p className="font-serif italic text-stone-900 leading-relaxed text-[12.5px] border-l-2 border-amber-500 pl-2.5 my-1">
+                            &ldquo;{thesis}&rdquo;
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-sans text-stone-400 block pt-1 border-t border-stone-100">
+                          A single memorable axiom crystallizing the author&apos;s life philosophy.
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Defining Crucible */}
+                    {crucible && (
+                      <div className="rounded-xl border border-orange-200/90 bg-white p-3.5 space-y-2 shadow-2xs flex flex-col justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-orange-900">
+                              <span>⚔️</span> Defining Crucible
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyCrucible}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-500 hover:text-stone-900 transition cursor-pointer"
+                              title="Copy defining crucible"
+                            >
+                              {isCrucibleCopied ? (
+                                <>
+                                  <CheckIcon className="w-3 h-3 text-emerald-600" />
+                                  <span className="text-emerald-700">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CopyIcon className="w-3 h-3 text-stone-400" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <p className="font-serif text-stone-800 leading-relaxed text-[12px] border-l-2 border-orange-500 pl-2.5 my-1">
+                            {crucible}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-sans text-stone-400 block pt-1 border-t border-stone-100">
+                          The historical crisis, illness, or trial that forged their convictions.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

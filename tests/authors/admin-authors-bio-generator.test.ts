@@ -168,6 +168,9 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(result.companionThinkers.contrasts.includes("Epicurus"), "Should identify Epicurus as contrast")
       assert.ok(result.faqs.length >= 2, "Should provide at least 2 FAQ pairs for rich snippet schema")
       assert.ok(result.faqs[0].question.includes("Marcus Aurelius"), "FAQ question should name the author")
+      assert.ok(result.thesis.length > 20, "Should generate core worldview thesis")
+      assert.ok(result.crucible.length > 20, "Should generate defining crucible")
+      assert.ok(result.thesis.toLowerCase().includes("serenity"), "Thesis should capture serene self-command")
     })
 
     it("returns rich biography and valid SEO snippet for Seneca", () => {
@@ -219,6 +222,8 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(result.companionThinkers.influences.length > 0)
       assert.ok(result.faqs.length >= 2, "Dynamic heuristic should generate FAQ pairs")
       assert.ok(result.faqs[0].question.includes("Ada Lovelace"))
+      assert.ok(result.thesis.length > 20, "Should synthesize default thesis")
+      assert.ok(result.crucible.length > 20, "Should synthesize default crucible")
     })
   })
 
@@ -331,6 +336,8 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
         faqs: Array<{ question: string; answer: string }>
         provider: string
         wordCount: number
+        thesis: string
+        crucible: string
       }
 
       assert.ok(doneData.bio.length > 100)
@@ -340,6 +347,8 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(doneData.wordCount > 50)
       assert.ok(Array.isArray(doneData.companionThinkers.influences))
       assert.ok(Array.isArray(doneData.faqs) && doneData.faqs.length >= 2)
+      assert.ok(typeof doneData.thesis === "string" && doneData.thesis.length > 10, "Stream done event should include thesis")
+      assert.ok(typeof doneData.crucible === "string" && doneData.crucible.length > 10, "Stream done event should include crucible")
 
       // Reconstructed delta text matches completed bio
       const accumulatedFromDeltas = deltaEvents

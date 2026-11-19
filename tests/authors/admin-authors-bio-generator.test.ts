@@ -164,6 +164,10 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(result.keyThemes.includes("Stoic Resilience"), "Should contain Stoic Resilience theme")
       assert.ok(result.notableWorks.includes("Meditations"), "Should contain Meditations")
       assert.ok(result.wordCount > 100, `Expected word count > 100, got ${result.wordCount}`)
+      assert.ok(result.companionThinkers.influences.includes("Epictetus"), "Should identify Epictetus as influence")
+      assert.ok(result.companionThinkers.contrasts.includes("Epicurus"), "Should identify Epicurus as contrast")
+      assert.ok(result.faqs.length >= 2, "Should provide at least 2 FAQ pairs for rich snippet schema")
+      assert.ok(result.faqs[0].question.includes("Marcus Aurelius"), "FAQ question should name the author")
     })
 
     it("returns rich biography and valid SEO snippet for Seneca", () => {
@@ -212,6 +216,9 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(result.seoDescription.length <= 160, `SEO snippet <= 160 chars, got ${result.seoDescription.length}`)
       assert.ok(result.keyThemes.length >= 3)
       assert.deepEqual(result.notableWorks, ["Sketch of the Analytical Engine"])
+      assert.ok(result.companionThinkers.influences.length > 0)
+      assert.ok(result.faqs.length >= 2, "Dynamic heuristic should generate FAQ pairs")
+      assert.ok(result.faqs[0].question.includes("Ada Lovelace"))
     })
   })
 
@@ -316,6 +323,12 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
         seoDescription: string
         keyThemes: string[]
         notableWorks: string[]
+        companionThinkers: {
+          influences: string[]
+          influenced: string[]
+          contrasts: string[]
+        }
+        faqs: Array<{ question: string; answer: string }>
         provider: string
         wordCount: number
       }
@@ -325,6 +338,8 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(Array.isArray(doneData.keyThemes))
       assert.ok(Array.isArray(doneData.notableWorks))
       assert.ok(doneData.wordCount > 50)
+      assert.ok(Array.isArray(doneData.companionThinkers.influences))
+      assert.ok(Array.isArray(doneData.faqs) && doneData.faqs.length >= 2)
 
       // Reconstructed delta text matches completed bio
       const accumulatedFromDeltas = deltaEvents

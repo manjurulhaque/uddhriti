@@ -326,7 +326,7 @@ export default async function AuthorDetailPage({
     notFound()
   }
 
-  const [topCategoriesRaw, relatedAuthors] = await Promise.all([
+  const [topCategoriesRaw, relatedAuthors, authorFaqs] = await Promise.all([
     prisma.quote.findMany({
       where: {
         authorId: author.id,
@@ -365,6 +365,14 @@ export default async function AuthorDetailPage({
       take: 4,
       orderBy: [{ quoteCount: "desc" }, { name: "asc" }],
     }),
+    prisma.fAQ.findMany({
+      where: {
+        pageType: "AUTHOR",
+        pageSlug: author.slug,
+      },
+      orderBy: { position: "asc" },
+      select: { id: true, question: true, answer: true },
+    }),
   ])
 
   // Aggregate active thematic domains directly from distinct categories
@@ -399,6 +407,7 @@ export default async function AuthorDetailPage({
     ...author,
     topCategories,
     sources: author.sources,
+    faqs: authorFaqs,
   })
 
   return (
@@ -673,6 +682,42 @@ export default async function AuthorDetailPage({
             searchParams={searchParams}
           />
         </React.Suspense>
+
+        {/* Frequently Asked Questions (FAQPage Schema Supported) */}
+        {authorFaqs.length > 0 && (
+          <section className="space-y-4 pt-6 border-t border-stone-200/80" aria-labelledby="author-faqs-heading">
+            <div className="flex items-center justify-between border-b border-stone-900/10 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg" aria-hidden="true">💡</span>
+                <h2 id="author-faqs-heading" className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink-900)]">
+                  Frequently Asked Questions
+                </h2>
+              </div>
+              <span className="text-xs font-mono text-stone-500">
+                Schema: FAQPage
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {authorFaqs.map((faq) => (
+                <details
+                  key={faq.id}
+                  className="group rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs transition-all hover:border-[var(--accent-rust)]/35 open:shadow-xs"
+                >
+                  <summary className="flex cursor-pointer items-center justify-between gap-4 font-serif text-base sm:text-lg font-bold text-stone-900 list-none select-none">
+                    <span>{faq.question}</span>
+                    <span className="text-stone-400 group-open:rotate-180 transition-transform text-xs font-mono" aria-hidden="true">
+                      ▼
+                    </span>
+                  </summary>
+                  <div className="mt-3.5 pt-3 border-t border-stone-100 text-sm sm:text-base text-stone-700 leading-relaxed font-sans">
+                    {faq.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Related Thinkers & Contemporary Voices */}
         {relatedAuthors.length > 0 && (

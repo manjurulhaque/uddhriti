@@ -158,5 +158,52 @@ describe("🔍 SEO & Knowledge Graph Entity Optimization", () => {
       assert.ok(collection, "CollectionPage entity should exist")
       assert.deepEqual(collection.about, { "@id": person["@id"] })
     })
+
+    it("generates Schema.org FAQPage entity and relatedTo relationships when faqs and companion thinkers are provided", () => {
+      const graphResult = buildAuthorKnowledgeGraph({
+        name: "Marcus Aurelius",
+        slug: "marcus-aurelius",
+        profession: "Stoic Philosopher",
+        faqs: [
+          {
+            question: "What was Marcus Aurelius's main philosophy?",
+            answer: "He practiced late Roman Stoicism, emphasizing duty and the dichotomy of control.",
+          },
+          {
+            question: "Why did he write Meditations?",
+            answer: "It was a private journal for self-discipline written during the Danube campaigns.",
+          },
+        ],
+        companionThinkers: {
+          influences: ["Epictetus", "Rusticus"],
+          influenced: ["Montaigne"],
+          contrasts: ["Epicurus"],
+        },
+      })
+
+      const graph = graphResult["@graph"] as Array<Record<string, unknown>>
+      assert.equal(graph.length, 4, "Should contain Person, BreadcrumbList, CollectionPage, and FAQPage")
+
+      const person = graph.find((node) => node["@type"] === "Person")
+      assert.ok(person)
+      const relatedTo = person.relatedTo as Array<{ "@type": string; name: string }>
+      assert.ok(Array.isArray(relatedTo), "Person should have relatedTo array")
+      assert.equal(relatedTo.length, 4)
+      assert.deepEqual(relatedTo[0], { "@type": "Person", name: "Epictetus" })
+
+      const faqPage = graph.find((node) => node["@type"] === "FAQPage")
+      assert.ok(faqPage, "FAQPage entity should be present in @graph")
+      const mainEntity = faqPage.mainEntity as Array<Record<string, unknown>>
+      assert.ok(Array.isArray(mainEntity))
+      assert.equal(mainEntity.length, 2)
+      assert.equal(mainEntity[0]["@type"], "Question")
+      assert.equal(mainEntity[0].name, "What was Marcus Aurelius's main philosophy?")
+      const answer0 = mainEntity[0].acceptedAnswer as Record<string, unknown>
+      assert.equal(answer0["@type"], "Answer")
+      assert.equal(
+        answer0.text,
+        "He practiced late Roman Stoicism, emphasizing duty and the dichotomy of control."
+      )
+    })
   })
 })

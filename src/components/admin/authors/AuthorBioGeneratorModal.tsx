@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react"
 import { Button, Badge } from "@/components/ui"
 import { CloseIcon, CopyIcon, CheckIcon } from "@/components/ui/icons"
 import { computeWordDiff, type DiffPart } from "@/lib/diff"
-import type { BioTone, BioLength, BioPerspective } from "@/lib/authors/bio-generator"
+import type { BioTone, BioLength, BioPerspective, CompanionThinkers, AuthorFaqItem } from "@/lib/authors/bio-generator"
 
 export interface AuthorBioGeneratorModalProps {
   isOpen: boolean
@@ -12,6 +12,7 @@ export interface AuthorBioGeneratorModalProps {
   author: {
     id?: string
     name: string
+    slug?: string | null
     profession?: string | null
     nationality?: string | null
     birthYear?: number | string | null
@@ -82,6 +83,11 @@ function AuthorBioModalInner({
   const [seoDescription, setSeoDescription] = useState("")
   const [keyThemes, setKeyThemes] = useState<string[]>([])
   const [notableWorks, setNotableWorks] = useState<string[]>([])
+  const [companionThinkers, setCompanionThinkers] = useState<CompanionThinkers | null>(null)
+  const [faqs, setFaqs] = useState<AuthorFaqItem[]>([])
+  const [isPublishingFaqs, setIsPublishingFaqs] = useState(false)
+  const [faqsPublished, setFaqsPublished] = useState(false)
+  const [isFaqCopied, setIsFaqCopied] = useState(false)
   const [provider, setProvider] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +128,9 @@ function AuthorBioModalInner({
     setSeoDescription("")
     setKeyThemes([])
     setNotableWorks([])
+    setCompanionThinkers(null)
+    setFaqs([])
+    setFaqsPublished(false)
     setProvider(null)
 
     const controller = new AbortController()
@@ -208,6 +217,12 @@ function AuthorBioModalInner({
                 if (data.seoDescription) setSeoDescription(data.seoDescription)
                 if (Array.isArray(data.keyThemes)) setKeyThemes(data.keyThemes)
                 if (Array.isArray(data.notableWorks)) setNotableWorks(data.notableWorks)
+                if (data.companionThinkers && typeof data.companionThinkers === "object") {
+                  setCompanionThinkers(data.companionThinkers)
+                }
+                if (Array.isArray(data.faqs)) {
+                  setFaqs(data.faqs)
+                }
                 setProvider(data.provider === "gemini" ? "Google Gemini AI" : "Curator Knowledge Engine")
               }
             } catch {
@@ -356,6 +371,63 @@ function AuthorBioModalInner({
     navigator.clipboard.writeText(textToCopy)
     setIsSeoCopied(true)
     setTimeout(() => setIsSeoCopied(false), 2000)
+  }
+
+  async function handleCopyFaqs() {
+    if (faqs.length === 0) return
+    const schemaData = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqs.map((f) => ({
+        "@type": "Question",
+        name: f.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: f.answer,
+        },
+      })),
+    }
+    await navigator.clipboard.writeText(JSON.stringify(schemaData, null, 2))
+    setIsFaqCopied(true)
+    setTimeout(() => setIsFaqCopied(false), 2000)
+  }
+
+  async function handlePublishFaqs() {
+    if (faqs.length === 0) return
+    const slug =
+      author.slug ||
+      author.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+    if (!slug) return
+
+    setIsPublishingFaqs(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/admin/faqs/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: faqs.map((f, idx) => ({
+            question: f.question,
+            answer: f.answer,
+            pageType: "AUTHOR",
+            pageSlug: slug,
+            position: idx,
+          })),
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to publish FAQs")
+      }
+      setFaqsPublished(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to publish FAQs")
+    } finally {
+      setIsPublishingFaqs(false)
+    }
   }
 
   function handleApply() {
@@ -979,6 +1051,150 @@ function AuthorBioModalInner({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Google Search FAQPage Rich Results Preview */}
+              {faqs.length > 0 && (
+                <div className="rounded-xl border border-stone-200/90 bg-white p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
+                        Google Search FAQ Rich Results
+                      </span>
+                      <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+                        Schema: FAQPage
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopyFaqs}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-stone-600 hover:text-stone-900 transition cursor-pointer"
+                        title="Copy FAQ Schema JSON-LD"
+                      >
+                        {isFaqCopied ? (
+                          <>
+                            <CheckIcon className="w-3 h-3 text-emerald-600" />
+                            <span className="text-emerald-700">Copied FAQ</span>
+                          </>
+                        ) : (
+                          <>
+                            <CopyIcon className="w-3 h-3 text-stone-400" />
+                            <span>Copy FAQ JSON-LD</span>
+                          </>
+                        )}
+                      </button>
+
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        onClick={handlePublishFaqs}
+                        disabled={isPublishingFaqs || faqsPublished}
+                        className={`text-[11px] font-semibold transition ${
+                          faqsPublished
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "hover:bg-stone-50 text-stone-700"
+                        }`}
+                      >
+                        {faqsPublished ? (
+                          <>
+                            <CheckIcon className="w-3 h-3 text-emerald-600 inline mr-1" />
+                            <span>Published to Schema</span>
+                          </>
+                        ) : isPublishingFaqs ? (
+                          <span>Saving FAQs...</span>
+                        ) : (
+                          <span>Publish FAQs</span>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {faqs.map((faq, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-lg border border-stone-100 bg-stone-50/50 p-2.5 space-y-1 text-xs"
+                      >
+                        <p className="font-semibold text-stone-900 flex items-start gap-1.5">
+                          <span className="text-stone-400 font-mono text-[11px]">Q:</span>
+                          <span>{faq.question}</span>
+                        </p>
+                        <p className="text-stone-600 leading-relaxed pl-4 text-[11.5px]">
+                          {faq.answer}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Intellectual Lineage & Companion Thinkers Graph */}
+              {companionThinkers && (
+                <div className="rounded-xl border border-stone-200/90 bg-white p-4 space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
+                      Intellectual Lineage &amp; Companion Thinkers
+                    </span>
+                    <span className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-1.5 py-0.5 rounded">
+                      Schema: relatedTo
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Influences */}
+                    <div className="rounded-lg border border-stone-100 bg-stone-50/50 p-2.5 space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-stone-500 block">
+                        🏛️ Roots &amp; Mentors
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {companionThinkers.influences.map((thinker) => (
+                          <span
+                            key={thinker}
+                            className="px-2 py-0.5 rounded bg-white border border-stone-200 text-stone-700 text-[11px] font-medium"
+                          >
+                            {thinker}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Influenced */}
+                    <div className="rounded-lg border border-stone-100 bg-stone-50/50 p-2.5 space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-stone-500 block">
+                        🌿 Successors &amp; Heirs
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {companionThinkers.influenced.map((thinker) => (
+                          <span
+                            key={thinker}
+                            className="px-2 py-0.5 rounded bg-white border border-stone-200 text-stone-700 text-[11px] font-medium"
+                          >
+                            {thinker}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Contrasts */}
+                    <div className="rounded-lg border border-stone-100 bg-stone-50/50 p-2.5 space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-stone-500 block">
+                        ⚖️ Contrasting Voices
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {companionThinkers.contrasts.map((thinker) => (
+                          <span
+                            key={thinker}
+                            className="px-2 py-0.5 rounded bg-white border border-stone-200 text-stone-700 text-[11px] font-medium"
+                          >
+                            {thinker}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </>

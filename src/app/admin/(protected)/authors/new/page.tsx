@@ -443,6 +443,7 @@ export default function NewAuthorPage() {
         onClose={() => setIsBioStudioOpen(false)}
         author={{
           name: form.name,
+          slug: form.slug,
           profession: form.profession,
           nationality: form.nationality,
           birthYear: form.birthYear,

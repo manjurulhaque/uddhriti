@@ -579,6 +579,7 @@ export default function EditAuthorPage() {
         author={{
           id: id || undefined,
           name: form.name,
+          slug: form.slug,
           profession: form.profession,
           nationality: form.nationality,
           birthYear: form.birthYear,

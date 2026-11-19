@@ -36,6 +36,15 @@ export interface AuthorSeoData {
     type?: string | null
     year?: number | null
   }>
+  faqs?: Array<{
+    question: string
+    answer: string
+  }>
+  companionThinkers?: {
+    influences?: string[]
+    influenced?: string[]
+    contrasts?: string[]
+  }
 }
 
 /**
@@ -192,6 +201,25 @@ export function buildAuthorKnowledgeGraph(author: AuthorSeoData): Record<string,
     ...(sameAsList.length > 0 ? { sameAs: sameAsList } : {}),
     ...(knowsAbout.length > 0 ? { knowsAbout } : {}),
     ...(workExamples ? { workExample: workExamples } : {}),
+    ...(author.companionThinkers
+      ? (() => {
+          const related = [
+            ...(author.companionThinkers.influences || []),
+            ...(author.companionThinkers.influenced || []),
+            ...(author.companionThinkers.contrasts || []),
+          ]
+            .map((n) => n.trim())
+            .filter((n) => n.length > 1)
+          return related.length > 0
+            ? {
+                relatedTo: related.map((name) => ({
+                  "@type": "Person",
+                  name,
+                })),
+              }
+            : {}
+        })()
+      : {}),
   }
 
   const breadcrumbEntity: Record<string, unknown> = {
@@ -234,8 +262,31 @@ export function buildAuthorKnowledgeGraph(author: AuthorSeoData): Record<string,
     },
   }
 
+  const graph: Array<Record<string, unknown>> = [
+    personEntity,
+    breadcrumbEntity,
+    collectionEntity,
+  ]
+
+  if (author.faqs && author.faqs.length > 0) {
+    const faqPageEntity: Record<string, unknown> = {
+      "@type": "FAQPage",
+      "@id": `${authorUrl}#faq`,
+      isPartOf: { "@id": authorUrl },
+      mainEntity: author.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    }
+    graph.push(faqPageEntity)
+  }
+
   return {
     "@context": "https://schema.org",
-    "@graph": [personEntity, breadcrumbEntity, collectionEntity],
+    "@graph": graph,
   }
 }

@@ -475,6 +475,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
           author={{
             id: studioAuthor.id,
             name: studioAuthor.name,
+            slug: studioAuthor.slug,
             profession: studioAuthor.profession,
             nationality: studioAuthor.nationality,
             birthYear: studioAuthor.birthYear,

@@ -51,11 +51,24 @@ export interface AuthorBioInput {
   authorityGroundingSummary?: string | null
 }
 
+export interface AuthorFaqItem {
+  question: string
+  answer: string
+}
+
+export interface CompanionThinkers {
+  influences: string[]
+  influenced: string[]
+  contrasts: string[]
+}
+
 export interface AuthorBioResult {
   bio: string
   seoDescription: string
   keyThemes: string[]
   notableWorks: string[]
+  companionThinkers: CompanionThinkers
+  faqs: AuthorFaqItem[]
   provider: "gemini" | "curator"
   wordCount: number
 }
@@ -128,6 +141,8 @@ const CANONICAL_AUTHOR_KNOWLEDGE: Record<
     seoDescription: string
     keyThemes: string[]
     notableWorks: string[]
+    companionThinkers: CompanionThinkers
+    faqs: AuthorFaqItem[]
   }
 > = {
   "marcus aurelius": {
@@ -140,6 +155,23 @@ Today, his insights on emotional fortitude, resilience under duress, and integri
       "Explore the Stoic philosophy of Marcus Aurelius, Roman Emperor and author of Meditations. Read his timeless quotes on resilience, duty, and inner peace.",
     keyThemes: ["Stoic Resilience", "Dichotomy of Control", "Mortality (Memento Mori)", "Public Duty"],
     notableWorks: ["Meditations"],
+    companionThinkers: {
+      influences: ["Epictetus", "Junius Rusticus", "Cleanthes"],
+      influenced: ["Michel de Montaigne", "James Stockdale", "Thomas More"],
+      contrasts: ["Epicurus", "Friedrich Nietzsche", "Niccolò Machiavelli"],
+    },
+    faqs: [
+      {
+        question: "What was Marcus Aurelius's core Stoic philosophy?",
+        answer:
+          "Marcus Aurelius practiced late Roman Stoicism, focusing on duty, the dichotomy of control, accepting mortality, and mastering personal judgment rather than lamenting external circumstance.",
+      },
+      {
+        question: "Why did Marcus Aurelius write Meditations?",
+        answer:
+          "Meditations was Marcus's private morning journal (originally titled 'To Himself'), written during military campaigns along the Danube to hold himself accountable to virtue while governing an empire.",
+      },
+    ],
   },
   seneca: {
     bio: `Lucius Annaeus Seneca (c. 4 BC – 65 AD), known simply as Seneca the Younger, lived at the volatile center of imperial Roman politics as a dramatist, senator, and advisor to Emperor Nero. His life was defined by dramatic contradiction: a philosophical advocate for modesty and detachment who accumulated immense wealth, and a voice of reason who ultimately met a forced suicide under a tyrannical regime.
@@ -151,6 +183,23 @@ His moral essays and letters bridge high philosophy and human vulnerability, off
       "Discover the wisdom of Seneca, Roman Stoic philosopher and statesman. Explore his essays, Letters from a Stoic, and enduring quotes on time and anxiety.",
     keyThemes: ["Brevity of Life", "Anxiety & Imagination", "Anger Management", "Tranquility of Mind"],
     notableWorks: ["Letters from a Stoic", "On the Brevity of Life", "On Anger", "On the Happy Life"],
+    companionThinkers: {
+      influences: ["Attalus", "Posidonius", "Zeno of Citium"],
+      influenced: ["Michel de Montaigne", "Arthur Schopenhauer", "Ralph Waldo Emerson"],
+      contrasts: ["Epicurus", "Diogenes the Cynic"],
+    },
+    faqs: [
+      {
+        question: "What are Seneca's most celebrated philosophical teachings?",
+        answer:
+          "Seneca taught that humans suffer far more in imagination than in reality, that time is our most precious non-renewable asset, and that practical wisdom lies in moderating destructive emotions.",
+      },
+      {
+        question: "How did Seneca reconcile wealth with Stoic detachment?",
+        answer:
+          "Seneca viewed wealth as a 'preferred indifferent'—acceptable to possess and use wisely, provided one remains morally unattached and prepared to lose it without anguish.",
+      },
+    ],
   },
   "friedrich nietzsche": {
     bio: `Friedrich Nietzsche (1844–1900) remains one of the most provocative and misunderstood figures in Western intellectual history. Resigning his professorship at Basel due to chronic debilitating illness, the German philosopher lived nomadically through the Swiss Alps and Italian coastlines, channeling intense suffering into incandescent aphorisms that shattered Enlightenment complacency.
@@ -162,6 +211,23 @@ Written with poetic fury and sharp psychological diagnostic precision, his works
       "Read the biography and philosophical ideas of Friedrich Nietzsche, author of Thus Spoke Zarathustra. Discover his quotes on Amor Fati and self-overcoming.",
     keyThemes: ["Amor Fati", "The Will to Power", "Self-Overcoming", "Critique of Nihilism"],
     notableWorks: ["Thus Spoke Zarathustra", "Beyond Good and Evil", "The Gay Science", "On the Genealogy of Morals"],
+    companionThinkers: {
+      influences: ["Arthur Schopenhauer", "Ralph Waldo Emerson", "Heraclitus"],
+      influenced: ["Albert Camus", "Jean-Paul Sartre", "Martin Heidegger"],
+      contrasts: ["Socrates", "Immanuel Kant"],
+    },
+    faqs: [
+      {
+        question: "What did Nietzsche mean by the 'death of God'?",
+        answer:
+          "Nietzsche diagnosed that Enlightenment rationality had undermined religious foundations for universal morality, leaving humanity vulnerable to nihilism unless individuals create life-affirming values.",
+      },
+      {
+        question: "What is Amor Fati in Nietzsche's philosophy?",
+        answer:
+          "Amor Fati ('love of fate') is the resolve not merely to endure suffering, but to embrace every single moment of existence as necessary and worthy of affirmation.",
+      },
+    ],
   },
   "ralph waldo emerson": {
     bio: `Ralph Waldo Emerson (1803–1882) stood as the intellectual father of American Transcendentalism, igniting a cultural declaration of intellectual independence from European traditions. Stepping down from a Boston Unitarian pulpit to become a traveling lecturer and essayist, Emerson championed the divine potential within every individual conscience and the sacred vitality of the natural world.
@@ -173,6 +239,23 @@ Emerson’s luminous prose shaped generations of thinkers—including his mentee
       "Discover Ralph Waldo Emerson, American essayist, poet, and champion of Transcendentalism. Explore his quotes on Self-Reliance, nature, and creative courage.",
     keyThemes: ["Radical Self-Reliance", "Individual Conscience", "Communion with Nature", "Transcendentalism"],
     notableWorks: ["Self-Reliance", "Nature", "The Over-Soul", "Circles"],
+    companionThinkers: {
+      influences: ["Plato", "Immanuel Kant", "Thomas Carlyle"],
+      influenced: ["Henry David Thoreau", "Walt Whitman", "Friedrich Nietzsche"],
+      contrasts: ["Thomas Hobbes", "John Locke"],
+    },
+    faqs: [
+      {
+        question: "What is the central message of Emerson's 'Self-Reliance'?",
+        answer:
+          "Emerson urged individuals to trust their intuition over inherited dogma and societal conformity, asserting that authentic self-trust is the true foundation of moral courage.",
+      },
+      {
+        question: "How did Emerson influence Henry David Thoreau?",
+        answer:
+          "Emerson served as a mentor and close friend to Thoreau, providing access to his land at Walden Pond and profoundly shaping Thoreau's philosophy of simple living and civil disobedience.",
+      },
+    ],
   },
   "mahatma gandhi": {
     bio: `Mohandas Karamchand Gandhi (1869–1948), revered globally as Mahatma ("Great Soul"), transformed ancient ethical concepts into a revolutionary political force. Trained as a barrister in London and radicalized by institutional racial injustice in South Africa, Gandhi returned to India to lead the national movement against British colonial rule through pure nonviolent resistance.
@@ -184,6 +267,23 @@ Gandhi’s philosophical legacy extended far beyond Indian independence, directl
       "Explore the life and philosophy of Mahatma Gandhi. Read his quotes on nonviolent resistance, Satyagraha, truth, and moral leadership in the modern world.",
     keyThemes: ["Satyagraha (Truth-Force)", "Ahimsa (Nonviolence)", "Ethical Leadership", "Simplicity & Self-Discipline"],
     notableWorks: ["The Story of My Experiments with Truth", "Hind Swaraj"],
+    companionThinkers: {
+      influences: ["Leo Tolstoy", "Henry David Thoreau", "John Ruskin"],
+      influenced: ["Martin Luther King Jr.", "Nelson Mandela", "Dalai Lama"],
+      contrasts: ["Niccolò Machiavelli", "Frantz Fanon"],
+    },
+    faqs: [
+      {
+        question: "What does Satyagraha mean in Gandhi's philosophy?",
+        answer:
+          "Satyagraha ('truth-force') is an active method of nonviolent civil resistance designed to convert an opponent's conscience through moral courage and willing sacrifice rather than coercion.",
+      },
+      {
+        question: "Which thinkers shaped Mahatma Gandhi's worldview?",
+        answer:
+          "Gandhi drew inspiration from ancient Indian Ahimsa, Leo Tolstoy's Christian pacifism, John Ruskin's ethics of labor in 'Unto This Last', and Henry David Thoreau's essay on Civil Disobedience.",
+      },
+    ],
   },
 }
 
@@ -229,6 +329,8 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
         seoDescription: record.seoDescription,
         keyThemes: record.keyThemes,
         notableWorks: record.notableWorks,
+        companionThinkers: record.companionThinkers,
+        faqs: record.faqs,
         provider: "curator",
         wordCount: record.bio.split(/\s+/).length,
       }
@@ -286,6 +388,26 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
     input.profession ? `, celebrated ${input.profession.toLowerCase()}` : ""
   }. Read curated thoughts on wisdom and life.`
 
+  const defaultFaqs: AuthorFaqItem[] = [
+    {
+      question: `What was ${input.name}'s central philosophy and legacy?`,
+      answer: `${input.name}${era ? ` ${era}` : ""} was an influential ${nationality}${role} whose writings and reflections examine fundamental questions of human integrity, resilience, and purposeful living.`,
+    },
+    {
+      question: `Why do readers study and cite quotes by ${input.name}?`,
+      answer: `The quotes of ${input.name} remain widely cited because they challenge conventional assumptions and provide timeless mental clarity for navigating adversity and personal conviction.`,
+    },
+  ]
+
+  const defaultCompanionThinkers: CompanionThinkers = {
+    influences:
+      input.nationality?.toLowerCase().includes("roman") || input.nationality?.toLowerCase().includes("greek")
+        ? ["Socrates", "Plato"]
+        : ["Classical Philosophy", "Enlightenment Thinkers"],
+    influenced: ["Modern Thinkers", "Contemporary Essayists"],
+    contrasts: ["Dogmatic Traditionalism", "Material Cynicism"],
+  }
+
   return {
     bio: sanitizeHumanBioText(fullBio),
     seoDescription: seoDescription.slice(0, 160),
@@ -304,6 +426,8 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
         : input.knownWorks && input.knownWorks.length > 0
         ? input.knownWorks
         : ["Collected Writings", "Selected Essays & Addresses"],
+    companionThinkers: defaultCompanionThinkers,
+    faqs: defaultFaqs,
     provider: "curator",
     wordCount: fullBio.split(/\s+/).length,
   }
@@ -396,16 +520,33 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 3. HUMAN VOICE & BURSTINESS:
    - Vary sentence lengths dynamically: mix short, punchy 5-to-9 word declarative statements with deeper analytical reflections.
    - Use concrete, sensory details and historical specificity over empty praise adjectives.
-4. NATURAL TOPICAL AUTHORITY (SEO):
+4. NATURAL TOPICAL AUTHORITY & KNOWLEDGE GRAPH (SEO):
    - The first sentence of Paragraph 1 must be a compelling, self-contained hook that immediately conveys who they are and why their thoughts endure.
    - Seamlessly embed seminal works and concepts without keyword stuffing.
+   - Highlight intellectual lineage: 2 to 3 figures who influenced them, 2 to 3 figures they influenced, and 1 to 2 contrasting philosophical voices.
+   - Formulate 2 high-intent FAQ pairs directly answering common questions searchers ask about this author's philosophy or legacy (concise, factual, authoritative 1-2 sentence answers).
 
 Output strictly valid JSON with this exact structure:
 {
   "bio": "Multi-paragraph narrative biography text separated by double newlines (\\n\\n)",
   "seoDescription": "Strictly 140 to 160 characters search engine snippet summarizing who they are and why readers search for their quotes",
   "keyThemes": ["3 to 5 core thematic phrases"],
-  "notableWorks": ["2 to 4 major publication or speech titles"]
+  "notableWorks": ["2 to 4 major publication or speech titles"],
+  "companionThinkers": {
+    "influences": ["2 to 3 historical figures or mentors who influenced them"],
+    "influenced": ["2 to 3 thinkers, writers, or leaders they directly influenced"],
+    "contrasts": ["1 to 2 thinkers with opposing or contrasting philosophical frameworks"]
+  },
+  "faqs": [
+    {
+      "question": "Clear, direct question searchers ask (e.g. What was X's main philosophy?)",
+      "answer": "Authoritative 1-2 sentence direct answer suitable for Google search answer snippet"
+    },
+    {
+      "question": "Second key question (e.g. about their most famous work or turning point)",
+      "answer": "Authoritative 1-2 sentence direct answer"
+    }
+  ]
 }`
 }
 
@@ -456,11 +597,64 @@ export async function generateAuthorBio(
                 ? parsed.notableWorks.slice(0, 6)
                 : fallback.notableWorks
 
+            const companionThinkers: CompanionThinkers = {
+              influences:
+                parsed.companionThinkers &&
+                Array.isArray(parsed.companionThinkers.influences) &&
+                parsed.companionThinkers.influences.length > 0
+                  ? parsed.companionThinkers.influences
+                      .map(String)
+                      .filter((s: string) => s.trim().length > 1)
+                      .slice(0, 4)
+                  : fallback.companionThinkers.influences,
+              influenced:
+                parsed.companionThinkers &&
+                Array.isArray(parsed.companionThinkers.influenced) &&
+                parsed.companionThinkers.influenced.length > 0
+                  ? parsed.companionThinkers.influenced
+                      .map(String)
+                      .filter((s: string) => s.trim().length > 1)
+                      .slice(0, 4)
+                  : fallback.companionThinkers.influenced,
+              contrasts:
+                parsed.companionThinkers &&
+                Array.isArray(parsed.companionThinkers.contrasts) &&
+                parsed.companionThinkers.contrasts.length > 0
+                  ? parsed.companionThinkers.contrasts
+                      .map(String)
+                      .filter((s: string) => s.trim().length > 1)
+                      .slice(0, 3)
+                  : fallback.companionThinkers.contrasts,
+            }
+
+            let faqs: AuthorFaqItem[] = fallback.faqs
+            if (Array.isArray(parsed.faqs) && parsed.faqs.length > 0) {
+              const parsedFaqs = parsed.faqs
+                .filter(
+                  (f: unknown) =>
+                    f && typeof f === "object" && "question" in f && "answer" in f
+                )
+                .map((f: { question: unknown; answer: unknown }) => ({
+                  question: String(f.question).trim(),
+                  answer: sanitizeHumanBioText(String(f.answer).trim()),
+                }))
+                .filter(
+                  (f: { question: string; answer: string }) =>
+                    f.question.length > 5 && f.answer.length > 10
+                )
+                .slice(0, 3)
+              if (parsedFaqs.length > 0) {
+                faqs = parsedFaqs
+              }
+            }
+
             return {
               bio,
               seoDescription,
               keyThemes,
               notableWorks,
+              companionThinkers,
+              faqs,
               provider: "gemini",
               wordCount: bio.split(/\s+/).length,
             }
@@ -473,6 +667,103 @@ export async function generateAuthorBio(
   }
 
   return generateCuratorAuthorBio(input)
+}
+
+function parseCompanionThinkersText(raw: string, fallback: CompanionThinkers): CompanionThinkers {
+  if (!raw.trim()) return fallback
+  try {
+    if (raw.trim().startsWith("{")) {
+      const parsed = JSON.parse(raw.trim())
+      if (parsed && typeof parsed === "object") {
+        return {
+          influences:
+            Array.isArray(parsed.influences) && parsed.influences.length > 0
+              ? parsed.influences.map(String).filter((s: string) => s.trim().length > 1).slice(0, 4)
+              : fallback.influences,
+          influenced:
+            Array.isArray(parsed.influenced) && parsed.influenced.length > 0
+              ? parsed.influenced.map(String).filter((s: string) => s.trim().length > 1).slice(0, 4)
+              : fallback.influenced,
+          contrasts:
+            Array.isArray(parsed.contrasts) && parsed.contrasts.length > 0
+              ? parsed.contrasts.map(String).filter((s: string) => s.trim().length > 1).slice(0, 3)
+              : fallback.contrasts,
+        }
+      }
+    }
+  } catch {
+    // fallback to text lines
+  }
+
+  const lines = raw.split("\n")
+  let influences = [...fallback.influences]
+  let influenced = [...fallback.influenced]
+  let contrasts = [...fallback.contrasts]
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (/^influences?\s*:/i.test(trimmed)) {
+      const items = trimmed
+        .replace(/^influences?\s*:/i, "")
+        .split(/[,;]+/)
+        .map((s) => s.trim().replace(/^[-*•#\s]+/, ""))
+        .filter((s) => s.length > 1)
+      if (items.length > 0) influences = items.slice(0, 4)
+    } else if (/^influenced\s*:/i.test(trimmed)) {
+      const items = trimmed
+        .replace(/^influenced\s*:/i, "")
+        .split(/[,;]+/)
+        .map((s) => s.trim().replace(/^[-*•#\s]+/, ""))
+        .filter((s) => s.length > 1)
+      if (items.length > 0) influenced = items.slice(0, 4)
+    } else if (/^contrasts?\s*:/i.test(trimmed)) {
+      const items = trimmed
+        .replace(/^contrasts?\s*:/i, "")
+        .split(/[,;]+/)
+        .map((s) => s.trim().replace(/^[-*•#\s]+/, ""))
+        .filter((s) => s.length > 1)
+      if (items.length > 0) contrasts = items.slice(0, 3)
+    }
+  }
+
+  return { influences, influenced, contrasts }
+}
+
+function parseFaqsText(raw: string, fallback: AuthorFaqItem[]): AuthorFaqItem[] {
+  if (!raw.trim()) return fallback
+  try {
+    if (raw.trim().startsWith("[")) {
+      const parsed = JSON.parse(raw.trim())
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const items = parsed
+          .filter((f) => f && typeof f === "object" && f.question && f.answer)
+          .map((f) => ({
+            question: String(f.question).trim(),
+            answer: sanitizeHumanBioText(String(f.answer).trim()),
+          }))
+          .filter((f) => f.question.length > 5 && f.answer.length > 10)
+        if (items.length > 0) return items.slice(0, 3)
+      }
+    }
+  } catch {
+    // text parsing
+  }
+
+  const faqs: AuthorFaqItem[] = []
+  const qaBlocks = raw.split(/(?:^|\n)(?=Q\d*[:?.-]|\*\*Q\d*[:?.-]|\bQuestion\d*[:?.-])/i)
+  for (const block of qaBlocks) {
+    const qMatch = block.match(/(?:Q\d*[:?.-]|\*\*Q\d*[:?.-]|\bQuestion\d*[:?.-])\s*([^\n]+)/i)
+    const aMatch = block.match(/(?:A\d*[:?.-]|\*\*A\d*[:?.-]|\bAnswer\d*[:?.-])\s*([\s\S]+)/i)
+    if (qMatch && aMatch) {
+      const question = qMatch[1].trim().replace(/\*\*$/, "").trim()
+      const answer = sanitizeHumanBioText(aMatch[1].trim().replace(/^[-*•\s]+/, ""))
+      if (question.length > 5 && answer.length > 10) {
+        faqs.push({ question, answer })
+      }
+    }
+  }
+
+  return faqs.length > 0 ? faqs.slice(0, 3) : fallback
 }
 
 /**
@@ -542,6 +833,8 @@ export function streamAuthorBio(
             seoDescription: result.seoDescription,
             keyThemes: result.keyThemes,
             notableWorks: result.notableWorks,
+            companionThinkers: result.companionThinkers,
+            faqs: result.faqs,
             provider: "curator",
             wordCount: accumulated.split(/\s+/).length,
           })
@@ -603,7 +896,16 @@ Format your response strictly using these exact delimiters:
 <<<KEY_THEMES>>>
 (Comma-separated list of 3-5 core themes/concepts)
 <<<NOTABLE_WORKS>>>
-(Comma-separated list of 2-4 major publication, essay, or speech titles)`
+(Comma-separated list of 2-4 major publication, essay, or speech titles)
+<<<COMPANION_THINKERS>>>
+INFLUENCES: Thinker 1, Thinker 2
+INFLUENCED: Thinker 3, Thinker 4
+CONTRASTS: Thinker 5, Thinker 6
+<<<FAQS>>>
+Q: What was their core philosophy?
+A: 1-2 sentence authoritative answer.
+Q: Why do their quotes endure?
+A: 1-2 sentence authoritative answer.`
 
         const timeoutController = new AbortController()
         const timeoutId = setTimeout(() => timeoutController.abort(), 30000)
@@ -634,14 +936,17 @@ Format your response strictly using these exact delimiters:
         let sseBuffer = ""
         let pendingStreamBuffer = ""
 
-        let currentSection: "BIO" | "SEO" | "THEMES" | "WORKS" = "BIO"
+        let currentSection: "BIO" | "SEO" | "THEMES" | "WORKS" | "COMPANIONS" | "FAQS" = "BIO"
         let accumulatedBio = ""
         let accumulatedSeo = ""
         let accumulatedThemes = ""
         let accumulatedWorks = ""
+        let accumulatedCompanions = ""
+        let accumulatedFaqs = ""
         let hasBioCompleted = false
 
-        const tagPattern = /<<<\s*(BIO|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS)\s*>>>/i
+        const tagPattern =
+          /<<<\s*(BIO|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS|COMPANION(?:_|\s+)THINKERS|FAQS)\s*>>>/i
 
         while (true) {
           if (options?.signal?.aborted || isClosed) break
@@ -707,6 +1012,10 @@ Format your response strictly using these exact delimiters:
                   accumulatedThemes += textBefore
                 } else if (currentSection === "WORKS") {
                   accumulatedWorks += textBefore
+                } else if (currentSection === "COMPANIONS") {
+                  accumulatedCompanions += textBefore
+                } else if (currentSection === "FAQS") {
+                  accumulatedFaqs += textBefore
                 }
               }
 
@@ -724,6 +1033,10 @@ Format your response strictly using these exact delimiters:
                 currentSection = "THEMES"
               } else if (rawTag.includes("WORK")) {
                 currentSection = "WORKS"
+              } else if (rawTag.includes("COMPANION")) {
+                currentSection = "COMPANIONS"
+              } else if (rawTag.includes("FAQ")) {
+                currentSection = "FAQS"
               }
 
               pendingStreamBuffer = pendingStreamBuffer.slice(match.index + match[0].length)
@@ -752,10 +1065,14 @@ Format your response strictly using these exact delimiters:
                 if (currentSection === "SEO") accumulatedSeo += safeToAppend
                 else if (currentSection === "THEMES") accumulatedThemes += safeToAppend
                 else if (currentSection === "WORKS") accumulatedWorks += safeToAppend
+                else if (currentSection === "COMPANIONS") accumulatedCompanions += safeToAppend
+                else if (currentSection === "FAQS") accumulatedFaqs += safeToAppend
               } else if (pendingStreamBuffer && lastLtIndex === -1) {
                 if (currentSection === "SEO") accumulatedSeo += pendingStreamBuffer
                 else if (currentSection === "THEMES") accumulatedThemes += pendingStreamBuffer
                 else if (currentSection === "WORKS") accumulatedWorks += pendingStreamBuffer
+                else if (currentSection === "COMPANIONS") accumulatedCompanions += pendingStreamBuffer
+                else if (currentSection === "FAQS") accumulatedFaqs += pendingStreamBuffer
                 pendingStreamBuffer = ""
               }
             }
@@ -773,6 +1090,10 @@ Format your response strictly using these exact delimiters:
             accumulatedThemes += pendingStreamBuffer
           } else if (currentSection === "WORKS") {
             accumulatedWorks += pendingStreamBuffer
+          } else if (currentSection === "COMPANIONS") {
+            accumulatedCompanions += pendingStreamBuffer
+          } else if (currentSection === "FAQS") {
+            accumulatedFaqs += pendingStreamBuffer
           }
           pendingStreamBuffer = ""
         }
@@ -796,19 +1117,32 @@ Format your response strictly using these exact delimiters:
           .map((w) => w.trim().replace(/^[-*•#\s]+/, "").replace(/^["']|["']$/g, ""))
           .filter((w) => w.length > 2 && w.length < 80)
 
-        const finalThemes = parsedKeyThemes.length > 0 ? parsedKeyThemes.slice(0, 6) : fallback.keyThemes
-        const finalWorks = parsedNotableWorks.length > 0 ? parsedNotableWorks.slice(0, 6) : fallback.notableWorks
+        const finalThemes =
+          parsedKeyThemes.length > 0 ? parsedKeyThemes.slice(0, 6) : fallback.keyThemes
+        const finalWorks =
+          parsedNotableWorks.length > 0 ? parsedNotableWorks.slice(0, 6) : fallback.notableWorks
         const finalSeo =
           (accumulatedSeo.trim().length >= 30 ? accumulatedSeo.trim().slice(0, 160) : null) ||
           fallback.seoDescription ||
           seoSnippet
 
-        sendEvent("complete_bio", { bio: cleanBio })
+        const finalCompanionThinkers = parseCompanionThinkersText(
+          accumulatedCompanions,
+          fallback.companionThinkers
+        )
+        const finalFaqs = parseFaqsText(accumulatedFaqs, fallback.faqs)
+
+        if (!hasBioCompleted) {
+          hasBioCompleted = true
+          sendEvent("complete_bio", { bio: cleanBio })
+        }
         sendEvent("done", {
           bio: cleanBio,
           seoDescription: finalSeo,
           keyThemes: finalThemes,
           notableWorks: finalWorks,
+          companionThinkers: finalCompanionThinkers,
+          faqs: finalFaqs,
           provider: "gemini",
           wordCount: cleanBio.split(/\s+/).length,
         })

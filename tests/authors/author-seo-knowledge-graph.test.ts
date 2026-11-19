@@ -70,6 +70,43 @@ describe("🔍 SEO & Knowledge Graph Entity Optimization", () => {
       assert.ok(desc.includes("Meditations"), "Should retain anchor text")
       assert.ok(desc.includes("Stoic resilience"), "Should retain anchor text")
     })
+
+    it("skips blockquote callouts and uses first narrative prose paragraph for meta description", () => {
+      const bioWithCallouts = `> **Core Worldview**: *The tranquility of life depends not on external circumstance, but on our disciplined judgment of it.*
+>
+> **Defining Crucible**: *Forged during eight grueling years on the frozen Danube frontier confronting the plague.*
+
+Marcus Aurelius (121–180 CE) ruled Rome at its imperial zenith, yet his greatest struggle was the quiet war within his own conscience.`
+
+      const desc = extractAuthorMetaDescription({
+        name: "Marcus Aurelius",
+        profession: "Roman Emperor & Stoic Philosopher",
+        bio: bioWithCallouts,
+      })
+
+      assert.ok(!desc.includes(">"), "Should not contain blockquote '>' character")
+      assert.ok(!desc.includes("**"), "Should not contain markdown bold '**' asterisks")
+      assert.ok(!desc.includes("Core Worldview"), "Should skip callout label and use narrative paragraph")
+      assert.ok(desc.includes("Marcus Aurelius (121–180 CE) ruled Rome at its imperial zenith"), "Should use narrative hook")
+      assert.ok(desc.length <= 160, `Length <= 160 chars, got ${desc.length}`)
+    })
+
+    it("cleanly strips raw markdown characters when bio contains only blockquote callouts", () => {
+      const calloutOnlyBio = `> **Core Worldview**: *The tranquility of life depends not on external circumstance, but on our disciplined judgment of it.*`
+
+      const desc = extractAuthorMetaDescription({
+        name: "Marcus Aurelius",
+        profession: "Stoic Philosopher",
+        bio: calloutOnlyBio,
+      })
+
+      assert.ok(!desc.includes(">"), "Should strip '>' blockquote prefix")
+      assert.ok(!desc.includes("**"), "Should strip '**' bold markers")
+      assert.ok(!desc.includes("*"), "Should strip '*' italic markers")
+      assert.ok(!desc.toLowerCase().startsWith("core worldview"), "Should strip callout label")
+      assert.ok(desc.includes("The tranquility of life depends not on external circumstance"), "Should preserve clean thesis text")
+      assert.ok(desc.length <= 160, `Length <= 160 chars, got ${desc.length}`)
+    })
   })
 
   describe("generateAuthorPageTitle", () => {

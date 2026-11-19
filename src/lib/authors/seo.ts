@@ -60,9 +60,26 @@ export function extractAuthorMetaDescription(author: {
   const roleClause = cleanedRole ? `, ${cleanedRole}` : ""
 
   if (author.bio && author.bio.trim().length > 20) {
-    const rawP1 = author.bio.split("\n\n")[0].trim()
-    // Strip markdown links for clean plain text SERP output
-    const p1 = rawP1.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim()
+    const rawParagraphs = author.bio
+      .split(/\n\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+
+    // Skip blockquote callouts (e.g. "> **Core Worldview**...") to find the first narrative prose paragraph
+    const narrativeParagraph = rawParagraphs.find((p) => !p.startsWith(">"))
+    const targetParagraph = narrativeParagraph || rawParagraphs[0] || ""
+
+    // Strip markdown formatting for clean plain text SERP output
+    const p1 = targetParagraph
+      .replace(/^>+\s*/gm, "")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/_([^_]+)_/g, "$1")
+      .replace(/^(?:Core Worldview|Defining Crucible)[:\-]?\s*/i, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim()
 
     // 1. If paragraph 1 itself is already <= 160 characters and has closing punctuation
     if (p1.length >= 70 && p1.length <= 160 && /[.!?]$/.test(p1)) {

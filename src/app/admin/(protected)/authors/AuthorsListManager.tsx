@@ -4,8 +4,15 @@ import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
 import { formatLifespan } from "@/lib/formatters"
-import { FilterToolbar, AdminEntityCard, AdminEntityCountBadge } from "@/components/admin"
+import {
+  FilterToolbar,
+  AdminEntityCard,
+  AdminEntityCountBadge,
+  AdminBulkActionBar,
+} from "@/components/admin"
 import { Select, EmptyState, Pagination } from "@/components/ui"
+import { AuthorBioGeneratorModal } from "@/components/admin/authors/AuthorBioGeneratorModal"
+import { BatchBioGeneratorModal } from "@/components/admin/authors/BatchBioGeneratorModal"
 
 const PAGE_SIZE = 24
 
@@ -18,6 +25,8 @@ type AuthorItem = {
   profession: string | null
   nationality: string | null
   quoteCount: number
+  hasBio?: boolean
+  bio?: string | null
   createdAt: string
 }
 
@@ -33,6 +42,7 @@ type SortOption =
 
 type QuoteFilter = "all" | "with-quotes" | "without-quotes"
 type LifeStatusFilter = "all" | "living" | "deceased" | "unknown"
+type BioFilter = "all" | "missing-bio" | "has-bio"
 
 export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
   const router = useRouter()
@@ -42,7 +52,11 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
   const [lifeStatusFilter, setLifeStatusFilter] = useState<LifeStatusFilter>("all")
   const [nationalityFilter, setNationalityFilter] = useState("all")
   const [professionFilter, setProfessionFilter] = useState("all")
+  const [bioFilter, setBioFilter] = useState<BioFilter>("all")
   const [page, setPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBatchBioOpen, setIsBatchBioOpen] = useState(false)
+  const [studioAuthor, setStudioAuthor] = useState<AuthorItem | null>(null)
 
   const nationalityOptions = useMemo(
     () =>
@@ -71,6 +85,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     lifeStatusFilter !== "all" ||
     nationalityFilter !== "all" ||
     professionFilter !== "all" ||
+    bioFilter !== "all" ||
     search.trim().length > 0
 
   const visibleAuthors = useMemo(() => {
@@ -110,12 +125,18 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
       const matchesProfession =
         professionFilter === "all" || (author.profession?.trim() ?? "") === professionFilter
 
+      const matchesBioFilter =
+        bioFilter === "all" ||
+        (bioFilter === "missing-bio" && !author.hasBio) ||
+        (bioFilter === "has-bio" && Boolean(author.hasBio))
+
       return (
         matchesSearch &&
         matchesQuoteFilter &&
         matchesLifeStatus &&
         matchesNationality &&
-        matchesProfession
+        matchesProfession &&
+        matchesBioFilter
       )
     })
 
@@ -145,7 +166,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
-  }, [authors, lifeStatusFilter, nationalityFilter, professionFilter, quoteFilter, search, sortBy])
+  }, [authors, lifeStatusFilter, nationalityFilter, professionFilter, quoteFilter, bioFilter, search, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(visibleAuthors.length / PAGE_SIZE))
   const paginatedAuthors = useMemo(() => {
@@ -159,9 +180,44 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     setLifeStatusFilter("all")
     setNationalityFilter("all")
     setProfessionFilter("all")
+    setBioFilter("all")
     setSortBy("newest")
     setPage(1)
   }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  function handleSelectMissingBios() {
+    const missing = visibleAuthors.filter((a) => !a.hasBio).map((a) => a.id)
+    setSelectedIds(missing)
+  }
+
+  function handleSelectAllVisible() {
+    setSelectedIds(visibleAuthors.map((a) => a.id))
+  }
+
+  async function handleApplyStudioBio(newBio: string) {
+    if (!studioAuthor) return
+    try {
+      await fetch(`/api/admin/authors/${studioAuthor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio: newBio }),
+      })
+      router.refresh()
+    } catch {
+      // Ignore
+    }
+  }
+
+  const missingBioCount = useMemo(
+    () => visibleAuthors.filter((a) => !a.hasBio).length,
+    [visibleAuthors]
+  )
 
   const sortOptions = [
     { value: "newest", label: "Arrange: Newest first" },
@@ -176,6 +232,40 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
 
   return (
     <div className="space-y-4">
+      {/* Sticky Bulk Action Bar */}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.length}
+        entityLabel="author"
+        onDeselectAll={() => setSelectedIds([])}
+      >
+        <button
+          type="button"
+          onClick={() => setIsBatchBioOpen(true)}
+          className="bg-violet-600 text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+        >
+          <span>⚡</span>
+          <span>Batch Generate Bios ({selectedIds.length})</span>
+        </button>
+
+        {missingBioCount > 0 && (
+          <button
+            type="button"
+            onClick={handleSelectMissingBios}
+            className="bg-stone-800 text-stone-200 text-xs px-2.5 py-1.5 rounded-lg hover:bg-stone-700 transition cursor-pointer"
+          >
+            Select All Missing Bios ({missingBioCount})
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSelectAllVisible}
+          className="bg-stone-800 text-stone-200 text-xs px-2.5 py-1.5 rounded-lg hover:bg-stone-700 transition cursor-pointer"
+        >
+          Select All Visible ({visibleAuthors.length})
+        </button>
+      </AdminBulkActionBar>
+
       <FilterToolbar
         searchValue={search}
         onSearchChange={(value) => {
@@ -206,6 +296,19 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
                 { value: "all", label: "Quotes: All authors" },
                 { value: "with-quotes", label: "Quotes: Has quotes" },
                 { value: "without-quotes", label: "Quotes: No quotes" },
+              ]}
+            />
+
+            <Select
+              value={bioFilter}
+              onChange={(event) => {
+                setBioFilter(event.target.value as BioFilter)
+                setPage(1)
+              }}
+              options={[
+                { value: "all", label: "Bio: All authors" },
+                { value: "missing-bio", label: "Bio: Missing bio" },
+                { value: "has-bio", label: "Bio: Has biography" },
               ]}
             />
 
@@ -270,34 +373,59 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
                   variant="grid"
                   title={author.name}
                   subtitle={subtitle || undefined}
-                  badge={<AdminEntityCountBadge count={author.quoteCount} />}
+                  selected={selectedIds.includes(author.id)}
+                  onSelect={() => toggleSelect(author.id)}
+                  badge={
+                    <div className="flex items-center gap-1.5">
+                      {!author.hasBio && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80">
+                          No Bio
+                        </span>
+                      )}
+                      <AdminEntityCountBadge count={author.quoteCount} />
+                    </div>
+                  }
                   meta={
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center justify-between w-full pt-1">
                       <span className="text-[11px] text-stone-400">
                         Added {formatDateInAppTimeZone(author.createdAt)}
                       </span>
-                      {author.quoteCount > 0 && (
-                        <span
-                          role="button"
-                          tabIndex={0}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
-                            router.push(`/admin/quotes?author=${author.slug}`)
+                            setStudioAuthor(author)
                           }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
+                          className="text-[11px] font-medium text-violet-700 hover:text-violet-900 bg-violet-50 hover:bg-violet-100 border border-violet-200/60 px-2 py-0.5 rounded-md transition cursor-pointer"
+                          title="Open AI Bio Studio"
+                        >
+                          ✨ Bio Studio
+                        </button>
+                        {author.quoteCount > 0 && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
                               router.push(`/admin/quotes?author=${author.slug}`)
-                            }
-                          }}
-                          className="text-xs font-semibold text-stone-700 hover:text-black hover:underline inline-flex items-center gap-0.5 cursor-pointer"
-                          title={`View ${author.quoteCount} quotes by ${author.name}`}
-                        >
-                          View quotes &rarr;
-                        </span>
-                      )}
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                router.push(`/admin/quotes?author=${author.slug}`)
+                              }
+                            }}
+                            className="text-xs font-semibold text-stone-700 hover:text-black hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                            title={`View ${author.quoteCount} quotes by ${author.name}`}
+                          >
+                            Quotes &rarr;
+                          </span>
+                        )}
+                      </div>
                     </div>
                   }
                 />
@@ -322,6 +450,38 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
           title="No authors match your search"
           description="Try clearing filters or searching for a different keyword."
           variant="stone"
+        />
+      )}
+
+      {/* Batch Bio Generator Modal */}
+      <BatchBioGeneratorModal
+        isOpen={isBatchBioOpen}
+        onClose={() => {
+          setIsBatchBioOpen(false)
+          setSelectedIds([])
+        }}
+        authorIds={selectedIds}
+        authors={authors}
+        onComplete={() => {
+          router.refresh()
+        }}
+      />
+
+      {/* Individual Author AI Bio Studio Modal */}
+      {studioAuthor && (
+        <AuthorBioGeneratorModal
+          isOpen={Boolean(studioAuthor)}
+          onClose={() => setStudioAuthor(null)}
+          author={{
+            id: studioAuthor.id,
+            name: studioAuthor.name,
+            profession: studioAuthor.profession,
+            nationality: studioAuthor.nationality,
+            birthYear: studioAuthor.birthYear,
+            deathYear: studioAuthor.deathYear,
+            currentBio: studioAuthor.bio,
+          }}
+          onApplyBio={handleApplyStudioBio}
         />
       )}
     </div>

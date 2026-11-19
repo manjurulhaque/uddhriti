@@ -7,6 +7,7 @@ import { importAuthorFromWikipediaOrWikidata } from "@/lib/wikimedia/authorImpor
 import {
   generateAuthorBio,
   streamAuthorBio,
+  regenerateAuthorBioParagraph,
   type AuthorBioInput,
   type BioTone,
   type BioLength,
@@ -37,6 +38,9 @@ export async function POST(req: Request) {
     wikipediaUrl,
     wikidataId,
     existingBio,
+    currentBio,
+    paragraphIndex,
+    instruction,
     tone,
     perspective,
     length,
@@ -159,6 +163,40 @@ export async function POST(req: Request) {
 
   if (!bioInput.name) {
     return NextResponse.json({ error: "Author name is required to generate biography" }, { status: 400 })
+  }
+
+  // Handle single-paragraph interactive regeneration
+  if (typeof paragraphIndex === "number" && Number.isInteger(paragraphIndex)) {
+    const fullBio =
+      typeof currentBio === "string" && currentBio.trim()
+        ? currentBio.trim()
+        : typeof existingBio === "string"
+        ? existingBio.trim()
+        : ""
+
+    if (!fullBio) {
+      return NextResponse.json(
+        { error: "currentBio is required to regenerate a specific paragraph" },
+        { status: 400 }
+      )
+    }
+
+    const regenResult = await regenerateAuthorBioParagraph({
+      authorName: bioInput.name,
+      profession: bioInput.profession,
+      paragraphIndex,
+      currentBio: fullBio,
+      instruction: typeof instruction === "string" ? instruction.trim() : undefined,
+      tone: bioInput.tone,
+      perspective: bioInput.perspective,
+      primaryQuote: bioInput.primaryQuote,
+      linkedWorks: bioInput.linkedWorks,
+    })
+
+    return NextResponse.json({
+      success: true,
+      ...regenResult,
+    })
   }
 
   const wantsStream =

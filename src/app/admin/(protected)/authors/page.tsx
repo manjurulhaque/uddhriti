@@ -19,6 +19,7 @@ export default async function AuthorsPage() {
       profession: true,
       nationality: true,
       quoteCount: true,
+      bio: true,
       createdAt: true,
     },
   })
@@ -32,6 +33,8 @@ export default async function AuthorsPage() {
     profession: author.profession,
     nationality: author.nationality,
     quoteCount: author.quoteCount,
+    hasBio: Boolean(author.bio && author.bio.trim().length > 0),
+    bio: author.bio,
     createdAt: author.createdAt.toISOString(),
   }))
 

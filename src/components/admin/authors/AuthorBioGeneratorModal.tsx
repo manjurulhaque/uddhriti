@@ -1,8 +1,9 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useMemo } from "react"
 import { Button, Badge } from "@/components/ui"
 import { CloseIcon, CopyIcon, CheckIcon } from "@/components/ui/icons"
+import { computeWordDiff, type DiffPart } from "@/lib/diff"
 import type { BioTone, BioLength, BioPerspective } from "@/lib/authors/bio-generator"
 
 export interface AuthorBioGeneratorModalProps {
@@ -27,6 +28,48 @@ export function AuthorBioGeneratorModal(props: AuthorBioGeneratorModalProps) {
   return <AuthorBioModalInner {...props} />
 }
 
+function renderDiffInline(parts: DiffPart[], mode: "orig" | "prop") {
+  return parts.map((part, idx) => {
+    if (mode === "orig") {
+      if (part.type === "added") return null
+      if (part.type === "removed") {
+        return (
+          <mark
+            key={idx}
+            className="bg-rose-100 text-rose-900 line-through rounded px-0.5 py-0.2 mx-0.5"
+          >
+            {part.value}
+          </mark>
+        )
+      }
+      return <span key={idx}>{part.value}</span>
+    }
+
+    if (mode === "prop") {
+      if (part.type === "removed") return null
+      if (part.type === "added") {
+        return (
+          <mark
+            key={idx}
+            className="bg-emerald-100 text-emerald-950 font-medium rounded px-0.5 py-0.2 mx-0.5"
+          >
+            {part.value}
+          </mark>
+        )
+      }
+      return <span key={idx}>{part.value}</span>
+    }
+
+    return <span key={idx}>{part.value}</span>
+  })
+}
+
+const PARAGRAPH_ROLES = [
+  { index: 0, label: "Hook & Core Dilemma", desc: "Introductory thesis, intellectual dilemma, and historical context" },
+  { index: 1, label: "Philosophy, Quotes & Works", desc: "Seminal writings, anchored quote, and moral framework" },
+  { index: 2, label: "Modern Resonance & Challenge", desc: "Relevance today and lasting challenge to the reader" },
+]
+
 function AuthorBioModalInner({
   onClose,
   author,
@@ -44,6 +87,13 @@ function AuthorBioModalInner({
   const [error, setError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
   const [isSeoCopied, setIsSeoCopied] = useState(false)
+
+  // Pillar 4 Admin UX State: Diff / Merge & Paragraph Regeneration
+  const [viewMode, setViewMode] = useState<"editor" | "diff">("editor")
+  const [proposedBioSnapshot, setProposedBioSnapshot] = useState(author.currentBio || "")
+  const [editingParagraphIndex, setEditingParagraphIndex] = useState<number | null>(null)
+  const [regeneratingParagraphIndex, setRegeneratingParagraphIndex] = useState<number | null>(null)
+  const [paragraphInstruction, setParagraphInstruction] = useState("")
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -149,8 +199,12 @@ function AuthorBioModalInner({
                 setGeneratedBio((prev) => prev + data.text)
               } else if (currentEvent === "complete_bio") {
                 setGeneratedBio(data.bio)
+                setProposedBioSnapshot(data.bio)
               } else if (currentEvent === "done") {
-                if (data.bio) setGeneratedBio(data.bio)
+                if (data.bio) {
+                  setGeneratedBio(data.bio)
+                  setProposedBioSnapshot(data.bio)
+                }
                 if (data.seoDescription) setSeoDescription(data.seoDescription)
                 if (Array.isArray(data.keyThemes)) setKeyThemes(data.keyThemes)
                 if (Array.isArray(data.notableWorks)) setNotableWorks(data.notableWorks)
@@ -171,6 +225,122 @@ function AuthorBioModalInner({
       abortControllerRef.current = null
     }
   }
+
+  async function handleRegenerateParagraph(pIndex: number, instructionText: string) {
+    if (!author.name.trim()) return
+
+    setRegeneratingParagraphIndex(pIndex)
+    setError(null)
+
+    try {
+      const res = await fetch("/api/admin/authors/generate-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          authorId: author.id,
+          name: author.name.trim(),
+          profession: author.profession,
+          nationality: author.nationality,
+          birthYear: author.birthYear ? Number(author.birthYear) : undefined,
+          deathYear: author.deathYear ? Number(author.deathYear) : undefined,
+          wikipediaUrl: author.wikipediaUrl,
+          wikidataId: author.wikidataId,
+          paragraphIndex: pIndex,
+          currentBio: generatedBio,
+          instruction: instructionText,
+          tone,
+          perspective,
+        }),
+      })
+
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to regenerate paragraph")
+      }
+
+      if (data.fullBio) {
+        setGeneratedBio(data.fullBio)
+        setProposedBioSnapshot(data.fullBio)
+      } else if (data.paragraph) {
+        const paras = generatedBio.split(/\n\n+/).filter(Boolean)
+        paras[pIndex] = data.paragraph
+        const joined = paras.join("\n\n")
+        setGeneratedBio(joined)
+        setProposedBioSnapshot(joined)
+      }
+      setEditingParagraphIndex(null)
+      setParagraphInstruction("")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to regenerate paragraph")
+    } finally {
+      setRegeneratingParagraphIndex(null)
+    }
+  }
+
+  function handleKeepOriginalParagraph(pIndex: number) {
+    const origParas = (author.currentBio || "").split(/\n\n+/).filter(Boolean)
+    const currentParas = generatedBio.split(/\n\n+/).filter(Boolean)
+    if (origParas[pIndex]) {
+      currentParas[pIndex] = origParas[pIndex]
+      setGeneratedBio(currentParas.join("\n\n"))
+    }
+  }
+
+  function handleUseProposedParagraph(pIndex: number, proposedText: string) {
+    const currentParas = generatedBio.split(/\n\n+/).filter(Boolean)
+    currentParas[pIndex] = proposedText
+    setGeneratedBio(currentParas.join("\n\n"))
+  }
+
+  function handleAcceptAllProposed() {
+    if (proposedBioSnapshot) {
+      setGeneratedBio(proposedBioSnapshot)
+    }
+  }
+
+  function handleRevertAllToOriginal() {
+    if (author.currentBio) {
+      setGeneratedBio(author.currentBio)
+    }
+  }
+
+  const hasOriginalBio = Boolean(author.currentBio && author.currentBio.trim().length > 0)
+  const origParas = useMemo(
+    () => (author.currentBio || "").split(/\n\n+/).filter(Boolean),
+    [author.currentBio]
+  )
+  const proposedParas = useMemo(
+    () => (proposedBioSnapshot || generatedBio).split(/\n\n+/).filter(Boolean),
+    [proposedBioSnapshot, generatedBio]
+  )
+  const diffParagraphCount = Math.max(origParas.length, proposedParas.length, 1)
+
+  const diffParagraphs = useMemo(() => {
+    const list = []
+    for (let i = 0; i < diffParagraphCount; i++) {
+      const orig = origParas[i] || ""
+      const prop = proposedParas[i] || ""
+      const diffParts = computeWordDiff(orig, prop)
+      const role = PARAGRAPH_ROLES[i] || {
+        index: i,
+        label: `Paragraph ${i + 1}`,
+        desc: "Narrative paragraph",
+      }
+      list.push({
+        index: i,
+        roleLabel: role.label,
+        origText: orig,
+        proposedText: prop,
+        diffParts,
+      })
+    }
+    return list
+  }, [diffParagraphCount, origParas, proposedParas])
+
+  const paragraphs = useMemo(
+    () => generatedBio.split(/\n\n+/).filter(Boolean),
+    [generatedBio]
+  )
 
   function handleCopy() {
     if (!generatedBio) return
@@ -215,12 +385,12 @@ function AuthorBioModalInner({
       {/* Modal Dialog Card */}
       <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-stone-200/90 overflow-hidden flex flex-col max-h-[92vh] font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200 bg-gradient-to-r from-stone-50 via-white to-violet-50/30">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-gradient-to-r from-stone-50 via-white to-violet-50/30">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-lg">✨</span>
               <h2 id="author-bio-studio-title" className="text-base font-bold text-stone-900 tracking-tight">
-                AI Author Bio Studio
+                AI Author Bio Studio: {author.name}
               </h2>
               <Badge variant="neutral" size="xs">
                 Humanized &amp; SEO-Optimized
@@ -236,15 +406,48 @@ function AuthorBioModalInner({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isStreaming}
-            className="rounded-full p-1.5 text-stone-400 hover:bg-stone-200/70 hover:text-stone-700 transition cursor-pointer"
-            aria-label="Close"
-          >
-            <CloseIcon className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {/* View Mode Toggle: Studio Editor vs Diff/Merge */}
+            {hasOriginalBio && (
+              <div className="inline-flex bg-stone-100 p-0.5 rounded-lg border border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("editor")}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                    viewMode === "editor"
+                      ? "bg-white text-stone-900 shadow-2xs font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  ✍️ Studio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("diff")}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === "diff"
+                      ? "bg-white text-stone-900 shadow-2xs font-semibold"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  <span>⚖️ Diff &amp; Merge</span>
+                  {generatedBio !== author.currentBio && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-600" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isStreaming}
+              className="rounded-full p-1.5 text-stone-400 hover:bg-stone-200/70 hover:text-stone-700 transition cursor-pointer"
+              aria-label="Close"
+            >
+              <CloseIcon className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Toolbar: Tone, Length & Perspective Selectors */}
@@ -434,141 +637,366 @@ function AuthorBioModalInner({
             </div>
           )}
 
-          {/* Biography Textarea with Live Streaming Feedback */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-stone-800">
-                  Narrative Biography
-                </label>
-                {isStreaming && (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-violet-700 animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-ping" />
-                    Streaming live tokens...
+          {viewMode === "diff" && hasOriginalBio ? (
+            /* Side-by-Side Diff & Merge View */
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-stone-100/70 border border-stone-200 rounded-xl text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-stone-700">Diff Comparison:</span>
+                  <span className="text-stone-500 font-mono text-[11px]">
+                    Original ({author.currentBio?.split(/\s+/).length || 0} words) vs Proposed ({(proposedBioSnapshot || generatedBio).split(/\s+/).length} words)
                   </span>
-                )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAcceptAllProposed}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition cursor-pointer text-xs shadow-2xs"
+                  >
+                    Accept All Proposed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRevertAllToOriginal}
+                    className="px-2.5 py-1 rounded-lg bg-stone-200 text-stone-700 font-medium hover:bg-stone-300 transition cursor-pointer text-xs"
+                  >
+                    Revert to Original
+                  </button>
+                </div>
               </div>
-              <span className="text-[11px] font-mono text-stone-400">
-                {wordCount} words • {generatedBio.length} characters
-              </span>
+
+              {/* Paragraph Comparison Cards */}
+              <div className="space-y-4">
+                {diffParagraphs.map((dp) => (
+                  <div key={dp.index} className="rounded-xl border border-stone-200 bg-white p-4 space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-stone-100 text-stone-700">
+                          P{dp.index + 1}
+                        </span>
+                        <span className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                          {dp.roleLabel}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleKeepOriginalParagraph(dp.index)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+                        >
+                          Keep Original P{dp.index + 1}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUseProposedParagraph(dp.index, dp.proposedText)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
+                        >
+                          Use Proposed P{dp.index + 1}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-serif leading-relaxed">
+                      {/* Original with deletions */}
+                      <div className="p-3.5 rounded-xl bg-rose-50/40 border border-rose-100 space-y-1.5">
+                        <div className="text-[10px] uppercase font-sans font-bold text-rose-700 tracking-wider">
+                          Original Text
+                        </div>
+                        <div className="text-stone-800">
+                          {renderDiffInline(dp.diffParts, "orig")}
+                        </div>
+                      </div>
+
+                      {/* Proposed with additions */}
+                      <div className="p-3.5 rounded-xl bg-emerald-50/40 border border-emerald-100 space-y-1.5">
+                        <div className="text-[10px] uppercase font-sans font-bold text-emerald-700 tracking-wider">
+                          Proposed Text
+                        </div>
+                        <div className="text-stone-800">
+                          {renderDiffInline(dp.diffParts, "prop")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Merged Draft Live Textarea */}
+              <div className="space-y-1.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-stone-800">
+                    Merged Biography Draft
+                  </label>
+                  <span className="text-[11px] font-mono text-stone-400">
+                    {wordCount} words • {generatedBio.length} characters
+                  </span>
+                </div>
+                <textarea
+                  rows={6}
+                  value={generatedBio}
+                  onChange={(e) => setGeneratedBio(e.target.value)}
+                  className="w-full rounded-xl border border-stone-300 p-3.5 text-sm font-serif leading-relaxed text-stone-900 bg-stone-50/50 focus:bg-white focus:outline-hidden focus:border-stone-900"
+                />
+              </div>
             </div>
+          ) : (
+            /* Studio Editor View */
+            <>
+              {/* Biography Textarea with Live Streaming Feedback */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-stone-800">
+                      Narrative Biography
+                    </label>
+                    {isStreaming && (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-violet-700 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-ping" />
+                        Streaming live tokens...
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-mono text-stone-400">
+                    {wordCount} words • {generatedBio.length} characters
+                  </span>
+                </div>
 
-            <textarea
-              rows={9}
-              value={generatedBio}
-              onChange={(e) => setGeneratedBio(e.target.value)}
-              placeholder="Click 'Generate Bio Stream' to write an insightful, humanized biography for this author..."
-              className={`w-full rounded-xl border p-4 text-sm font-serif leading-relaxed text-stone-900 placeholder:text-stone-400 placeholder:font-sans focus:outline-hidden transition-all duration-200 ${
-                isStreaming
-                  ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/10"
-                  : "border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-white"
-              }`}
-            />
-          </div>
-
-          {/* Google SERP Snippet Preview */}
-          <div className="rounded-xl border border-stone-200/90 bg-stone-50/60 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
-                  Google Search Result (SERP) &amp; Schema.org Preview
-                </span>
-                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
-                  JSON-LD Ready
-                </span>
+                <textarea
+                  rows={9}
+                  value={generatedBio}
+                  onChange={(e) => setGeneratedBio(e.target.value)}
+                  placeholder="Click 'Generate Bio Stream' to write an insightful, humanized biography for this author..."
+                  className={`w-full rounded-xl border p-4 text-sm font-serif leading-relaxed text-stone-900 placeholder:text-stone-400 placeholder:font-sans focus:outline-hidden transition-all duration-200 ${
+                    isStreaming
+                      ? "border-violet-500 ring-2 ring-violet-200 bg-violet-50/10"
+                      : "border-stone-300 focus:border-stone-900 focus:ring-1 focus:ring-stone-900 bg-white"
+                  }`}
+                />
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-stone-400">
-                  {seoDescription.length || Math.min(160, generatedBio.length)} / 160 chars
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopySeo}
-                  disabled={!seoDescription && !generatedBio}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 transition cursor-pointer disabled:opacity-40"
-                  title="Copy SEO meta description to clipboard"
-                >
-                  {isSeoCopied ? (
-                    <>
-                      <CheckIcon className="w-3 h-3 text-emerald-600" />
-                      <span className="text-emerald-700">Copied SERP</span>
-                    </>
-                  ) : (
-                    <>
-                      <CopyIcon className="w-3 h-3 text-stone-400" />
-                      <span>Copy SERP</span>
-                    </>
+
+              {/* Interactive Paragraph Studio */}
+              {paragraphs.length > 0 && (
+                <div className="rounded-xl border border-stone-200/90 bg-stone-50/60 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">🔄</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-stone-800">
+                        Interactive Paragraph Regeneration
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-stone-500">
+                      Rewrite individual paragraphs with targeted editorial context
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {paragraphs.map((paraText, pIdx) => {
+                      const role = PARAGRAPH_ROLES[pIdx] || {
+                        index: pIdx,
+                        label: `Paragraph ${pIdx + 1}`,
+                        desc: "Narrative paragraph",
+                      }
+                      const isEditing = editingParagraphIndex === pIdx
+                      const isBusy = regeneratingParagraphIndex === pIdx
+
+                      return (
+                        <div
+                          key={pIdx}
+                          className={`rounded-xl border p-3.5 bg-white transition-all ${
+                            isEditing
+                              ? "border-violet-400 ring-2 ring-violet-100 shadow-xs"
+                              : "border-stone-200 hover:border-stone-300 shadow-2xs"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between pb-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-700">
+                                P{pIdx + 1}
+                              </span>
+                              <span className="text-xs font-semibold text-stone-900">
+                                {role.label}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isEditing) {
+                                  setEditingParagraphIndex(null)
+                                } else {
+                                  setEditingParagraphIndex(pIdx)
+                                  setParagraphInstruction("")
+                                }
+                              }}
+                              disabled={isBusy || isStreaming}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 hover:text-violet-900 px-2 py-0.5 rounded-md hover:bg-violet-50 transition cursor-pointer"
+                            >
+                              <span>{isEditing ? "Cancel" : "🔄 Regenerate"}</span>
+                            </button>
+                          </div>
+
+                          <p className="text-xs font-serif text-stone-600 line-clamp-2 leading-relaxed">
+                            {paraText}
+                          </p>
+
+                          {/* Expanded Regeneration Controls */}
+                          {isEditing && (
+                            <div className="mt-3 pt-3 border-t border-stone-100 space-y-2.5">
+                              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                <span className="text-stone-400 font-medium">Quick presets:</span>
+                                {[
+                                  "Add more historical context",
+                                  "Make punchy and concise",
+                                  "Highlight central quote & work",
+                                  "Emphasize human contradictions",
+                                ].map((preset) => (
+                                  <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => setParagraphInstruction(preset)}
+                                    className={`px-2 py-0.5 rounded-full border text-[11px] transition cursor-pointer ${
+                                      paragraphInstruction === preset
+                                        ? "bg-violet-600 text-white border-violet-600 font-medium"
+                                        : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
+                                    }`}
+                                  >
+                                    {preset}
+                                  </button>
+                                ))}
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={paragraphInstruction}
+                                  onChange={(e) => setParagraphInstruction(e.target.value)}
+                                  placeholder="Editorial instruction, e.g. 'Focus on his Corsican exile and resilience'..."
+                                  className="flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-xs text-stone-900 focus:outline-hidden focus:border-stone-900"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="primary"
+                                  size="xs"
+                                  disabled={isBusy}
+                                  onClick={() => handleRegenerateParagraph(pIdx, paragraphInstruction)}
+                                  className="bg-violet-600 hover:bg-violet-700 font-semibold cursor-pointer shrink-0"
+                                >
+                                  {isBusy ? "Rewriting..." : "Rewrite Paragraph"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Google SERP Snippet Preview */}
+              <div className="rounded-xl border border-stone-200/90 bg-stone-50/60 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
+                      Google Search Result (SERP) &amp; Schema.org Preview
+                    </span>
+                    <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+                      JSON-LD Ready
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-mono text-stone-400">
+                      {seoDescription.length || Math.min(160, generatedBio.length)} / 160 chars
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopySeo}
+                      disabled={!seoDescription && !generatedBio}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 transition cursor-pointer disabled:opacity-40"
+                      title="Copy SEO meta description to clipboard"
+                    >
+                      {isSeoCopied ? (
+                        <>
+                          <CheckIcon className="w-3 h-3 text-emerald-600" />
+                          <span className="text-emerald-700">Copied SERP</span>
+                        </>
+                      ) : (
+                        <>
+                          <CopyIcon className="w-3 h-3 text-stone-400" />
+                          <span>Copy SERP</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1 bg-white p-3.5 rounded-lg border border-stone-200/80 shadow-2xs font-sans">
+                  <div className="flex items-center gap-1.5 text-xs text-stone-600">
+                    <span className="text-stone-400 font-mono text-[11px]">https://quotzen.com › authors ›</span>
+                    <span className="font-semibold text-stone-700">{author.name.toLowerCase().replace(/\s+/g, "-")}</span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-blue-700 hover:underline cursor-pointer">
+                    {author.name} Quotes &amp; Philosophy - {author.profession || "Thinker & Writer"}
+                  </h4>
+                  <p className="text-xs text-stone-600 leading-relaxed line-clamp-2">
+                    {seoDescription ||
+                      (generatedBio
+                        ? generatedBio.slice(0, 155).replace(/\n+/g, " ") + "..."
+                        : `Explore the life, philosophy, and timeless quotes by ${author.name}. Discover curated insights on resilience, purpose, and wisdom.`)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Key Themes & Motifs Tags */}
+              {(keyThemes.length > 0 || notableWorks.length > 0) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {keyThemes.length > 0 && (
+                    <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
+                          Core Philosophical Themes
+                        </span>
+                        <span className="text-[9px] font-mono text-violet-600 bg-violet-50 px-1.5 py-0.2 rounded border border-violet-100">
+                          Schema: knowsAbout
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {keyThemes.map((theme) => (
+                          <span
+                            key={theme}
+                            className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-[11px] font-medium"
+                          >
+                            #{theme}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </button>
-              </div>
-            </div>
 
-            <div className="space-y-1 bg-white p-3.5 rounded-lg border border-stone-200/80 shadow-2xs font-sans">
-              <div className="flex items-center gap-1.5 text-xs text-stone-600">
-                <span className="text-stone-400 font-mono text-[11px]">https://quotzen.com › authors ›</span>
-                <span className="font-semibold text-stone-700">{author.name.toLowerCase().replace(/\s+/g, "-")}</span>
-              </div>
-              <h4 className="text-sm font-semibold text-blue-700 hover:underline cursor-pointer">
-                {author.name} Quotes &amp; Philosophy - {author.profession || "Thinker & Writer"}
-              </h4>
-              <p className="text-xs text-stone-600 leading-relaxed line-clamp-2">
-                {seoDescription ||
-                  (generatedBio
-                    ? generatedBio.slice(0, 155).replace(/\n+/g, " ") + "..."
-                    : `Explore the life, philosophy, and timeless quotes by ${author.name}. Discover curated insights on resilience, purpose, and wisdom.`)}
-              </p>
-            </div>
-          </div>
-
-          {/* Key Themes & Motifs Tags */}
-          {(keyThemes.length > 0 || notableWorks.length > 0) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              {keyThemes.length > 0 && (
-                <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
-                      Core Philosophical Themes
-                    </span>
-                    <span className="text-[9px] font-mono text-violet-600 bg-violet-50 px-1.5 py-0.2 rounded border border-violet-100">
-                      Schema: knowsAbout
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {keyThemes.map((theme) => (
-                      <span
-                        key={theme}
-                        className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 text-[11px] font-medium"
-                      >
-                        #{theme}
-                      </span>
-                    ))}
-                  </div>
+                  {notableWorks.length > 0 && (
+                    <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
+                          Notable Publications / Sources
+                        </span>
+                        <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-100">
+                          Schema: workExample
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {notableWorks.map((work) => (
+                          <span
+                            key={work}
+                            className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/70 text-[11px] font-medium"
+                          >
+                            📖 {work}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {notableWorks.length > 0 && (
-                <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
-                      Notable Publications / Sources
-                    </span>
-                    <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-100">
-                      Schema: workExample
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {notableWorks.map((work) => (
-                      <span
-                        key={work}
-                        className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/70 text-[11px] font-medium"
-                      >
-                        📖 {work}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </div>
 

@@ -4,6 +4,7 @@ import {
   generateCuratorAuthorBio,
   generateAuthorBio,
   streamAuthorBio,
+  regenerateAuthorBioParagraph,
   sanitizeHumanBioText,
 } from "../../src/lib/authors/bio-generator"
 
@@ -336,6 +337,46 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       }
 
       assert.ok(chunksReceived >= 3, "Received initial chunks before abort")
+    })
+  })
+
+  describe("Interactive Paragraph Regeneration (regenerateAuthorBioParagraph)", () => {
+    const sampleFullBio = [
+      "Hannah Arendt stands as an influential political theorist whose intellectual footprint continues to shape conversations on authority and human purpose.",
+      "Across notable contributions including The Human Condition, their writing explores the banality of evil with unflinching moral clarity.",
+      "Today, the timeless reflections of Hannah Arendt endure as essential reading for anyone seeking emotional fortitude and moral courage.",
+    ].join("\n\n")
+
+    it("regenerates paragraph 1 (index 1) while preserving paragraph 0 and paragraph 2", async () => {
+      const result = await regenerateAuthorBioParagraph({
+        authorName: "Hannah Arendt",
+        profession: "Political Theorist",
+        paragraphIndex: 1,
+        currentBio: sampleFullBio,
+        instruction: "Emphasize her concept of the banality of evil and active citizenship",
+      })
+
+      assert.equal(result.paragraphIndex, 1)
+      assert.ok(result.paragraph.length > 20, "Regenerated paragraph should have content")
+
+      const parts = result.fullBio.split(/\n\n+/)
+      assert.equal(parts.length, 3, "Should preserve 3 paragraphs")
+      assert.equal(parts[0], "Hannah Arendt stands as an influential political theorist whose intellectual footprint continues to shape conversations on authority and human purpose.")
+      assert.equal(parts[2], "Today, the timeless reflections of Hannah Arendt endure as essential reading for anyone seeking emotional fortitude and moral courage.")
+      assert.equal(parts[1], result.paragraph)
+    })
+
+    it("handles boundary indices gracefully (clamping out-of-range index)", async () => {
+      const result = await regenerateAuthorBioParagraph({
+        authorName: "Hannah Arendt",
+        profession: "Political Theorist",
+        paragraphIndex: 99,
+        currentBio: sampleFullBio,
+      })
+
+      assert.equal(result.paragraphIndex, 2, "Should clamp index 99 to last paragraph (2)")
+      const parts = result.fullBio.split(/\n\n+/)
+      assert.equal(parts.length, 3)
     })
   })
 })

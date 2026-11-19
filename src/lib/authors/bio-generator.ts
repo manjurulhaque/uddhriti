@@ -633,3 +633,119 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
     },
   })
 }
+
+export interface RegenerateParagraphInput {
+  authorName: string
+  profession?: string | null
+  paragraphIndex: number // 0-based
+  currentBio: string
+  instruction?: string
+  tone?: BioTone
+  perspective?: BioPerspective
+  primaryQuote?: { content: string; sourceTitle?: string | null }
+  linkedWorks?: Array<{ title: string; slug: string }>
+}
+
+export interface RegenerateParagraphResult {
+  paragraph: string
+  fullBio: string
+  paragraphIndex: number
+  provider: "gemini" | "curator"
+}
+
+/**
+ * Regenerates a single paragraph within an existing author biography
+ */
+export async function regenerateAuthorBioParagraph(
+  input: RegenerateParagraphInput
+): Promise<RegenerateParagraphResult> {
+  const paragraphs = input.currentBio.split(/\n\n+/).filter(Boolean)
+  const targetIndex = Math.max(0, Math.min(input.paragraphIndex, Math.max(0, paragraphs.length - 1)))
+  const currentParagraph = paragraphs[targetIndex] || ""
+
+  const paragraphRoles = [
+    "Paragraph 1 (Hook & Identity): Introducing the thinker, their core intellectual dilemma or era, and why their thoughts endure.",
+    "Paragraph 2 (Core Philosophy & Works): Examining their seminal writings, core quotes, and philosophical framework forged under adversity.",
+    "Paragraph 3 (Modern Resonance & Challenge): Exploring why their insights matter today and their enduring challenge to the reader.",
+  ]
+
+  const roleDescription = paragraphRoles[targetIndex] || "Paragraph of the author biography."
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  if (apiKey) {
+    try {
+      const prompt = `You are a world-class literary biographer and digital editor revising ONE single paragraph of an author biography.
+
+Author: "${input.authorName}"
+Profession: "${input.profession || "Thinker & Writer"}"
+Target Paragraph Slot: ${roleDescription}
+
+CURRENT FULL BIOGRAPHY:
+${input.currentBio}
+
+PARAGRAPH TO REVISE:
+"${currentParagraph}"
+
+EDITORIAL REVISION INSTRUCTION:
+"${input.instruction?.trim() || "Improve clarity, rhythm, and emotional resonance while eliminating fluff."}"
+
+${input.primaryQuote ? `Primary Quote to anchor (if relevant): "${input.primaryQuote.content}"` : ""}
+${input.linkedWorks && input.linkedWorks.length > 0 ? `Internal Works to link (if mentioned): ${input.linkedWorks.map((w) => `[${w.title}](/sources/${w.slug})`).join(", ")}` : ""}
+
+CRITICAL RULES:
+1. STRICTLY BANNED VOCABULARY: DO NOT USE "delve", "tapestry", "beacon", "testament", "multifaceted", "pivotal", "cornerstone", "quintessential", "unwavering", "indelible mark", "serves as a reminder", "realm", "dynamic interplay", "enduring legacy", "in conclusion", "it is worth noting", or "journey".
+2. No participial openings ("Bridging high philosophy..."). Use direct subject-verb constructions.
+3. Keep the paragraph's length natural (around 50-90 words).
+4. Output ONLY the raw replacement paragraph text. No markdown fences, no labels, no quotes around the text.`
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 9000)
+
+      const response = await callGeminiGenerateContent(apiKey, prompt, {
+        temperature: 0.38,
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (response.ok) {
+        const data = await response.json()
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+        if (text && text.trim().length > 30) {
+          const cleanParagraph = sanitizeHumanBioText(text.trim())
+          const newParagraphs = [...paragraphs]
+          newParagraphs[targetIndex] = cleanParagraph
+          return {
+            paragraph: cleanParagraph,
+            fullBio: newParagraphs.join("\n\n"),
+            paragraphIndex: targetIndex,
+            provider: "gemini",
+          }
+        }
+      }
+    } catch {
+      // Fallback to curator
+    }
+  }
+
+  // Fallback curator synthesizer
+  const curatorBioResult = generateCuratorAuthorBio({
+    name: input.authorName,
+    profession: input.profession,
+    perspective: input.perspective,
+    tone: input.tone,
+    primaryQuote: input.primaryQuote,
+    linkedWorks: input.linkedWorks,
+  })
+
+  const curatorParagraphs = curatorBioResult.bio.split(/\n\n+/).filter(Boolean)
+  const replacement = curatorParagraphs[targetIndex] || currentParagraph
+  const newParagraphs = [...paragraphs]
+  newParagraphs[targetIndex] = replacement
+
+  return {
+    paragraph: replacement,
+    fullBio: newParagraphs.join("\n\n"),
+    paragraphIndex: targetIndex,
+    provider: "curator",
+  }
+}

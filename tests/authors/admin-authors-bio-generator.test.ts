@@ -192,6 +192,63 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
     })
   })
 
+  describe("Quotzen Data Grounding (RAG & Internal Linking)", () => {
+    it("anchors primary top quote organically into Paragraph 2 of curator bio", () => {
+      const result = generateCuratorAuthorBio({
+        name: "Hannah Arendt",
+        profession: "Political Philosopher",
+        primaryQuote: {
+          content: "The sad truth is that most evil is done by people who never make up their minds to be good or evil.",
+          sourceTitle: "The Life of the Mind",
+        },
+      })
+
+      assert.ok(
+        result.bio.includes("The sad truth is that most evil is done"),
+        "Bio should contain primary quote text"
+      )
+    })
+
+    it("weaves internal markdown links for verified works and categories", () => {
+      const result = generateCuratorAuthorBio({
+        name: "Hannah Arendt",
+        profession: "Political Theorist",
+        linkedWorks: [
+          { title: "The Human Condition", slug: "the-human-condition" },
+        ],
+        linkedCategories: [
+          { name: "Political Philosophy", slug: "political-philosophy" },
+        ],
+      })
+
+      assert.ok(
+        result.bio.includes("[The Human Condition](/sources/the-human-condition)"),
+        "Bio should format work as internal markdown link"
+      )
+      assert.ok(
+        result.keyThemes.includes("Political Philosophy"),
+        "Key themes should include linked category name"
+      )
+      assert.ok(
+        result.notableWorks.includes("The Human Condition"),
+        "Notable works should include linked work title"
+      )
+    })
+
+    it("incorporates authority grounding summary in curator fallback", () => {
+      const result = generateCuratorAuthorBio({
+        name: "Hypatia of Alexandria",
+        profession: "Hellenistic Mathematician",
+        authorityGroundingSummary: "Head of the Neoplatonic school at Alexandria, renowned for geometry commentaries.",
+      })
+
+      assert.ok(
+        result.bio.includes("Head of the Neoplatonic school at Alexandria"),
+        "Bio should incorporate authority grounding facts"
+      )
+    })
+  })
+
   describe("End-to-End generateAuthorBio", () => {
     it("resolves successfully with structured result", async () => {
       const result = await generateAuthorBio({

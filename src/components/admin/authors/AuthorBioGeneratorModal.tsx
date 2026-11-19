@@ -15,6 +15,8 @@ export interface AuthorBioGeneratorModalProps {
     nationality?: string | null
     birthYear?: number | string | null
     deathYear?: number | string | null
+    wikipediaUrl?: string | null
+    wikidataId?: string | null
     currentBio?: string | null
   }
   onApplyBio: (bio: string) => void
@@ -89,6 +91,8 @@ function AuthorBioModalInner({
           nationality: author.nationality,
           birthYear: author.birthYear ? Number(author.birthYear) : undefined,
           deathYear: author.deathYear ? Number(author.deathYear) : undefined,
+          wikipediaUrl: author.wikipediaUrl,
+          wikidataId: author.wikidataId,
           tone,
           perspective,
           length,

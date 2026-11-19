@@ -54,6 +54,22 @@ describe("🔍 SEO & Knowledge Graph Entity Optimization", () => {
       assert.ok(desc.includes("Epictetus"))
       assert.ok(desc.includes("Greek Stoic Philosopher"))
     })
+
+    it("strips internal markdown links cleanly from SERP snippet text", () => {
+      const bioWithLinks =
+        "Marcus Aurelius (121–180 AD) was Roman Emperor and Stoic philosopher who authored [Meditations](/sources/meditations). He explored [Stoic resilience](/categories/resilience) under imperial adversity."
+
+      const desc = extractAuthorMetaDescription({
+        name: "Marcus Aurelius",
+        profession: "Roman Emperor & Stoic Philosopher",
+        bio: bioWithLinks,
+      })
+
+      assert.ok(!desc.includes("[Meditations]"), "Should strip markdown link bracket")
+      assert.ok(!desc.includes("(/sources/meditations)"), "Should strip markdown link URL")
+      assert.ok(desc.includes("Meditations"), "Should retain anchor text")
+      assert.ok(desc.includes("Stoic resilience"), "Should retain anchor text")
+    })
   })
 
   describe("generateAuthorPageTitle", () => {

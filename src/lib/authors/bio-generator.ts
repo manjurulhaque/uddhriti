@@ -34,6 +34,21 @@ export interface AuthorBioInput {
   tone?: BioTone
   length?: BioLength
   perspective?: BioPerspective
+  // RAG Grounding & Internal Linking
+  primaryQuote?: {
+    content: string
+    slug?: string | null
+    sourceTitle?: string | null
+  }
+  linkedWorks?: Array<{
+    title: string
+    slug: string
+  }>
+  linkedCategories?: Array<{
+    name: string
+    slug: string
+  }>
+  authorityGroundingSummary?: string | null
 }
 
 export interface AuthorBioResult {
@@ -188,17 +203,22 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
       ? `(b. ${input.birthYear})`
       : ""
 
-  const p1 = `${input.name} ${era} stands as an influential ${nationality}${role} whose intellectual footprint continues to shape conversations on human purpose, resilience, and creative expression. Known for rigorous engagement with the pressing questions of their time, their work cuts through surface convention to examine how individuals cultivate integrity, navigate adversity, and contribute to the broader human condition.`
+  const p1 = input.authorityGroundingSummary
+    ? `${input.name} ${era} stands as an influential ${nationality}${role}. ${input.authorityGroundingSummary} Known for rigorous engagement with the pressing questions of their time, their work cuts through surface convention to examine how individuals cultivate integrity, navigate adversity, and contribute to the broader human condition.`
+    : `${input.name} ${era} stands as an influential ${nationality}${role} whose intellectual footprint continues to shape conversations on human purpose, resilience, and creative expression. Known for rigorous engagement with the pressing questions of their time, their work cuts through surface convention to examine how individuals cultivate integrity, navigate adversity, and contribute to the broader human condition.`
 
   const worksClause =
-    input.knownWorks && input.knownWorks.length > 0
+    input.linkedWorks && input.linkedWorks.length > 0
+      ? `Across notable contributions including [${input.linkedWorks[0].title}](/sources/${input.linkedWorks[0].slug}), their writings `
+      : input.knownWorks && input.knownWorks.length > 0
       ? `Across notable contributions including "${input.knownWorks.slice(0, 3).join('", "')}", their writings `
       : `Throughout their celebrated lectures, publications, and personal writings, their thought `
 
-  const quotesClause =
-    input.sampleQuotes && input.sampleQuotes.length > 0
-      ? `Their reflections—addressing themes of discipline, moral clarity, and authentic conviction—exemplify a sustained commitment to intellectual honesty.`
-      : `Their philosophy explores the delicate balance between personal autonomy and social responsibility, offering enduring insight for thoughtful living.`
+  const quotesClause = input.primaryQuote
+    ? `Their celebrated insight that "${input.primaryQuote.content}" encapsulates their dedication to moral clarity and intellectual discipline.`
+    : input.sampleQuotes && input.sampleQuotes.length > 0
+    ? `Their reflections—addressing themes of discipline, moral clarity, and authentic conviction—exemplify a sustained commitment to intellectual honesty.`
+    : `Their philosophy explores the delicate balance between personal autonomy and social responsibility, offering enduring insight for thoughtful living.`
 
   let p2 = ""
   if (input.perspective === "crucible") {
@@ -227,13 +247,19 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
   return {
     bio: sanitizeHumanBioText(fullBio),
     seoDescription: seoDescription.slice(0, 160),
-    keyThemes: [
-      `${input.name} Philosophy`,
-      "Human Resilience",
-      "Authentic Leadership",
-      "Moral Integrity",
-    ],
-    notableWorks: input.knownWorks || [],
+    keyThemes:
+      input.linkedCategories && input.linkedCategories.length > 0
+        ? input.linkedCategories.map((c) => c.name)
+        : [
+            `${input.name} Philosophy`,
+            "Human Resilience",
+            "Authentic Leadership",
+            "Moral Integrity",
+          ],
+    notableWorks:
+      input.linkedWorks && input.linkedWorks.length > 0
+        ? input.linkedWorks.map((w) => w.title)
+        : input.knownWorks || [],
     provider: "curator",
     wordCount: fullBio.split(/\s+/).length,
   }
@@ -271,6 +297,33 @@ function buildAuthorBioPrompt(input: AuthorBioInput): string {
       ? "around 280-350 words (3 substantial paragraphs with double newlines)"
       : "around 180-240 words (2-3 balanced paragraphs with double newlines)"
 
+  const primaryQuoteClause = input.primaryQuote
+    ? `\nCENTRAL QUOTE ANCHOR (RAG GROUNDING):
+Quotzen's primary published quote by this author is:
+"${input.primaryQuote.content}"${input.primaryQuote.sourceTitle ? ` (from "${input.primaryQuote.sourceTitle}")` : ""}
+Organically integrate this exact quote into Paragraph 2 as a concrete illustration of their philosophy (e.g. 'Their reflection that "${input.primaryQuote.content.slice(0, 50)}..." crystallizes their approach to...').`
+    : ""
+
+  const linkedWorksClause =
+    input.linkedWorks && input.linkedWorks.length > 0
+      ? `\nINTERNAL WORK HYPERLINKING (SEO & PLATFORM LINKING):
+Whenever referencing their notable works in the prose, format them as Markdown links to their Quotzen work pages:
+${input.linkedWorks.map((w) => `- "${w.title}" -> [${w.title}](/sources/${w.slug})`).join("\n")}`
+      : ""
+
+  const linkedCategoriesClause =
+    input.linkedCategories && input.linkedCategories.length > 0
+      ? `\nTHEMATIC TOPIC HYPERLINKING:
+When highlighting key conceptual domains, seamlessly hyperlink the concept to its curated topic archive:
+${input.linkedCategories.map((c) => `- "${c.name}" -> [${c.name}](/categories/${c.slug})`).join("\n")}`
+      : ""
+
+  const authorityClause = input.authorityGroundingSummary
+    ? `\nAUTHORITY GROUNDING (WIKIPEDIA / WIKIDATA REFERENCE):
+"${input.authorityGroundingSummary}"
+Use these verified facts for factual precision without mimicking encyclopedic phrasing.`
+    : ""
+
   return `You are a world-class literary essayist, biographer, and digital editor.
 Write a humanized, engaging, and SEO-optimized biography for:
 
@@ -280,6 +333,10 @@ Nationality / Region: "${input.nationality || "Global"}"
 Lifespan: "${input.birthYear ? input.birthYear : ""}${input.deathYear ? ` – ${input.deathYear}` : ""}"
 Known Works: "${input.knownWorks?.join(", ") || "N/A"}"
 Representative Themes: "${input.sampleQuotes?.slice(0, 3).join(" | ") || "N/A"}"
+${authorityClause}
+${primaryQuoteClause}
+${linkedWorksClause}
+${linkedCategoriesClause}
 
 STYLE INSTRUCTIONS:
 - Tone: ${toneLabel}
@@ -451,6 +508,19 @@ export function streamAuthorBio(
       }
 
       try {
+        const streamPrimaryQuote = input.primaryQuote
+          ? `\nCENTRAL QUOTE ANCHOR: Organically weave this published quote into Paragraph 2: "${input.primaryQuote.content}"`
+          : ""
+        const streamLinkedWorks =
+          input.linkedWorks && input.linkedWorks.length > 0
+            ? `\nINTERNAL WORK HYPERLINKING: When referencing works, format as Markdown links:\n${input.linkedWorks
+                .map((w) => `- [${w.title}](/sources/${w.slug})`)
+                .join("\n")}`
+            : ""
+        const streamAuthority = input.authorityGroundingSummary
+          ? `\nAUTHORITY GROUNDING (FACTUAL REFERENCE): "${input.authorityGroundingSummary}"`
+          : ""
+
         const streamPrompt = `You are a world-class literary biographer and essayist.
 Write a humanized, engaging, and SEO-optimized biography for:
 Author: "${input.name}"
@@ -460,6 +530,9 @@ Lifespan: "${input.birthYear ? input.birthYear : ""}${input.deathYear ? ` – ${
 Tone: ${input.tone || "humanized"}
 Perspective: ${getPerspectiveGuidance(input.perspective)}
 Length: ${input.length || "balanced"}
+${streamAuthority}
+${streamPrimaryQuote}
+${streamLinkedWorks}
 
 CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 1. STRICTLY BANNED WORDS: Do not use "delve", "delving", "tapestry", "rich tapestry", "beacon", "testament", "multifaceted", "pivotal", "cornerstone", "quintessential", "unwavering", "indelible mark", "serves as a reminder", "realm", "dynamic interplay", "enduring legacy", or "in conclusion".

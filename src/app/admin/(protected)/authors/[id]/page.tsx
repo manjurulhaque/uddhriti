@@ -583,6 +583,8 @@ export default function EditAuthorPage() {
           nationality: form.nationality,
           birthYear: form.birthYear,
           deathYear: form.deathYear,
+          wikipediaUrl: form.wikipediaUrl,
+          wikidataId: form.wikidataId,
           currentBio: form.bio,
         }}
         onApplyBio={(newBio) => {

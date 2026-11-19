@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 import { isValidUuid } from "@/lib/api/route-helpers"
+import { importAuthorFromWikipediaOrWikidata } from "@/lib/wikimedia/authorImport"
 import {
   generateAuthorBio,
   streamAuthorBio,
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
     deathYear,
     dateOfBirth,
     dateOfDeath,
+    wikipediaUrl,
+    wikidataId,
     existingBio,
     tone,
     perspective,
@@ -64,7 +67,7 @@ export async function POST(req: Request) {
     length: (length === "concise" || length === "comprehensive" || length === "balanced") ? length as BioLength : "balanced",
   }
 
-  // If authorId is given, enrich with database footprint (known works, sample quotes)
+  // If authorId is given, enrich with database footprint (known works, top quotes, categories)
   if (typeof authorId === "string" && isValidUuid(authorId)) {
     const dbAuthor = await prisma.author.findUnique({
       where: { id: authorId },
@@ -77,17 +80,45 @@ export async function POST(req: Request) {
         bio: true,
         sources: {
           take: 5,
-          select: { title: true },
+          orderBy: [{ quoteCount: "desc" }, { id: "asc" }],
+          select: { id: true, title: true, slug: true },
         },
         quotes: {
           take: 5,
           where: { deletedAt: null, status: "PUBLISHED" },
-          select: { content: true },
+          orderBy: [{ popularityScore: "desc" }, { id: "asc" }],
+          select: {
+            id: true,
+            content: true,
+            slug: true,
+            source: { select: { title: true } },
+            category: { select: { name: true, slug: true } },
+          },
         },
       },
     })
 
     if (dbAuthor) {
+      const primaryQuote = dbAuthor.quotes[0]
+        ? {
+            content: dbAuthor.quotes[0].content,
+            slug: dbAuthor.quotes[0].slug,
+            sourceTitle: dbAuthor.quotes[0].source?.title,
+          }
+        : undefined
+
+      const linkedWorks = dbAuthor.sources
+        .filter((s) => s.slug && s.title)
+        .map((s) => ({ title: s.title, slug: s.slug }))
+
+      const categoryMap = new Map<string, { name: string; slug: string }>()
+      for (const q of dbAuthor.quotes) {
+        if (q.category && !categoryMap.has(q.category.slug)) {
+          categoryMap.set(q.category.slug, { name: q.category.name, slug: q.category.slug })
+        }
+      }
+      const linkedCategories = Array.from(categoryMap.values()).slice(0, 3)
+
       bioInput = {
         name: bioInput.name || dbAuthor.name,
         profession: bioInput.profession || dbAuthor.profession,
@@ -97,10 +128,32 @@ export async function POST(req: Request) {
         existingBio: bioInput.existingBio || dbAuthor.bio,
         knownWorks: dbAuthor.sources.map((s) => s.title),
         sampleQuotes: dbAuthor.quotes.map((q) => q.content),
+        primaryQuote,
+        linkedWorks,
+        linkedCategories,
         tone: bioInput.tone,
         perspective: bioInput.perspective,
         length: bioInput.length,
       }
+    }
+  }
+
+  // Cold-start authority grounding for new authors when Wikipedia/Wikidata credentials are provided
+  const wikiUrl = typeof wikipediaUrl === "string" ? wikipediaUrl.trim() : undefined
+  const wikiId = typeof wikidataId === "string" ? wikidataId.trim() : undefined
+  if (!bioInput.primaryQuote && (wikiUrl || wikiId)) {
+    try {
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500))
+      const fetchPromise = importAuthorFromWikipediaOrWikidata({
+        wikipediaUrl: wikiUrl,
+        wikidataId: wikiId,
+      })
+      const imported = await Promise.race([fetchPromise, timeoutPromise])
+      if (imported?.bio) {
+        bioInput.authorityGroundingSummary = imported.bio
+      }
+    } catch {
+      // Graceful fallback if Wikimedia fetch fails
     }
   }
 

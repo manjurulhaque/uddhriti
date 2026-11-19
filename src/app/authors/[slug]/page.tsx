@@ -257,6 +257,62 @@ async function AuthorQuotesSection({
   )
 }
 
+function renderBioParagraphWithLinks(text: string): React.ReactNode {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+  if (!linkRegex.test(text)) {
+    return text
+  }
+
+  linkRegex.lastIndex = 0
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    const [fullMatch, linkText, href] = match
+    const matchIndex = match.index
+
+    if (matchIndex > lastIndex) {
+      parts.push(text.slice(lastIndex, matchIndex))
+    }
+
+    const isInternal = href.startsWith("/")
+    if (isInternal) {
+      parts.push(
+        <Link
+          key={`${href}-${matchIndex}`}
+          href={href}
+          className="text-[var(--accent-rust)] font-medium underline decoration-[var(--accent-rust)]/35 underline-offset-2 hover:decoration-[var(--accent-rust)] transition-colors"
+        >
+          {linkText}
+        </Link>
+      )
+    } else if (isSafeExternalUrl(href)) {
+      parts.push(
+        <a
+          key={`${href}-${matchIndex}`}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--accent-rust)] font-medium underline decoration-[var(--accent-rust)]/35 underline-offset-2 hover:decoration-[var(--accent-rust)] transition-colors"
+        >
+          {linkText}
+        </a>
+      )
+    } else {
+      parts.push(linkText)
+    }
+
+    lastIndex = matchIndex + fullMatch.length
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+
+  return parts
+}
+
 export default async function AuthorDetailPage({
   params,
   searchParams,
@@ -447,7 +503,7 @@ export default async function AuthorDetailPage({
               {author.bio && (
                 <div className="text-sm sm:text-base text-stone-700 leading-relaxed font-serif max-w-3xl border-l-2 border-[var(--accent-rust)]/40 pl-4 py-1 space-y-2">
                   {author.bio.split("\n\n").map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
+                    <p key={index}>{renderBioParagraphWithLinks(paragraph)}</p>
                   ))}
                 </div>
               )}

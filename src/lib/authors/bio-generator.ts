@@ -60,27 +60,64 @@ export interface AuthorBioResult {
   wordCount: number
 }
 
-// Banned robotic clichés and subtle AI tells for post-generation sanitization
-const BANNED_AI_WORDS: RegExp[] = [
-  /\bdelv(?:e|es|ing)\b/gi,
-  /\brich\s+tapestry\b/gi,
-  /\btapestry\b/gi,
-  /\bbeacon(?:s)?\b/gi,
-  /\btestament(?:\s+to)?\b/gi,
-  /\bmultifaceted\b/gi,
-  /\bpivotal\b/gi,
-  /\bcornerstone(?:s)?\b/gi,
-  /\bquintessential(?:ly)?\b/gi,
-  /\bunwavering\b/gi,
-  /\bindelible\s+mark\b/gi,
-  /\bserves?\s+as\s+a\s+reminder\b/gi,
-  /\bdynamic\s+interplay\b/gi,
-  /\benduring\s+legacy\b/gi,
-  /\betched\s+into\b/gi,
-  /\brealm(?:s)?\b/gi,
-  /\bin\s+conclusion\b/gi,
-  /\bit\s+is\s+important\s+to\s+note\b/gi,
-  /\bit\s+is\s+worth\s+noting\b/gi,
+// Banned robotic clichés and subtle AI tells with contextual, fluent human replacements
+// that avoid dropping words or creating missing sentence parts.
+const HUMAN_PHRASE_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
+  // 1. Phrasal tropes with verbs & prepositions
+  { pattern: /\b(?:stands?|serves?)\s+as\s+a\s+testament\s+to\b/gi, replacement: "demonstrates" },
+  { pattern: /\b(?:is|are)\s+a\s+testament\s+to\b/gi, replacement: "reflects" },
+  { pattern: /\btestament\s+to\b/gi, replacement: "reflection of" },
+  { pattern: /\btestament\b/gi, replacement: "evidence" },
+
+  { pattern: /\bserves?\s+as\s+a\s+reminder\s+that\b/gi, replacement: "reminds us that" },
+  { pattern: /\bserves?\s+as\s+a\s+reminder\s+of\b/gi, replacement: "highlights" },
+  { pattern: /\bserving\s+as\s+a\s+reminder\b/gi, replacement: "illustrating" },
+  { pattern: /\bserves?\s+as\s+a\s+reminder\b/gi, replacement: "reminds us" },
+  { pattern: /\ba\s+powerful\s+reminder\s+of\b/gi, replacement: "a clear reflection of" },
+  { pattern: /\ba\s+poignant\s+reminder\s+of\b/gi, replacement: "a moving reflection of" },
+
+  { pattern: /\bdelves?\s+into\b/gi, replacement: "explores" },
+  { pattern: /\bdelving\s+into\b/gi, replacement: "exploring" },
+  { pattern: /\bdelved\s+into\b/gi, replacement: "explored" },
+  { pattern: /\bdelve\b/gi, replacement: "look" },
+
+  { pattern: /\b(?:a|the)\s+rich\s+tapestry\s+of\b/gi, replacement: "the depth of" },
+  { pattern: /\brich\s+tapestry\b/gi, replacement: "depth" },
+  { pattern: /\btapestry\s+of\b/gi, replacement: "variety of" },
+  { pattern: /\btapestry\b/gi, replacement: "tradition" },
+
+  { pattern: /\b(?:a|the)\s+beacon\s+of\s+hope\b/gi, replacement: "a source of hope" },
+  { pattern: /\b(?:a|the)\s+beacon\s+of\b/gi, replacement: "a guide for" },
+  { pattern: /\bbeacons?\b/gi, replacement: "guide" },
+
+  { pattern: /\bmultifaceted\b/gi, replacement: "wide-ranging" },
+
+  { pattern: /\bpivotal\s+role\b/gi, replacement: "central role" },
+  { pattern: /\bpivotal\s+moment\b/gi, replacement: "turning point" },
+  { pattern: /\bpivotal\b/gi, replacement: "crucial" },
+
+  { pattern: /\b(?:a|the)\s+cornerstone\s+of\b/gi, replacement: "a foundation of" },
+  { pattern: /\bcornerstones?\s+of\b/gi, replacement: "foundations of" },
+  { pattern: /\bcornerstones?\b/gi, replacement: "foundation" },
+
+  { pattern: /\bquintessentially\b/gi, replacement: "characteristically" },
+  { pattern: /\bquintessential\b/gi, replacement: "defining" },
+
+  { pattern: /\bunwavering\b/gi, replacement: "steadfast" },
+
+  { pattern: /\b(?:an?\s+)?indelible\s+mark\s+on\b/gi, replacement: "a lasting influence on" },
+  { pattern: /\bindelible\s+mark\b/gi, replacement: "lasting influence" },
+
+  { pattern: /\bdynamic\s+interplay\b/gi, replacement: "interaction" },
+  { pattern: /\benduring\s+legacy\b/gi, replacement: "lasting influence" },
+  { pattern: /\betched\s+into\b/gi, replacement: "embedded in" },
+
+  { pattern: /\bin\s+the\s+realm\s+of\b/gi, replacement: "in" },
+  { pattern: /\brealms?\s+of\b/gi, replacement: "domains of" },
+  { pattern: /\brealms?\b/gi, replacement: "world" },
+
+  { pattern: /\bin\s+conclusion,?\s*/gi, replacement: "" },
+  { pattern: /\bit\s+is\s+(?:important|worth)\s+noting\s+(?:that\s+)?/gi, replacement: "" },
 ]
 
 // Curated canonical knowledge base for premier thinkers
@@ -156,12 +193,13 @@ function normalizeKey(str?: string | null): string {
 }
 
 /**
- * Removes typical AI fluff and ensures natural human phrasing
+ * Removes typical AI fluff and ensures natural, fluent human phrasing without dropping words
  */
 export function sanitizeHumanBioText(text: string): string {
+  if (!text) return ""
   let cleaned = text.trim()
-  for (const pattern of BANNED_AI_WORDS) {
-    cleaned = cleaned.replace(pattern, "")
+  for (const { pattern, replacement } of HUMAN_PHRASE_REPLACEMENTS) {
+    cleaned = cleaned.replace(pattern, replacement)
   }
   return cleaned
     .replace(/[ \t]{2,}/g, " ")
@@ -169,8 +207,12 @@ export function sanitizeHumanBioText(text: string): string {
     .replace(/[ \t]+,/g, ",")
     .replace(/\b(a|an|the)\s+of\b/gi, "of")
     .replace(/\b(a|an)\s+(a|an)\b/gi, "a")
+    .replace(/\bthe\s+the\b/gi, "the")
+    .replace(/\s*([.?!])\s*([.?!])+/g, "$1")
+    .replace(/\s+\./g, ".")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/([ \t]*\r?\n){3,}/g, "\n\n")
+    .replace(/(?:^|\n\n)([a-z])/g, (_, char) => char.toUpperCase())
     .trim()
 }
 
@@ -259,7 +301,9 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
     notableWorks:
       input.linkedWorks && input.linkedWorks.length > 0
         ? input.linkedWorks.map((w) => w.title)
-        : input.knownWorks || [],
+        : input.knownWorks && input.knownWorks.length > 0
+        ? input.knownWorks
+        : ["Collected Writings", "Selected Essays & Addresses"],
     provider: "curator",
     wordCount: fullBio.split(/\s+/).length,
   }
@@ -377,7 +421,7 @@ export async function generateAuthorBio(
     try {
       const prompt = buildAuthorBioPrompt(input)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 12000)
+      const timeoutId = setTimeout(() => controller.abort(), 22000)
 
       const temperature =
         input.tone === "philosophical" ? 0.32 : input.tone === "punchy" ? 0.45 : 0.38
@@ -398,16 +442,19 @@ export async function generateAuthorBio(
 
           if (parsed && typeof parsed.bio === "string" && parsed.bio.trim().length > 50) {
             const bio = sanitizeHumanBioText(parsed.bio)
+            const fallback = generateCuratorAuthorBio(input)
             const seoDescription =
-              typeof parsed.seoDescription === "string"
+              typeof parsed.seoDescription === "string" && parsed.seoDescription.trim().length > 20
                 ? parsed.seoDescription.slice(0, 160)
-                : `${input.name} biography, key works, and philosophical quotes.`
-            const keyThemes = Array.isArray(parsed.keyThemes)
-              ? parsed.keyThemes.slice(0, 6)
-              : []
-            const notableWorks = Array.isArray(parsed.notableWorks)
-              ? parsed.notableWorks.slice(0, 6)
-              : []
+                : fallback.seoDescription || `${input.name} biography, key works, and philosophical quotes.`
+            const keyThemes =
+              Array.isArray(parsed.keyThemes) && parsed.keyThemes.length > 0
+                ? parsed.keyThemes.slice(0, 6)
+                : fallback.keyThemes
+            const notableWorks =
+              Array.isArray(parsed.notableWorks) && parsed.notableWorks.length > 0
+                ? parsed.notableWorks.slice(0, 6)
+                : fallback.notableWorks
 
             return {
               bio,
@@ -521,15 +568,22 @@ export function streamAuthorBio(
           ? `\nAUTHORITY GROUNDING (FACTUAL REFERENCE): "${input.authorityGroundingSummary}"`
           : ""
 
-        const streamPrompt = `You are a world-class literary biographer and essayist.
-Write a humanized, engaging, and SEO-optimized biography for:
+        const lengthClause =
+          input.length === "concise"
+            ? "1 rich paragraph (around 100-140 words)"
+            : input.length === "comprehensive"
+            ? "exactly 3 substantial, distinct paragraphs separated by double newlines (around 280-350 words)"
+            : "2 to 3 balanced, distinct paragraphs separated by double newlines (around 180-240 words)"
+
+        const streamPrompt = `You are a world-class literary biographer, essayist, and digital editor.
+Write a humanized, engaging, and SEO-optimized biography and metadata for:
 Author: "${input.name}"
 Profession: "${input.profession || "Thinker & Writer"}"
 Nationality: "${input.nationality || "Global"}"
 Lifespan: "${input.birthYear ? input.birthYear : ""}${input.deathYear ? ` – ${input.deathYear}` : ""}"
 Tone: ${input.tone || "humanized"}
 Perspective: ${getPerspectiveGuidance(input.perspective)}
-Length: ${input.length || "balanced"}
+Target Length: ${lengthClause}
 ${streamAuthority}
 ${streamPrimaryQuote}
 ${streamLinkedWorks}
@@ -539,11 +593,20 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 2. BANNED SYNTACTIC PATTERNS: Do not open sentences with participial clauses ("Bridging...", "Standing at..."). Do not conclude with generic platitudes ("...serves as a compass...").
 3. Open directly with their central intellectual obsession, moral conflict, or the historical friction that shaped their thought.
 4. Vary sentence lengths for human rhythm and burstiness (combine short declarative sentences with nuanced reflections).
-5. Include natural paragraph breaks with double newlines.
-6. Output ONLY the narrative biography text directly. Do not include markdown headers, quotes, or JSON formatting.`
+5. Ensure distinct narrative paragraphs are separated by double newlines (\n\n).
+
+Format your response strictly using these exact delimiters:
+<<<BIO>>>
+(The narrative biography text with distinct paragraphs separated by double newlines)
+<<<SEO_DESCRIPTION>>>
+(Strictly 140 to 160 characters summary for Google search result meta description)
+<<<KEY_THEMES>>>
+(Comma-separated list of 3-5 core themes/concepts)
+<<<NOTABLE_WORKS>>>
+(Comma-separated list of 2-4 major publication, essay, or speech titles)`
 
         const timeoutController = new AbortController()
-        const timeoutId = setTimeout(() => timeoutController.abort(), 12000)
+        const timeoutId = setTimeout(() => timeoutController.abort(), 30000)
 
         const abortHandler = () => timeoutController.abort()
         options?.signal?.addEventListener("abort", abortHandler)
@@ -569,13 +632,42 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
         const reader = geminiRes.body.getReader()
         const decoder = new TextDecoder()
         let sseBuffer = ""
+        let pendingStreamBuffer = ""
+
+        let currentSection: "BIO" | "SEO" | "THEMES" | "WORKS" = "BIO"
         let accumulatedBio = ""
+        let accumulatedSeo = ""
+        let accumulatedThemes = ""
+        let accumulatedWorks = ""
+        let hasBioCompleted = false
+
+        const tagPattern = /<<<\s*(BIO|SEO(?:_|\s+)DESCRIPTION|KEY(?:_|\s+)THEMES|NOTABLE(?:_|\s+)WORKS)\s*>>>/i
 
         while (true) {
           if (options?.signal?.aborted || isClosed) break
 
           const { done, value } = await reader.read()
-          if (done) break
+          if (done) {
+            // Process any trailing line left in sseBuffer
+            if (sseBuffer.trim()) {
+              const remainingLines = sseBuffer.split("\n")
+              sseBuffer = ""
+              for (const line of remainingLines) {
+                const trimmed = line.trim()
+                if (!trimmed.startsWith("data:")) continue
+                const jsonStr = trimmed.replace(/^data:\s*/, "")
+                if (!jsonStr || jsonStr === "[DONE]") continue
+                try {
+                  const parsed = JSON.parse(jsonStr)
+                  const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || ""
+                  if (text) pendingStreamBuffer += text
+                } catch {
+                  // ignore
+                }
+              }
+            }
+            break
+          }
 
           sseBuffer += decoder.decode(value, { stream: true })
           const lines = sseBuffer.split("\n")
@@ -598,13 +690,95 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
 
             if (!textChunk) continue
 
-            accumulatedBio += textChunk
-            sendEvent("delta", { text: textChunk })
+            pendingStreamBuffer += textChunk
+
+            while (true) {
+              const match = pendingStreamBuffer.match(tagPattern)
+              if (!match || match.index === undefined) break
+
+              const textBefore = pendingStreamBuffer.slice(0, match.index)
+              if (textBefore) {
+                if (currentSection === "BIO") {
+                  accumulatedBio += textBefore
+                  sendEvent("delta", { text: textBefore })
+                } else if (currentSection === "SEO") {
+                  accumulatedSeo += textBefore
+                } else if (currentSection === "THEMES") {
+                  accumulatedThemes += textBefore
+                } else if (currentSection === "WORKS") {
+                  accumulatedWorks += textBefore
+                }
+              }
+
+              if (currentSection === "BIO" && !hasBioCompleted) {
+                hasBioCompleted = true
+                sendEvent("complete_bio", { bio: sanitizeHumanBioText(accumulatedBio) })
+              }
+
+              const rawTag = match[1].toUpperCase()
+              if (rawTag.includes("BIO")) {
+                currentSection = "BIO"
+              } else if (rawTag.includes("SEO")) {
+                currentSection = "SEO"
+              } else if (rawTag.includes("THEME")) {
+                currentSection = "THEMES"
+              } else if (rawTag.includes("WORK")) {
+                currentSection = "WORKS"
+              }
+
+              pendingStreamBuffer = pendingStreamBuffer.slice(match.index + match[0].length)
+            }
+
+            // Emit safe text tokens while in BIO
+            if (currentSection === "BIO") {
+              const lastLtIndex = pendingStreamBuffer.lastIndexOf("<")
+              if (lastLtIndex !== -1 && pendingStreamBuffer.length - lastLtIndex < 30) {
+                const safeToEmit = pendingStreamBuffer.slice(0, lastLtIndex)
+                pendingStreamBuffer = pendingStreamBuffer.slice(lastLtIndex)
+                if (safeToEmit) {
+                  accumulatedBio += safeToEmit
+                  sendEvent("delta", { text: safeToEmit })
+                }
+              } else if (pendingStreamBuffer && lastLtIndex === -1) {
+                accumulatedBio += pendingStreamBuffer
+                sendEvent("delta", { text: pendingStreamBuffer })
+                pendingStreamBuffer = ""
+              }
+            } else {
+              const lastLtIndex = pendingStreamBuffer.lastIndexOf("<")
+              if (lastLtIndex !== -1 && pendingStreamBuffer.length - lastLtIndex < 30) {
+                const safeToAppend = pendingStreamBuffer.slice(0, lastLtIndex)
+                pendingStreamBuffer = pendingStreamBuffer.slice(lastLtIndex)
+                if (currentSection === "SEO") accumulatedSeo += safeToAppend
+                else if (currentSection === "THEMES") accumulatedThemes += safeToAppend
+                else if (currentSection === "WORKS") accumulatedWorks += safeToAppend
+              } else if (pendingStreamBuffer && lastLtIndex === -1) {
+                if (currentSection === "SEO") accumulatedSeo += pendingStreamBuffer
+                else if (currentSection === "THEMES") accumulatedThemes += pendingStreamBuffer
+                else if (currentSection === "WORKS") accumulatedWorks += pendingStreamBuffer
+                pendingStreamBuffer = ""
+              }
+            }
           }
         }
 
-        const cleanBio = sanitizeHumanBioText(accumulatedBio)
+        // Flush remaining buffer at stream end
+        if (pendingStreamBuffer) {
+          if (currentSection === "BIO") {
+            accumulatedBio += pendingStreamBuffer
+            sendEvent("delta", { text: pendingStreamBuffer })
+          } else if (currentSection === "SEO") {
+            accumulatedSeo += pendingStreamBuffer
+          } else if (currentSection === "THEMES") {
+            accumulatedThemes += pendingStreamBuffer
+          } else if (currentSection === "WORKS") {
+            accumulatedWorks += pendingStreamBuffer
+          }
+          pendingStreamBuffer = ""
+        }
+
         const fallback = generateCuratorAuthorBio(input)
+        const cleanBio = sanitizeHumanBioText(accumulatedBio.trim()) || fallback.bio
 
         const seoSnippet = extractAuthorMetaDescription({
           name: input.name,
@@ -612,12 +786,29 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
           bio: cleanBio,
         })
 
+        const parsedKeyThemes = accumulatedThemes
+          .split(/[,;\n]+/)
+          .map((t) => t.trim().replace(/^[-*•#\s]+/, ""))
+          .filter((t) => t.length > 2 && t.length < 50)
+
+        const parsedNotableWorks = accumulatedWorks
+          .split(/[,;\n]+/)
+          .map((w) => w.trim().replace(/^[-*•#\s]+/, "").replace(/^["']|["']$/g, ""))
+          .filter((w) => w.length > 2 && w.length < 80)
+
+        const finalThemes = parsedKeyThemes.length > 0 ? parsedKeyThemes.slice(0, 6) : fallback.keyThemes
+        const finalWorks = parsedNotableWorks.length > 0 ? parsedNotableWorks.slice(0, 6) : fallback.notableWorks
+        const finalSeo =
+          (accumulatedSeo.trim().length >= 30 ? accumulatedSeo.trim().slice(0, 160) : null) ||
+          fallback.seoDescription ||
+          seoSnippet
+
         sendEvent("complete_bio", { bio: cleanBio })
         sendEvent("done", {
           bio: cleanBio,
-          seoDescription: fallback.seoDescription || seoSnippet,
-          keyThemes: fallback.keyThemes,
-          notableWorks: fallback.notableWorks,
+          seoDescription: finalSeo,
+          keyThemes: finalThemes,
+          notableWorks: finalWorks,
           provider: "gemini",
           wordCount: cleanBio.split(/\s+/).length,
         })

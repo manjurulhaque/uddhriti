@@ -153,8 +153,12 @@ export async function POST(req: Request) {
         wikidataId: wikiId,
       })
       const imported = await Promise.race([fetchPromise, timeoutPromise])
-      if (imported?.bio) {
-        bioInput.authorityGroundingSummary = imported.bio
+      if (imported) {
+        if (imported.bio) bioInput.authorityGroundingSummary = imported.bio
+        if (!bioInput.profession && imported.profession) bioInput.profession = imported.profession
+        if (!bioInput.nationality && imported.nationality) bioInput.nationality = imported.nationality
+        if (bioInput.birthYear == null && imported.birthYear != null) bioInput.birthYear = imported.birthYear
+        if (bioInput.deathYear == null && imported.deathYear != null) bioInput.deathYear = imported.deathYear
       }
     } catch {
       // Graceful fallback if Wikimedia fetch fails

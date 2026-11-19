@@ -92,6 +92,28 @@ describe("✨ AI-Assisted Author Bio Generator & SEO Optimizer", () => {
       assert.ok(!cleaned.includes(",,"), "Should not contain double commas")
       assert.ok(!cleaned.includes(" ,"), "Should not contain space before comma")
     })
+
+    it("preserves sentence completeness and prevents missing sentence parts when sanitizing", () => {
+      const sentence =
+        "His multifaceted career in the realm of letters was a cornerstone of modern literature. His unwavering dedication left an indelible mark on history."
+      const cleaned = sanitizeHumanBioText(sentence)
+
+      assert.ok(!cleaned.includes("multifaceted"))
+      assert.ok(!cleaned.includes("realm"))
+      assert.ok(!cleaned.includes("cornerstone"))
+      assert.ok(!cleaned.includes("unwavering"))
+      assert.ok(!cleaned.includes("indelible mark"))
+
+      // Must not leave grammatical gaps like "in of letters", "was of modern", "left an on history"
+      assert.ok(!cleaned.includes("in of"), "Should not leave dangling preposition 'in of'")
+      assert.ok(!cleaned.includes("was of modern"), "Should not leave missing noun 'was of modern'")
+      assert.ok(!cleaned.includes("an on history"), "Should not leave dangling article 'an on history'")
+      assert.ok(cleaned.includes("career"), "Should preserve noun 'career'")
+      assert.ok(cleaned.includes("letters"), "Should preserve 'letters'")
+      assert.ok(cleaned.includes("modern literature"), "Should preserve 'modern literature'")
+      assert.ok(cleaned.includes("dedication"), "Should preserve 'dedication'")
+      assert.ok(cleaned.includes("history"), "Should preserve 'history'")
+    })
   })
 
   describe("Perspective Framing Angles (generateCuratorAuthorBio)", () => {

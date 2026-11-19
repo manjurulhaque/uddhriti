@@ -28,36 +28,64 @@ export interface ContextGenerationResult {
   provider: "gemini" | "heuristic"
 }
 
-// Banned robotic clichés and subtle AI tells for post-generation sanitization
-export const BANNED_AI_CONTEXT_WORDS: RegExp[] = [
-  /\bat\s+its\s+core\b/gi,
-  /\bserves?\s+as\s+a\s+reminder\b/gi,
-  /\bserving\s+as\s+a\s+reminder\b/gi,
-  /\ba\s+powerful\s+reminder\b/gi,
-  /\ba\s+poignant\s+reminder\b/gi,
-  /\ba\s+timeless\s+reminder\b/gi,
-  /\bstands?\s+as\s+a\s+testament\b/gi,
-  /\bis\s+a\s+testament\s+to\b/gi,
-  /\btestament(?:\s+to)?\b/gi,
-  /\bdelv(?:e|es|ing)\b/gi,
-  /\brich\s+tapestry\b/gi,
-  /\btapestry\b/gi,
-  /\bbeacon(?:s)?\b/gi,
-  /\bmultifaceted\b/gi,
-  /\bcornerstone(?:s)?\b/gi,
-  /\bin\s+the\s+realm\s+of\b/gi,
-  /\brealm(?:s)?\b/gi,
-  /\bsheds?\s+light\s+on\b/gi,
-  /\bit\s+is\s+important\s+to\s+remember\b/gi,
-  /\bit\s+is\s+worth\s+noting\b/gi,
-  /\breminds\s+us\s+that\b/gi,
-  /\bprofound\s+reminder\b/gi,
-  /\bnavigate\s+the\s+complexities\b/gi,
-  /\bplays?\s+a\s+crucial\s+role\b/gi,
-  /\bin\s+our\s+contemporary,\s+hyper-connected\s+era\b/gi,
-  /\bin\s+today's\s+fast-paced\s+world\b/gi,
-  /\bin\s+conclusion\b/gi,
+// Banned robotic clichés and subtle AI tells with contextual, fluent human replacements
+export const HUMAN_CONTEXT_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
+  // Opening filler
+  { pattern: /^(?:at\s+its\s+core,?\s*|this\s+quote\s+speaks\s+directly\s+to\s*|this\s+quotation\s+speaks\s+directly\s+to\s*)/i, replacement: "" },
+  { pattern: /^(?:in\s+essence,?\s*|fundamentally,?\s*|essentially,?\s*)/i, replacement: "" },
+  { pattern: /^(?:serving\s+as\s+a\s+testament\s+to\s*|as\s+a\s+reminder\s+that\s*|standing\s+as\s+a\s+testament\s+to\s*)/i, replacement: "" },
+  { pattern: /^(?:this\s+quotation\s+explores\s+profound\s+insights\s+concerning\s*|this\s+quote\s+explores\s+profound\s+insights\s+concerning\s*)/i, replacement: "" },
+
+  // Phrasal verbs & idioms
+  { pattern: /\b(?:stands?|serves?)\s+as\s+a\s+testament\s+to\b/gi, replacement: "demonstrates" },
+  { pattern: /\b(?:is|are)\s+a\s+testament\s+to\b/gi, replacement: "reflects" },
+  { pattern: /\btestament\s+to\b/gi, replacement: "reflection of" },
+  { pattern: /\btestament\b/gi, replacement: "evidence" },
+
+  { pattern: /\bserves?\s+as\s+a\s+reminder\s+that\b/gi, replacement: "reminds us that" },
+  { pattern: /\bserves?\s+as\s+a\s+reminder\s+of\b/gi, replacement: "highlights" },
+  { pattern: /\bserving\s+as\s+a\s+reminder\b/gi, replacement: "illustrating" },
+  { pattern: /\ba\s+powerful\s+reminder\s+of\b/gi, replacement: "a clear reflection of" },
+  { pattern: /\ba\s+poignant\s+reminder\s+of\b/gi, replacement: "a moving reflection of" },
+  { pattern: /\ba\s+timeless\s+reminder\s+of\b/gi, replacement: "an enduring reflection of" },
+  { pattern: /\bprofound\s+reminder\b/gi, replacement: "meaningful reflection" },
+  { pattern: /\breminds\s+us\s+that\b/gi, replacement: "demonstrates that" },
+
+  { pattern: /\bdelves?\s+into\b/gi, replacement: "explores" },
+  { pattern: /\bdelving\s+into\b/gi, replacement: "exploring" },
+  { pattern: /\bdelved\s+into\b/gi, replacement: "explored" },
+  { pattern: /\bdelve\b/gi, replacement: "look" },
+
+  { pattern: /\b(?:a|the)\s+rich\s+tapestry\s+of\b/gi, replacement: "the depth of" },
+  { pattern: /\brich\s+tapestry\b/gi, replacement: "depth" },
+  { pattern: /\btapestry\s+of\b/gi, replacement: "variety of" },
+  { pattern: /\btapestry\b/gi, replacement: "tradition" },
+
+  { pattern: /\b(?:a|the)\s+beacon\s+of\s+hope\b/gi, replacement: "a source of hope" },
+  { pattern: /\b(?:a|the)\s+beacon\s+of\b/gi, replacement: "a guide for" },
+  { pattern: /\bbeacons?\b/gi, replacement: "guide" },
+
+  { pattern: /\bmultifaceted\b/gi, replacement: "wide-ranging" },
+  { pattern: /\b(?:a|the)\s+cornerstone\s+of\b/gi, replacement: "a foundation of" },
+  { pattern: /\bcornerstones?\s+of\b/gi, replacement: "foundations of" },
+  { pattern: /\bcornerstones?\b/gi, replacement: "foundation" },
+
+  { pattern: /\bin\s+the\s+realm\s+of\b/gi, replacement: "in" },
+  { pattern: /\brealms?\s+of\b/gi, replacement: "domains of" },
+  { pattern: /\brealms?\b/gi, replacement: "world" },
+
+  { pattern: /\bsheds?\s+light\s+on\b/gi, replacement: "clarifies" },
+  { pattern: /\bnavigate\s+the\s+complexities\s+of\b/gi, replacement: "navigate" },
+  { pattern: /\bplays?\s+a\s+crucial\s+role\s+in\b/gi, replacement: "shapes" },
+  { pattern: /\bin\s+our\s+contemporary,\s+hyper-connected\s+era\b/gi, replacement: "today" },
+  { pattern: /\bin\s+today's\s+fast-paced\s+world\b/gi, replacement: "in contemporary life" },
+  { pattern: /\bat\s+its\s+core,?\s*/gi, replacement: "" },
+  { pattern: /\bin\s+conclusion,?\s*/gi, replacement: "" },
+  { pattern: /\bit\s+is\s+(?:important|worth)\s+(?:to\s+)?remember(?:ing)?\s+(?:that\s+)?/gi, replacement: "" },
+  { pattern: /\bit\s+is\s+(?:important|worth)\s+noting\s+(?:that\s+)?/gi, replacement: "" },
 ]
+
+export const BANNED_AI_CONTEXT_WORDS: RegExp[] = HUMAN_CONTEXT_REPLACEMENTS.map((r) => r.pattern)
 
 export const BANNED_AI_CONTEXT_PHRASES = [
   "at its core",
@@ -114,27 +142,12 @@ export function sanitizeHumanContextText(text: string): string {
 
   let cleaned = text.trim()
 
-  // Clean common formulaic opening clauses
-  cleaned = cleaned.replace(
-    /^(?:at its core,?\s*|this quote speaks directly to\s*|this quotation speaks directly to\s*)/i,
-    ""
-  )
-  cleaned = cleaned.replace(/^(?:in essence,?\s*|fundamentally,?\s*|essentially,?\s*)/i, "")
-  cleaned = cleaned.replace(
-    /^(?:serving as a testament to\s*|as a reminder that\s*|standing as a testament to\s*)/i,
-    ""
-  )
-  cleaned = cleaned.replace(
-    /^(?:this quotation explores profound insights concerning\s*|this quote explores profound insights concerning\s*)/i,
-    ""
-  )
-
-  // Strip banned AI vocabulary
-  for (const pattern of BANNED_AI_CONTEXT_WORDS) {
-    cleaned = cleaned.replace(pattern, "")
+  // Apply contextual fluent human replacements
+  for (const { pattern, replacement } of HUMAN_CONTEXT_REPLACEMENTS) {
+    cleaned = cleaned.replace(pattern, replacement)
   }
 
-  // Clean whitespace and punctuation artifacts left after removals
+  // Clean whitespace and punctuation artifacts left after replacements
   cleaned = cleaned
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\s*,(\s*,)+/g, ",")

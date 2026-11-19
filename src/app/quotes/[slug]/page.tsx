@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { publicQuoteCardSelect } from "@/lib/quotes/selects"
 import { getSiteUrl } from "@/lib/site"
 import { formatEpoch, formatLifespan, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
+import { extractSeoGoldenSnippet } from "@/lib/quotes/context-generator"
 import {
   PublicLayout,
   JsonLd,
@@ -141,8 +142,9 @@ export async function generateMetadata({
   const author = quote.authorName || "Unknown"
   const cleanSnippet = quote.content.length > 70 ? `${quote.content.slice(0, 70)}...` : quote.content
   const title = `“${cleanSnippet}” — ${author}`
+  const seoMeaning = quote.meaning ? extractSeoGoldenSnippet(quote.meaning) : ""
   const description =
-    quote.meaning ||
+    seoMeaning ||
     `Read the quotation “${cleanSnippet}” by ${author}. Explore its historical context, meaning, and thematic analysis.`
 
   return {
@@ -193,6 +195,8 @@ export default async function IndividualQuotePage({
   const quoteUrl = `${siteUrl}/quotes/${quote.slug || quote.id}`
   const authorUrl = quote.author?.slug ? `${siteUrl}/authors/${quote.author.slug}` : undefined
 
+  const pageSeoDescription = quote.meaning ? extractSeoGoldenSnippet(quote.meaning) : undefined
+
   // Schema.org Quotation structured data for Google Knowledge Graph and Rich Snippets
   const jsonLd = {
     "@context": "https://schema.org",
@@ -202,6 +206,8 @@ export default async function IndividualQuotePage({
     text: quote.content,
     inLanguage: quote.language || "en",
     wordCount,
+    ...(pageSeoDescription ? { description: pageSeoDescription, disambiguatingDescription: pageSeoDescription } : {}),
+    ...(quote.meaning ? { abstract: quote.meaning } : {}),
     author: {
       "@type": "Person",
       name: authorName,

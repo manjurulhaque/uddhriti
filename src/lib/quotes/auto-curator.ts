@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma"
 import { callGeminiGenerateContent } from "@/lib/gemini"
 import { findMatchingDbAuthor, calculateSimilarity } from "./author-matcher"
 import { balanceTagsToDistribution } from "./tag-selector"
+import { sanitizeHumanContextText, generateHeuristicContextDraft } from "./context-generator"
 
 export interface AutoCurateInput {
   content: string
@@ -173,9 +174,10 @@ Perform a comprehensive curatorial analysis and return a JSON object with:
    - "citationLocator": Specific chapter, act, section, or essay name (e.g. "Book IV, Section 3", "Act III, Scene 1") or null
 6. "suggestedTags": Array of 5 to 7 relevant lowercase single-word or short tags capturing the themes, emotions, and virtues of the quote.
 7. "context": An object with:
-   - "meaning": Clear, insightful 1-2 sentence literary breakdown of what the quote means.
-   - "historicalContext": 1-2 sentences explaining when and why it was said/written and its historical setting.
-   - "modernRelevance": 1-2 sentences on why this wisdom applies to contemporary life, work, or ethics.
+   - "meaning": Rigorous, humanized philosophical interpretation. CRITICAL SEO REQUIREMENT: Sentence 1 MUST directly define what the quote means in under 160 characters (no filler openings like "This quote means..." or "At its core..."). Follow with 1-2 sentences on the core psychological principle or moral shift.
+   - "historicalContext": 1-2 sentences grounded in author circumstances, historical era, and primary work.
+   - "modernRelevance": 1-2 sentences grounded in contemporary realities (digital distractions, burnout, ethical leadership).
+   ANTI-AI GUARDRAIL: DO NOT use "at its core", "serves as a reminder", "in the realm of", "tapestry", "beacon", "testament", "multifaceted", "cornerstone", "delve", or "sheds light on".
 8. "verification": An object with:
    - "attributionStatus": One of "CONFIRMED" (authentic verified wording), "DISPUTED" (contentious origin), "MISATTRIBUTED" (frequently falsely attributed), or "UNKNOWN".
    - "isVerified": boolean (true if authentic primary source confirmed)
@@ -225,21 +227,27 @@ Return ONLY the raw JSON object. Do not wrap in markdown or backticks.`
       ? findMatchingDbAuthor(extractedAuthorName, dbAuthors)
       : null
 
+    const resolvedAuthorName = matchedDbAuthor?.name || extractedAuthorName || "Unknown"
+    const resolvedCategoryName = dbCategories[0]?.name || "General"
+
+    const fallbackContext = generateHeuristicContextDraft({
+      content: clean,
+      authorName: resolvedAuthorName,
+      categoryName: resolvedCategoryName,
+      sourceTitle: "Collected Works",
+    })
+
     payload = {
       cleanedContent: clean,
-      authorName: matchedDbAuthor?.name || extractedAuthorName || "Unknown",
-      suggestedCategory: dbCategories[0]?.name || "General",
+      authorName: resolvedAuthorName,
+      suggestedCategory: resolvedCategoryName,
       primarySource: {
         title: "Collected Works",
         workType: "BOOK",
         year: null,
       },
       suggestedTags: ["wisdom", "life", "reflection"],
-      context: {
-        meaning: `This quotation explores profound insights concerning human experience and personal reflection.`,
-        historicalContext: `Recorded as part of canonical literature, reflecting the author's philosophical and cultural perspectives.`,
-        modernRelevance: `Offers timeless guidance for contemporary decision-making, resilience, and ethical self-awareness.`,
-      },
+      context: fallbackContext,
       verification: {
         attributionStatus: matchedDbAuthor ? "CONFIRMED" : "UNKNOWN",
         isVerified: Boolean(matchedDbAuthor),
@@ -385,9 +393,9 @@ Return ONLY the raw JSON object. Do not wrap in markdown or backticks.`
     tagIds,
     tagNames,
     // Context
-    meaning: payload.context?.meaning?.trim() || "",
-    historicalContext: payload.context?.historicalContext?.trim() || "",
-    modernRelevance: payload.context?.modernRelevance?.trim() || "",
+    meaning: sanitizeHumanContextText(payload.context?.meaning || ""),
+    historicalContext: sanitizeHumanContextText(payload.context?.historicalContext || ""),
+    modernRelevance: sanitizeHumanContextText(payload.context?.modernRelevance || ""),
     // Verification
     attributionStatus: payload.verification?.attributionStatus || "CONFIRMED",
     isVerified: Boolean(payload.verification?.isVerified),

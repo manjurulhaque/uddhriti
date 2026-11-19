@@ -1,8 +1,9 @@
 /**
  * AI-Assisted Context Suggestion Engine
  *
- * Generates structured context drafts (meaning, historical context, and modern relevance)
- * for quotations. When GEMINI_API_KEY is configured, it leverages Google Gemini.
+ * Generates structured, humanized, and SEO-optimized context drafts (meaning, historical
+ * context, and modern relevance) for quotations. When GEMINI_API_KEY is configured, it
+ * leverages Google Gemini with strict anti-AI guardrails and search-intent prompt constraints.
  * Otherwise, it executes a deterministic semantic heuristic synthesizer that incorporates
  * author biographies, philosophical traditions, and thematic categories.
  */
@@ -25,6 +26,159 @@ export interface QuoteContextDraft {
 export interface ContextGenerationResult {
   draft: QuoteContextDraft
   provider: "gemini" | "heuristic"
+}
+
+// Banned robotic clichés and subtle AI tells for post-generation sanitization
+export const BANNED_AI_CONTEXT_WORDS: RegExp[] = [
+  /\bat\s+its\s+core\b/gi,
+  /\bserves?\s+as\s+a\s+reminder\b/gi,
+  /\bserving\s+as\s+a\s+reminder\b/gi,
+  /\ba\s+powerful\s+reminder\b/gi,
+  /\ba\s+poignant\s+reminder\b/gi,
+  /\ba\s+timeless\s+reminder\b/gi,
+  /\bstands?\s+as\s+a\s+testament\b/gi,
+  /\bis\s+a\s+testament\s+to\b/gi,
+  /\btestament(?:\s+to)?\b/gi,
+  /\bdelv(?:e|es|ing)\b/gi,
+  /\brich\s+tapestry\b/gi,
+  /\btapestry\b/gi,
+  /\bbeacon(?:s)?\b/gi,
+  /\bmultifaceted\b/gi,
+  /\bcornerstone(?:s)?\b/gi,
+  /\bin\s+the\s+realm\s+of\b/gi,
+  /\brealm(?:s)?\b/gi,
+  /\bsheds?\s+light\s+on\b/gi,
+  /\bit\s+is\s+important\s+to\s+remember\b/gi,
+  /\bit\s+is\s+worth\s+noting\b/gi,
+  /\breminds\s+us\s+that\b/gi,
+  /\bprofound\s+reminder\b/gi,
+  /\bnavigate\s+the\s+complexities\b/gi,
+  /\bplays?\s+a\s+crucial\s+role\b/gi,
+  /\bin\s+our\s+contemporary,\s+hyper-connected\s+era\b/gi,
+  /\bin\s+today's\s+fast-paced\s+world\b/gi,
+  /\bin\s+conclusion\b/gi,
+]
+
+export const BANNED_AI_CONTEXT_PHRASES = [
+  "at its core",
+  "serves as a reminder",
+  "serve as a reminder",
+  "serving as a reminder",
+  "a powerful reminder",
+  "a poignant reminder",
+  "a timeless reminder",
+  "stands as a testament",
+  "is a testament to",
+  "testament to",
+  "delve into",
+  "delves into",
+  "delving into",
+  "rich tapestry",
+  "beacon of",
+  "multifaceted",
+  "cornerstone of",
+  "in the realm of",
+  "sheds light on",
+  "shed light on",
+  "it is important to remember",
+  "it is worth noting",
+  "reminds us that",
+  "profound reminder",
+  "navigate the complexities",
+  "plays a crucial role",
+  "in today's fast-paced world",
+  "in conclusion",
+] as const
+
+/**
+ * Detects whether a piece of context text contains any known robotic AI clichés
+ */
+export function detectBannedContextCliches(text: string): string[] {
+  if (!text) return []
+  const lower = text.toLowerCase()
+  const found: string[] = []
+  for (const phrase of BANNED_AI_CONTEXT_PHRASES) {
+    if (lower.includes(phrase) && !found.includes(phrase)) {
+      found.push(phrase)
+    }
+  }
+  return found
+}
+
+/**
+ * Strips robotic AI phrases, formulaic opening filler, and syntactical repetition,
+ * ensuring high-quality, humanized prose.
+ */
+export function sanitizeHumanContextText(text: string): string {
+  if (!text) return ""
+
+  let cleaned = text.trim()
+
+  // Clean common formulaic opening clauses
+  cleaned = cleaned.replace(
+    /^(?:at its core,?\s*|this quote speaks directly to\s*|this quotation speaks directly to\s*)/i,
+    ""
+  )
+  cleaned = cleaned.replace(/^(?:in essence,?\s*|fundamentally,?\s*|essentially,?\s*)/i, "")
+  cleaned = cleaned.replace(
+    /^(?:serving as a testament to\s*|as a reminder that\s*|standing as a testament to\s*)/i,
+    ""
+  )
+  cleaned = cleaned.replace(
+    /^(?:this quotation explores profound insights concerning\s*|this quote explores profound insights concerning\s*)/i,
+    ""
+  )
+
+  // Strip banned AI vocabulary
+  for (const pattern of BANNED_AI_CONTEXT_WORDS) {
+    cleaned = cleaned.replace(pattern, "")
+  }
+
+  // Clean whitespace and punctuation artifacts left after removals
+  cleaned = cleaned
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s*,(\s*,)+/g, ",")
+    .replace(/[ \t]+,/g, ",")
+    .replace(/\b(a|an|the)\s+of\b/gi, "of")
+    .replace(/\b(a|an)\s+(a|an)\b/gi, "a")
+    .replace(/\bthe\s+the\b/gi, "the")
+    .replace(/\s*([.?!])\s*([.?!])+/g, "$1")
+    .replace(/\s+\./g, ".")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/([ \t]*\r?\n){3,}/g, "\n\n")
+    .trim()
+
+  // Ensure leading character is uppercase
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+  }
+
+  return cleaned
+}
+
+/**
+ * Extracts a concise, high-intent SEO snippet (sentence 1, <= 160 chars)
+ * suitable for Google Featured Snippets and search engine meta descriptions.
+ */
+export function extractSeoGoldenSnippet(meaning: string): string {
+  if (!meaning) return ""
+  const clean = sanitizeHumanContextText(meaning).replace(/\s+/g, " ").trim()
+
+  // Match sentence 1 ending in period, question mark, or exclamation point
+  const match = clean.match(/^([^.?!]+[.?!])/)
+  if (match && match[1]) {
+    const s1 = match[1].trim()
+    if (s1.length <= 160) {
+      return s1
+    }
+  }
+
+  // If sentence 1 exceeds 160 chars or has no terminal punctuation, truncate cleanly at word boundary
+  if (clean.length <= 160) return clean
+  const truncated = clean.slice(0, 157)
+  const lastSpace = truncated.lastIndexOf(" ")
+  const boundary = lastSpace > 90 ? lastSpace : 157
+  return `${clean.slice(0, boundary).trim()}...`
 }
 
 // Known author traditions and eras for high-fidelity heuristic enrichment
@@ -54,7 +208,7 @@ const AUTHOR_KNOWLEDGE_BASE: Record<
     era: "1803 – 1882, United States",
     tradition: "Transcendentalism",
     bioContext:
-      "American essayist, lecturer, and poet who championed individualism, self-reliance, and spiritual communion with nature during 19th-century New England cultural renaissance.",
+      "American essayist, lecturer, and poet who championed individualism, self-reliance, and spiritual communion with nature during the 19th-century New England cultural renaissance.",
   },
   "henry david thoreau": {
     era: "1817 – 1862, United States",
@@ -110,6 +264,66 @@ const AUTHOR_KNOWLEDGE_BASE: Record<
     bioContext:
       "Athenian philosopher whose dialectical questioning challenged conventional wisdom, arguing that the unexamined life is not worth living.",
   },
+  "viktor frankl": {
+    era: "1905 – 1997, Austria",
+    tradition: "Logotherapy & Existential Psychology",
+    bioContext:
+      "Neurologist, psychiatrist, and Holocaust survivor who argued that human beings are driven by a 'will to meaning,' capable of discovering purpose even under extreme suffering.",
+  },
+  "virginia woolf": {
+    era: "1882 – 1941, United Kingdom",
+    tradition: "Modernist Literature & Feminist Thought",
+    bioContext:
+      "English novelist and essayist whose pioneering stream-of-consciousness works examined the fluid nature of consciousness, social constraint, and intellectual independence.",
+  },
+  "james baldwin": {
+    era: "1924 – 1987, United States",
+    tradition: "Civil Rights & Moral Essayism",
+    bioContext:
+      "American essayist, novelist, and voice of moral clarity who interrogated racial oppression, systemic violence, and the psychological vulnerability required for genuine love.",
+  },
+  "albert einstein": {
+    era: "1879 – 1955, Germany & United States",
+    tradition: "Theoretical Physics & Humanist Philosophy",
+    bioContext:
+      "Theoretical physicist who transformed human understanding of space, time, and the cosmos, while advocating for intellectual wonder, pacifism, and humility before nature.",
+  },
+  "abraham lincoln": {
+    era: "1809 – 1865, United States",
+    tradition: "Democratic Statesmanship & Constitutional Union",
+    bioContext:
+      "16th President of the United States who preserved the Union during the American Civil War, advanced emancipation, and articulated enduring ideals of democratic government.",
+  },
+  "emily dickinson": {
+    era: "1830 – 1886, United States",
+    tradition: "American Poetry & Transcendental Solitude",
+    bioContext:
+      "American poet who lived in deliberate seclusion in Amherst, Massachusetts, writing concise, syntactically daring verses on mortality, nature, grief, and inner ecstasy.",
+  },
+  "simone de beauvoir": {
+    era: "1908 – 1986, France",
+    tradition: "Existentialism & Feminist Philosophy",
+    bioContext:
+      "French philosopher, writer, and feminist activist whose landmark work 'The Second Sex' investigated womanhood, existential freedom, and the ethics of ambiguity.",
+  },
+  "maya angelou": {
+    era: "1928 – 2014, United States",
+    tradition: "African American Literature & Human Rights",
+    bioContext:
+      "American poet, memoirist, and civil rights activist whose autobiographical writings celebrated resilient dignity, survival, and the transformative power of voice.",
+  },
+  "albert camus": {
+    era: "1913 – 1960, France & Algeria",
+    tradition: "Absurdism & Existential Ethics",
+    bioContext:
+      "French Algerian philosopher and novelist who formulated the philosophy of the Absurd, arguing that humans must actively defy life's meaninglessness through rebellion, freedom, and solidarity.",
+  },
+  "arthur schopenhauer": {
+    era: "1788 – 1860, Germany",
+    tradition: "Philosophical Pessimism & Aesthetics",
+    bioContext:
+      "German philosopher who identified the blind, insatiable 'will to live' as the root of human suffering, proposing aesthetic contemplation and ascetic compassion as avenues of relief.",
+  },
 }
 
 function normalizeAuthorKey(name?: string | null): string {
@@ -117,24 +331,40 @@ function normalizeAuthorKey(name?: string | null): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9 ]/g, "")
 }
 
-function detectThematicKeywords(content: string): string[] {
-  const normalized = content.toLowerCase()
+function detectThematicKeywords(content: string, categoryName?: string | null): string[] {
+  const normalized = `${content} ${categoryName || ""}`.toLowerCase()
   const themes: string[] = []
 
-  if (/\b(control|mind|thought|discipline|desire|passion|peace)\b/.test(normalized)) themes.push("self-mastery")
-  if (/\b(action|work|labor|doing|begin|start|act|habit)\b/.test(normalized)) themes.push("action")
-  if (/\b(fear|afraid|courage|brave|danger|bold)\b/.test(normalized)) themes.push("courage")
-  if (/\b(truth|honest|lie|deceit|reality|wisdom|know)\b/.test(normalized)) themes.push("truth")
-  if (/\b(love|friend|heart|kindness|compassion|care)\b/.test(normalized)) themes.push("compassion")
-  if (/\b(change|grow|transform|become|improve)\b/.test(normalized)) themes.push("transformation")
-  if (/\b(free|freedom|liberty|chain|slave|choice)\b/.test(normalized)) themes.push("freedom")
-  if (/\b(time|moment|present|today|hour|death|mortal|transient|ephemeral)\b/.test(normalized)) themes.push("temporality")
+  if (/\b(control|mind|thought|discipline|desire|passion|peace|power|strength)\b/.test(normalized)) {
+    themes.push("self-mastery")
+  }
+  if (/\b(action|work|labor|doing|begin|start|act|habit|deeds|discipline)\b/.test(normalized)) {
+    themes.push("action")
+  }
+  if (/\b(fear|afraid|courage|brave|danger|bold|stand|stands|challenge|controversy)\b/.test(normalized)) {
+    themes.push("courage")
+  }
+  if (/\b(truth|honest|lie|deceit|reality|wisdom|know|truth-force)\b/.test(normalized)) {
+    themes.push("truth")
+  }
+  if (/\b(love|friend|heart|kindness|compassion|care|gentle|empathy)\b/.test(normalized)) {
+    themes.push("compassion")
+  }
+  if (/\b(change|grow|transform|become|improve|renewal)\b/.test(normalized)) {
+    themes.push("transformation")
+  }
+  if (/\b(free|freedom|liberty|chain|slave|choice|sovereignty)\b/.test(normalized)) {
+    themes.push("freedom")
+  }
+  if (/\b(time|moment|present|today|hour|death|mortal|transient|ephemeral|waste)\b/.test(normalized)) {
+    themes.push("temporality")
+  }
 
   return themes
 }
 
 /**
- * Heuristic synthesizer generating comprehensive contextual paragraphs
+ * Heuristic synthesizer generating humanized, high-quality, SEO-optimized contextual paragraphs
  */
 export function generateHeuristicContextDraft(input: QuoteContextDraftInput): QuoteContextDraft {
   const content = input.content.trim()
@@ -143,69 +373,112 @@ export function generateHeuristicContextDraft(input: QuoteContextDraftInput): Qu
   const sourceTitle = input.sourceTitle?.trim()
 
   const authorKey = normalizeAuthorKey(authorName)
-  const matchedAuthor = Object.entries(AUTHOR_KNOWLEDGE_BASE).find(([key]) =>
-    authorKey.includes(key)
+  const matchedAuthor = Object.entries(AUTHOR_KNOWLEDGE_BASE).find(
+    ([key]) => authorKey.includes(key) || key.includes(authorKey)
   )?.[1]
 
-  const themes = detectThematicKeywords(content)
-  const primaryTheme = themes[0] || "virtue and intentional living"
+  const themes = detectThematicKeywords(content, categoryName)
 
-  // 1. Meaning & Interpretation Synthesis
-  let meaning = `At its core, this quotation speaks directly to the virtue of ${primaryTheme}. `
+  // 1. Meaning & Interpretation Synthesis (Sentence 1 strictly <= 160 chars for SEO Featured Snippets)
+  let meaning = ""
   if (themes.includes("self-mastery")) {
-    meaning += `It underscores the fundamental principle that true power resides in governing one's internal judgments and desires rather than reacting impulsively to external circumstance. `
+    meaning =
+      "This insight affirms that psychological freedom begins when one masters internal reactions rather than wrestling with external events. " +
+      "By distinguishing between personal judgment and outside circumstances, the thinker isolates the true locus of human agency. " +
+      "Lasting tranquility requires disciplined restraint over impulsive reactions, turning adversity into material for character."
   } else if (themes.includes("temporality")) {
-    meaning += `It reflects on the fleeting nature of time and the urgency of living with clear purpose, reminding us that fulfillment is found in how consciously we inhabit the present moment. `
+    meaning =
+      "This reflection highlights the urgency of the present moment and the finite nature of human existence. " +
+      "Fulfillment comes not from postponing life for a distant future, but from inhabiting today with deliberate intention. " +
+      "Awareness of mortality strips away trivial distractions, demanding clear moral choices before time runs out."
   } else if (themes.includes("courage")) {
-    meaning += `It distinguishes authentic courage from the absence of fear, emphasizing that moral fortitude requires confronting discomfort in the service of what is right. `
+    meaning =
+      "This principle defines courage not as the absence of fear, but as the resolve to act rightly despite vulnerability. " +
+      "Moral conviction is tested in conflict and hardship rather than during times of calm convenience. " +
+      "The individual who chooses difficult integrity over easy compliance protects the dignity of the self and society."
   } else if (themes.includes("action")) {
-    meaning += `It rejects passive contemplation in favor of deliberate, consistent action, highlighting that genuine character is demonstrated through deeds rather than rhetoric. `
+    meaning =
+      "This statement insists that authentic character is forged through deliberate action rather than passive speculation. " +
+      "Intentions gain value only when translated into daily practice and persistent discipline. " +
+      "By rejecting theoretical hesitation, the thinker urges direct engagement with reality to yield measurable growth."
+  } else if (themes.includes("truth")) {
+    meaning =
+      "This insight argues that truth demands unwavering honesty with oneself and the courage to challenge comfortable illusions. " +
+      "Genuine wisdom begins where intellectual pretense ends, requiring continuous examination of inherited assumptions. " +
+      "Upholding clarity over convenient distortion anchors both individual integrity and meaningful community trust."
+  } else if (themes.includes("compassion")) {
+    meaning =
+      "This passage shows that human connection thrives on active empathy and unconditional generosity of spirit. " +
+      "Looking beyond self-interest reveals shared vulnerability, turning kindness into a transformative social bond. " +
+      "True strength manifests in how gently one treats others, particularly when power allows indifference."
+  } else if (themes.includes("freedom")) {
+    meaning =
+      "This quotation reveals that genuine freedom is an internal moral condition rather than the mere removal of physical restraint. " +
+      "Autonomy requires freeing oneself from fear, irrational desires, and unexamined social conditioning. " +
+      "Only by taking full responsibility for one's choices does a person attain lasting sovereignty over their life."
+  } else if (themes.includes("transformation")) {
+    meaning =
+      "This reflection frames personal transformation as an intentional process of unlearning limitations and cultivating virtue. " +
+      "Evolution demands confronting discomfort, acknowledging errors, and embracing the slow labor of renewal. " +
+      "Character develops not by standing still, but through continuous self-overcoming and dedicated effort."
   } else {
-    meaning += `It encourages the reader to examine underlying assumptions, aligning thought and action with an enduring standard of integrity and clarity. `
+    meaning =
+      "This quotation challenges conventional assumptions, urging a clear alignment between core values and daily conduct. " +
+      "By cutting through surface distractions, the passage addresses an enduring dilemma of ethical responsibility. " +
+      "It offers a steady compass for self-reflection, inviting the reader to examine their own motives with rigorous clarity."
   }
-  meaning += `The author distills a nuanced human dilemma into an unambiguous moral imperative, providing a cognitive anchor for thoughtful reflection.`
 
   // 2. Historical Context Synthesis
   let historicalContext = ""
   if (matchedAuthor) {
-    historicalContext = `${authorName} was prominent during the ${matchedAuthor.era}, situated within the tradition of ${matchedAuthor.tradition}. ${matchedAuthor.bioContext} `
+    historicalContext = `${authorName} was prominent during ${matchedAuthor.era}, situated within the tradition of ${matchedAuthor.tradition}. ${matchedAuthor.bioContext}`
     if (sourceTitle) {
-      historicalContext += `This perspective emerges clearly in works such as "${sourceTitle}", reflecting the socio-philosophical tensions and moral inquiries of that era.`
+      historicalContext += ` This line is preserved in "${sourceTitle}", articulating the philosophical tensions and ethical inquiries of that period.`
     } else {
-      historicalContext += `The passage captures the author's recurring inquiry into human resilience, personal responsibility, and ethical leadership.`
+      historicalContext += ` This passage exemplifies the author's lifelong inquiry into resilience, personal responsibility, and moral clarity.`
     }
   } else {
     historicalContext = `Associated with ${authorName}${
-      categoryName ? ` within the realm of ${categoryName}` : ""
-    }, this passage reflects a universal contemplative tradition. `
+      categoryName ? ` under the tradition of ${categoryName}` : ""
+    }, this observation addresses an enduring human dilemma.`
     if (sourceTitle) {
-      historicalContext += `Recorded in "${sourceTitle}", it addresses the ethical and cultural expectations of its time, examining how individuals navigate societal pressure while preserving their values.`
+      historicalContext += ` Documented in "${sourceTitle}", it reflects the cultural dialogue of its era, examining how individuals uphold integrity under social pressure.`
     } else {
-      historicalContext += `Historically, such aphorisms served as oral or literary touchstones across philosophical schools, intended to guide disciples and citizens through periods of uncertainty and moral transition.`
+      historicalContext += ` Such aphorisms historically functioned as intellectual touchstones, offering practical ethical guidance through periods of transition and uncertainty.`
     }
   }
 
-  // 3. Modern Relevance Synthesis
-  let modernRelevance = `In our contemporary, hyper-connected era, this insight is especially poignant. `
+  // 3. Modern Relevance Synthesis (Concrete contemporary grounding, zero corporate buzzwords)
+  let modernRelevance = ""
   if (themes.includes("self-mastery") || themes.includes("temporality")) {
-    modernRelevance += `Surrounded by digital noise, relentless notifications, and external validation traps, the quote serves as a vital safeguard against cognitive overload and reactive anxiety. It invites modern readers to reclaim mental clarity and intentional focus. `
+    modernRelevance =
+      "Amid digital noise, notification overload, and constant pressures for external validation, this perspective acts as cognitive armor. " +
+      "It directs attention away from uncontrollable distractions and back to intentional focus and mental clarity."
   } else if (themes.includes("courage") || themes.includes("freedom")) {
-    modernRelevance += `In modern professional, civic, and personal arenas where conformity is subtly rewarded, the advice challenges individuals to uphold psychological independence and champion ethical principles even under institutional pressure. `
+    modernRelevance =
+      "In professional and civic environments where groupthink and risk-aversion dominate, this principle challenges individuals to practice independent judgment. " +
+      "It calls for moral courage when organizational or cultural incentives encourage quiet conformity."
+  } else if (themes.includes("action") || themes.includes("transformation")) {
+    modernRelevance =
+      "In an age prone to analysis paralysis and performative gestures, this counsel champions quiet, consistent execution. " +
+      "It shifts the focus from rhetorical intentions to disciplined habits that generate substantive change."
   } else {
-    modernRelevance += `Across leadership, personal development, and interpersonal relationships, it offers an actionable compass for cutting through superficial distractions to focus on what produces lasting fulfillment and mutual respect. `
+    modernRelevance =
+      "Across modern leadership, personal relationships, and creative work, this insight provides a clear filter against superficial trends. " +
+      "It demonstrates that while technology and culture change rapidly, the essential requirements of human purpose, discipline, and authentic integrity remain constant."
   }
-  modernRelevance += `It reminds us that while technological tools evolve rapidly, the fundamental challenges of human purpose, discipline, and authenticity remain unchanged.`
 
   return {
-    meaning: meaning.trim(),
-    historicalContext: historicalContext.trim(),
-    modernRelevance: modernRelevance.trim(),
+    meaning: sanitizeHumanContextText(meaning),
+    historicalContext: sanitizeHumanContextText(historicalContext),
+    modernRelevance: sanitizeHumanContextText(modernRelevance),
   }
 }
 
 /**
  * Attempts to generate context via Google Gemini API if GEMINI_API_KEY is configured,
- * otherwise safely falls back to the deterministic heuristic synthesizer.
+ * enforcing strict anti-AI humanization guardrails and SEO snippet constraints.
+ * Falls back deterministically to the humanized heuristic synthesizer.
  */
 export async function generateQuoteContextDraft(
   input: QuoteContextDraftInput
@@ -214,11 +487,8 @@ export async function generateQuoteContextDraft(
 
   if (apiKey) {
     try {
-      const prompt = `You are a scholarly philosophical editor and quotation curator.
-Analyze the following quotation and generate three comprehensive, high-quality paragraphs in strict JSON format:
-1. "meaning": Clear, rigorous philosophical interpretation explaining the deeper message and principles conveyed (around 2-3 sentences).
-2. "historicalContext": Author background, era, literary/historical setting, and origin context (around 2-3 sentences).
-3. "modernRelevance": Actionable contemporary application for modern life, mental well-being, or leadership in today's world (around 2-3 sentences).
+      const prompt = `You are a world-class literary scholar, philosophical editor, and quotation curator.
+Analyze the following quotation and generate three comprehensive, humanized, SEO-optimized contextual dimensions in strict JSON:
 
 Quotation details:
 - Content: "${input.content}"
@@ -226,13 +496,26 @@ Quotation details:
 - Category: "${input.categoryName || "General"}"
 - Source: "${input.sourceTitle || "N/A"}"
 
+DIMENSION SPECIFICATIONS:
+1. "meaning" (Philosophical Interpretation & SEO Golden Snippet):
+   - CRITICAL SEO REQUIREMENT: Sentence 1 MUST be a self-contained, high-intent answer explaining what the quote means in under 160 characters. Do NOT open with meta-commentary like "This quote means..." or "At its core...". State the core philosophical thesis immediately.
+   - Follow with 1-2 sentences examining the underlying philosophical tension, psychological principle, or moral shift required.
+2. "historicalContext" (Grounded Provenance):
+   - 2-3 sentences explaining the historical era, the author's real-life circumstances (e.g. exile, military campaign, public struggle, imprisonment), and the specific primary work (${input.sourceTitle || "known writings"}) in which this thought emerged.
+3. "modernRelevance" (Concrete Contemporary Application):
+   - 2-3 sentences applying the wisdom to modern daily life, digital fatigue, ethical leadership, or mental resilience. Ground in specific scenarios rather than abstract platitudes.
+
+CRITICAL ANTI-AI HUMANIZATION RULES:
+- STRICTLY BANNED WORDS & CLICHÉS: DO NOT USE "at its core", "serves as a reminder", "in the realm of", "tapestry", "rich tapestry", "beacon", "testament", "multifaceted", "cornerstone", "delve", "sheds light on", "stands as a testament", "plays a crucial role", "in today's fast-paced world", "a powerful reminder", "profound reminder", "in conclusion".
+- No formulaic participial openings ("Highlighting the importance of...", "Standing as..."). Use active, direct voice with dynamic cadence.
+
 Return ONLY valid JSON with keys: "meaning", "historicalContext", "modernRelevance". No markdown formatting or extra text.`
 
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 6000)
+      const timeoutId = setTimeout(() => controller.abort(), 7500)
 
       const response = await callGeminiGenerateContent(apiKey, prompt, {
-        temperature: 0.3,
+        temperature: 0.28,
         signal: controller.signal,
       })
 
@@ -242,7 +525,8 @@ Return ONLY valid JSON with keys: "meaning", "historicalContext", "modernRelevan
         const data = await response.json()
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
         if (text) {
-          const parsed = JSON.parse(text)
+          const cleanJson = text.replace(/^```json/m, "").replace(/^```/m, "").trim()
+          const parsed = JSON.parse(cleanJson)
           if (
             typeof parsed.meaning === "string" &&
             typeof parsed.historicalContext === "string" &&
@@ -250,9 +534,9 @@ Return ONLY valid JSON with keys: "meaning", "historicalContext", "modernRelevan
           ) {
             return {
               draft: {
-                meaning: parsed.meaning.trim(),
-                historicalContext: parsed.historicalContext.trim(),
-                modernRelevance: parsed.modernRelevance.trim(),
+                meaning: sanitizeHumanContextText(parsed.meaning),
+                historicalContext: sanitizeHumanContextText(parsed.historicalContext),
+                modernRelevance: sanitizeHumanContextText(parsed.modernRelevance),
               },
               provider: "gemini",
             }
@@ -280,7 +564,7 @@ export interface StreamContextOptions {
 
 /**
  * Streams contextual interpretation, historical context, and modern relevance
- * in real-time using Server-Sent Events (SSE).
+ * in real-time using Server-Sent Events (SSE) with humanization guardrails.
  *
  * Emits:
  * - 'start': { provider, targetFields }
@@ -378,7 +662,7 @@ export function streamQuoteContextDraft(
         let prompt: string
         if (targetField === "meaning") {
           prompt = `You are a scholarly philosophical editor and quotation curator.
-Analyze the following quotation and generate a rigorous, comprehensive interpretation explaining the deeper message and principles (around 2-3 sentences).
+Analyze the following quotation and generate a rigorous, humanized interpretation explaining the deeper message and principles (2-3 sentences).
 
 Quotation details:
 - Content: "${input.content}"
@@ -386,10 +670,13 @@ Quotation details:
 - Category: "${input.categoryName || "General"}"
 - Source: "${input.sourceTitle || "N/A"}"
 
-Output ONLY the meaning text directly with no markdown formatting, labels, or introductory phrases.`
+CRITICAL RULES:
+1. Sentence 1 MUST be a direct, self-contained SEO summary of what the quote means strictly under 160 characters. Do not use filler openings ("At its core...", "This quote means...").
+2. BANNED CLICHÉS: Do NOT use "at its core", "serves as a reminder", "in the realm of", "tapestry", "beacon", "testament", "multifaceted", "cornerstone", "delve", or "sheds light on".
+3. Output ONLY the raw meaning text directly with no markdown formatting, labels, or introductory phrases.`
         } else if (targetField === "historicalContext") {
           prompt = `You are a scholarly philosophical editor and quotation curator.
-Analyze the following quotation and generate author background, historical era, and origin context (around 2-3 sentences).
+Analyze the following quotation and generate grounded author background, historical era, and origin context (2-3 sentences).
 
 Quotation details:
 - Content: "${input.content}"
@@ -397,10 +684,13 @@ Quotation details:
 - Category: "${input.categoryName || "General"}"
 - Source: "${input.sourceTitle || "N/A"}"
 
-Output ONLY the historical context text directly with no markdown formatting, labels, or introductory phrases.`
+CRITICAL RULES:
+1. Ground the context in historical circumstances (exile, warfare, public service) and cite the primary work "${input.sourceTitle || "writings"}" where relevant.
+2. BANNED CLICHÉS: Do NOT use "at its core", "serves as a reminder", "in the realm of", "tapestry", "beacon", "testament", "multifaceted", "cornerstone", "delve", or "sheds light on".
+3. Output ONLY the historical context text directly with no markdown formatting, labels, or introductory phrases.`
         } else if (targetField === "modernRelevance") {
           prompt = `You are a scholarly philosophical editor and quotation curator.
-Analyze the following quotation and generate actionable contemporary applications for modern life, mental well-being, or leadership today (around 2-3 sentences).
+Analyze the following quotation and generate actionable contemporary applications for modern life, mental well-being, or leadership today (2-3 sentences).
 
 Quotation details:
 - Content: "${input.content}"
@@ -408,20 +698,28 @@ Quotation details:
 - Category: "${input.categoryName || "General"}"
 - Source: "${input.sourceTitle || "N/A"}"
 
-Output ONLY the modern relevance text directly with no markdown formatting, labels, or introductory phrases.`
+CRITICAL RULES:
+1. Provide concrete modern grounding (digital distraction, burnout, ethical leadership, independent thinking) without corporate platitudes.
+2. BANNED CLICHÉS: Do NOT use "in today's fast-paced world", "serves as a reminder", "beacon", "testament", "at its core", or "realm".
+3. Output ONLY the modern relevance text directly with no markdown formatting, labels, or introductory phrases.`
         } else {
           prompt = `You are a scholarly philosophical editor and quotation curator.
-Analyze the following quotation and generate three comprehensive, high-quality paragraphs.
+Analyze the following quotation and generate three comprehensive, humanized, SEO-optimized paragraphs.
 
 Quotation details:
 - Content: "${input.content}"
 - Author: "${input.authorName || "Unknown"}"
 - Category: "${input.categoryName || "General"}"
 - Source: "${input.sourceTitle || "N/A"}"
+
+CRITICAL RULES:
+1. Under MEANING: Sentence 1 MUST directly define the meaning in under 160 characters (SEO Golden Snippet). No opening clichés.
+2. BANNED CLICHÉS: Do NOT use "at its core", "serves as a reminder", "in the realm of", "tapestry", "beacon", "testament", "multifaceted", "cornerstone", "delve", "sheds light on", "stands as a testament", or "in today's fast-paced world".
+3. Use active voice and avoid participial sentence openings ("Bridging...", "Standing at...").
 
 Format your response strictly using these exact delimiters:
 <<<MEANING>>>
-(2-3 sentences explaining philosophical meaning and moral message)
+(2-3 sentences explaining philosophical meaning and moral message; first sentence <= 160 chars)
 <<<HISTORICAL_CONTEXT>>>
 (2-3 sentences explaining author background, era, and historical setting)
 <<<MODERN_RELEVANCE>>>
@@ -437,7 +735,7 @@ Do not output any introductory or closing remarks outside these tags.`
         options?.signal?.addEventListener("abort", abortHandler)
 
         const geminiRes = await callGeminiStreamGenerateContent(apiKey, prompt, {
-          temperature: 0.3,
+          temperature: 0.28,
           signal: timeoutController.signal,
         })
 
@@ -469,7 +767,8 @@ Do not output any introductory or closing remarks outside these tags.`
         const markFieldComplete = (field: ContextDimensionField) => {
           if (!completedFields.has(field)) {
             completedFields.add(field)
-            sendEvent("complete", { field, fullText: collected[field].trim() })
+            const cleanText = sanitizeHumanContextText(collected[field])
+            sendEvent("complete", { field, fullText: cleanText })
           }
         }
 
@@ -586,10 +885,13 @@ Do not output any introductory or closing remarks outside these tags.`
         const fallback = generateHeuristicContextDraft(input)
 
         if (targetField) {
-          const targetText = collected[targetField].trim() || fallback[targetField]
+          const rawTarget = collected[targetField].trim()
+          const sanitizedTarget = rawTarget
+            ? sanitizeHumanContextText(rawTarget)
+            : fallback[targetField]
           markFieldComplete(targetField)
           sendEvent("done", {
-            draft: { [targetField]: targetText },
+            draft: { [targetField]: sanitizedTarget },
             provider: "gemini",
           })
         } else {
@@ -605,9 +907,9 @@ Do not output any introductory or closing remarks outside these tags.`
 
           sendEvent("done", {
             draft: {
-              meaning: collected.meaning.trim(),
-              historicalContext: collected.historicalContext.trim(),
-              modernRelevance: collected.modernRelevance.trim(),
+              meaning: sanitizeHumanContextText(collected.meaning),
+              historicalContext: sanitizeHumanContextText(collected.historicalContext),
+              modernRelevance: sanitizeHumanContextText(collected.modernRelevance),
             },
             provider: "gemini",
           })
@@ -624,4 +926,3 @@ Do not output any introductory or closing remarks outside these tags.`
     },
   })
 }
-

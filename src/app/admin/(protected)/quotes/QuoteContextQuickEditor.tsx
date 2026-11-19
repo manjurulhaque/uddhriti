@@ -4,6 +4,11 @@ import React, { useState, useEffect, useId, useRef } from "react"
 import Link from "next/link"
 import { Button, Badge } from "@/components/ui"
 import { CloseIcon } from "@/components/ui/icons"
+import {
+  extractSeoGoldenSnippet,
+  detectBannedContextCliches,
+  sanitizeHumanContextText,
+} from "@/lib/quotes/context-generator"
 
 export interface QuoteContextQuickEditorProps {
   isOpen: boolean
@@ -100,6 +105,13 @@ export function QuoteContextQuickEditor({
   const isHistoricalFilled = historicalContext.trim().length > 0
   const isModernFilled = modernRelevance.trim().length > 0
   const filledCount = Number(isMeaningFilled) + Number(isHistoricalFilled) + Number(isModernFilled)
+
+  const meaningSeoSnippet = meaning.trim() ? extractSeoGoldenSnippet(meaning) : ""
+  const detectedCliches = [
+    ...detectBannedContextCliches(meaning),
+    ...detectBannedContextCliches(historicalContext),
+    ...detectBannedContextCliches(modernRelevance),
+  ].filter((val, idx, arr) => arr.indexOf(val) === idx)
 
   function handleStopStreaming() {
     if (abortControllerRef.current) {
@@ -452,6 +464,30 @@ export function QuoteContextQuickEditor({
               </div>
             )}
 
+            {detectedCliches.length > 0 && (
+              <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/90 px-3.5 py-2.5 text-xs text-amber-900 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">⚠️</span>
+                  <span>
+                    Robotic phrasing detected:{" "}
+                    <strong className="underline">{detectedCliches.slice(0, 3).map((c) => `"${c}"`).join(", ")}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMeaning((prev) => sanitizeHumanContextText(prev))
+                    setHistoricalContext((prev) => sanitizeHumanContextText(prev))
+                    setModernRelevance((prev) => sanitizeHumanContextText(prev))
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-amber-700 transition cursor-pointer"
+                  title="Clean and humanize context text"
+                >
+                  ✨ Humanize Text
+                </button>
+              </div>
+            )}
+
             {/* Dimension 1: Meaning & Interpretation */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -514,6 +550,29 @@ export function QuoteContextQuickEditor({
                   <span>Streaming interpretation in real-time...</span>
                 </div>
               )}
+              <div className="flex items-center justify-between pt-1 text-[11px]">
+                {meaningSeoSnippet ? (
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1 font-semibold ${
+                        meaningSeoSnippet.length <= 160 ? "text-emerald-700" : "text-amber-700"
+                      }`}
+                    >
+                      {meaningSeoSnippet.length <= 160 ? "✓ Optimal SEO Snippet:" : "⚠ Long SEO Snippet:"}
+                    </span>
+                    <span className="text-stone-600 font-mono">
+                      {meaningSeoSnippet.length} / 160 chars
+                    </span>
+                    <span className="text-stone-400 hidden sm:inline">
+                      (Sentence 1 powers Google Featured Snippets)
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-stone-400">
+                    SEO Intent: Sentence 1 should answer &quot;What does this quote mean?&quot; directly in under 160 characters.
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Dimension 2: Historical Context */}

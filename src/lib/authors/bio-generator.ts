@@ -179,6 +179,16 @@ Today, his insights on emotional fortitude, resilience under duress, and integri
         answer:
           "Meditations was Marcus's private morning journal (originally titled 'To Himself'), written during military campaigns along the Danube to hold himself accountable to virtue while governing an empire.",
       },
+      {
+        question: "What did Marcus Aurelius teach about handling adversity and difficult people?",
+        answer:
+          "He advised meeting hostility with calm empathy, recognizing that wrongdoers act out of ignorance of good, and remembering that external actions cannot harm your moral integrity unless you assent to them.",
+      },
+      {
+        question: "How did Marcus Aurelius view mortality and Memento Mori?",
+        answer:
+          "He viewed death as a natural cosmic process that strips away pretense, reminding himself daily that life is brief so as to infuse every present action with gratitude, justice, and moral urgency.",
+      },
     ],
   },
   seneca: {
@@ -210,6 +220,16 @@ His moral essays and letters bridge high philosophy and human vulnerability, off
         question: "How did Seneca reconcile wealth with Stoic detachment?",
         answer:
           "Seneca viewed wealth as a 'preferred indifferent'—acceptable to possess and use wisely, provided one remains morally unattached and prepared to lose it without anguish.",
+      },
+      {
+        question: "What is the core message of Seneca's 'On the Brevity of Life'?",
+        answer:
+          "Seneca argued that life is not inherently short, but rather wasted through trivial pursuits and procrastination; we only live a tiny fraction of our lifespan if we spend it fulfilling external expectations.",
+      },
+      {
+        question: "How did Seneca advise overcoming anxiety and anger?",
+        answer:
+          "He recommended delaying immediate emotional reactions, mentally rehearsing potential misfortunes in advance (premeditatio malorum) to disarm fear, and conducting nightly self-examinations.",
       },
     ],
   },
@@ -243,6 +263,16 @@ Written with poetic fury and sharp psychological diagnostic precision, his works
         answer:
           "Amor Fati ('love of fate') is the resolve not merely to endure suffering, but to embrace every single moment of existence as necessary and worthy of affirmation.",
       },
+      {
+        question: "What is the Übermensch according to Nietzsche?",
+        answer:
+          "The Übermensch ('Overman') represents a self-actualized creator who rises above herd conformity, masters internal weakness, and authors their own ethical meaning.",
+      },
+      {
+        question: "How did Nietzsche define the 'Will to Power'?",
+        answer:
+          "He defined it as the fundamental psychological drive in human beings toward vitality, creative growth, self-mastery, and the overcoming of internal and external obstacles.",
+      },
     ],
   },
   "ralph waldo emerson": {
@@ -275,6 +305,16 @@ Emerson’s luminous prose shaped generations of thinkers—including his mentee
         answer:
           "Emerson served as a mentor and close friend to Thoreau, providing access to his land at Walden Pond and profoundly shaping Thoreau's philosophy of simple living and civil disobedience.",
       },
+      {
+        question: "What is American Transcendentalism as defined by Emerson?",
+        answer:
+          "Transcendentalism was Emerson's philosophical movement asserting that ultimate spiritual truth transcends empirical senses, accessible directly through intuitive conscience and nature.",
+      },
+      {
+        question: "What was Emerson's spiritual view of nature?",
+        answer:
+          "Emerson viewed nature as a sacred, living reality that mirrors human consciousness, teaching that immersion in wilderness cures social pretension and restores primal clarity.",
+      },
     ],
   },
   "mahatma gandhi": {
@@ -306,6 +346,16 @@ Gandhi’s philosophical legacy extended far beyond Indian independence, directl
         question: "Which thinkers shaped Mahatma Gandhi's worldview?",
         answer:
           "Gandhi drew inspiration from ancient Indian Ahimsa, Leo Tolstoy's Christian pacifism, John Ruskin's ethics of labor in 'Unto This Last', and Henry David Thoreau's essay on Civil Disobedience.",
+      },
+      {
+        question: "How did Gandhi define Ahimsa (nonviolence)?",
+        answer:
+          "Gandhi defined Ahimsa not merely as refraining from physical harm, but as an active state of spiritual goodwill that refuses malice even when confronting oppression.",
+      },
+      {
+        question: "How did Gandhi influence modern civil rights movements?",
+        answer:
+          "Gandhi proved that disciplined, principled nonviolence could overcome military empires, providing the strategic and moral foundation for Martin Luther King Jr., Nelson Mandela, and global freedom struggles.",
       },
     ],
   },
@@ -441,6 +491,14 @@ export function generateCuratorAuthorBio(input: AuthorBioInput): AuthorBioResult
     {
       question: `Why do readers study and cite quotes by ${input.name}?`,
       answer: `The quotes of ${input.name} remain widely cited because they challenge conventional assumptions and provide timeless mental clarity for navigating adversity and personal conviction.`,
+    },
+    {
+      question: `What are the core themes explored throughout ${input.name}'s work?`,
+      answer: `Their intellectual footprint centers on ethical agency, personal discipline, and navigating the friction between individual conscience and societal expectation.`,
+    },
+    {
+      question: `How did historical challenges forge ${input.name}'s perspective?`,
+      answer: `Rather than formulating abstract theories in isolation, ${input.name} tested their ideas against the concrete moral dilemmas and lived adversities of their era.`,
     },
   ]
 
@@ -581,7 +639,7 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
    - Defining Crucible: Identify the single historical turning point, exile, battle, illness, or trial in 1 to 2 sentences that tested and forged their ideas.
    - Seamlessly embed seminal works and concepts without keyword stuffing.
    - Highlight intellectual lineage: 2 to 3 figures who influenced them, 2 to 3 figures they influenced, and 1 to 2 contrasting philosophical voices.
-   - Formulate 2 high-intent FAQ pairs directly answering common questions searchers ask about this author's philosophy or legacy (concise, factual, authoritative 1-2 sentence answers).
+   - Formulate 4 to 5 high-intent FAQ pairs directly answering common questions searchers ask about this author's philosophy, major works, ethical stances on adversity, or lasting legacy (concise, factual, authoritative 1-2 sentence answers).
 
 Output strictly valid JSON with this exact structure:
 {
@@ -602,7 +660,15 @@ Output strictly valid JSON with this exact structure:
       "answer": "Authoritative 1-2 sentence direct answer suitable for Google search answer snippet"
     },
     {
-      "question": "Second key question (e.g. about their most famous work or turning point)",
+      "question": "Second key question (e.g. about their seminal work or turning point)",
+      "answer": "Authoritative 1-2 sentence direct answer"
+    },
+    {
+      "question": "Third key question (e.g. about handling adversity, ethics, or personal discipline)",
+      "answer": "Authoritative 1-2 sentence direct answer"
+    },
+    {
+      "question": "Fourth key question (e.g. why their ideas remain influential today)",
       "answer": "Authoritative 1-2 sentence direct answer"
     }
   ]
@@ -701,7 +767,7 @@ export async function generateAuthorBio(
                   (f: { question: string; answer: string }) =>
                     f.question.length > 5 && f.answer.length > 10
                 )
-                .slice(0, 3)
+                .slice(0, 5)
               if (parsedFaqs.length > 0) {
                 faqs = parsedFaqs
               }
@@ -813,7 +879,7 @@ function parseFaqsText(raw: string, fallback: AuthorFaqItem[]): AuthorFaqItem[] 
             answer: sanitizeHumanBioText(String(f.answer).trim()),
           }))
           .filter((f) => f.question.length > 5 && f.answer.length > 10)
-        if (items.length > 0) return items.slice(0, 3)
+        if (items.length > 0) return items.slice(0, 5)
       }
     }
   } catch {
@@ -834,7 +900,7 @@ function parseFaqsText(raw: string, fallback: AuthorFaqItem[]): AuthorFaqItem[] 
     }
   }
 
-  return faqs.length > 0 ? faqs.slice(0, 3) : fallback
+  return faqs.length > 0 ? faqs.slice(0, 5) : fallback
 }
 
 /**
@@ -981,7 +1047,11 @@ CONTRASTS: Thinker 5, Thinker 6
 <<<FAQS>>>
 Q: What was their core philosophy?
 A: 1-2 sentence authoritative answer.
-Q: Why do their quotes endure?
+Q: What is their most celebrated work or speech?
+A: 1-2 sentence authoritative answer.
+Q: How did their ideas navigate crisis or adversity?
+A: 1-2 sentence authoritative answer.
+Q: Why do their insights remain relevant today?
 A: 1-2 sentence authoritative answer.`
 
         const timeoutController = new AbortController()

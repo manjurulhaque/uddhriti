@@ -382,7 +382,16 @@ export default async function AuthorDetailPage({
     notFound()
   }
 
-  const [topCategoriesRaw, relatedAuthors, authorFaqs] = await Promise.all([
+  const companionThinkers = getAuthorCompanionThinkers(author.name)
+  const companionNames = companionThinkers
+    ? [
+        ...companionThinkers.influences,
+        ...companionThinkers.influenced,
+        ...companionThinkers.contrasts,
+      ]
+    : []
+
+  const [topCategoriesRaw, relatedAuthors, authorFaqs, matchedCompanionAuthors] = await Promise.all([
     prisma.quote.findMany({
       where: {
         authorId: author.id,
@@ -429,7 +438,20 @@ export default async function AuthorDetailPage({
       orderBy: { position: "asc" },
       select: { id: true, question: true, answer: true },
     }),
+    companionNames.length > 0
+      ? prisma.author.findMany({
+          where: {
+            name: { in: companionNames, mode: "insensitive" },
+          },
+          select: { name: true, slug: true },
+        })
+      : Promise.resolve([]),
   ])
+
+  const authorSlugMap = new Map<string, string>()
+  for (const m of matchedCompanionAuthors) {
+    authorSlugMap.set(m.name.toLowerCase(), m.slug)
+  }
 
   // Aggregate active thematic domains directly from distinct categories
   const categoryCountMap = new Map<string, { id: string; name: string; slug: string; quoteCount: number }>()
@@ -458,8 +480,6 @@ export default async function AuthorDetailPage({
   const cleanedProfession = cleanProfession(author.profession)
   const dateOfBirthFormatted = formatDateOfRecord(author.dateOfBirth)
   const dateOfDeathFormatted = formatDateOfRecord(author.dateOfDeath)
-
-  const companionThinkers = getAuthorCompanionThinkers(author.name)
 
   const jsonLd = buildAuthorKnowledgeGraph({
     ...author,
@@ -654,6 +674,139 @@ export default async function AuthorDetailPage({
                   </Link>
                 )
               })}
+            </div>
+          </section>
+        )}
+
+        {/* Intellectual Lineage & Influences Shelf */}
+        {companionThinkers && (
+          <section className="space-y-4" aria-labelledby="intellectual-lineage-heading">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-stone-900/10 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg" aria-hidden="true">🏛️</span>
+                <h2 id="intellectual-lineage-heading" className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink-900)]">
+                  Intellectual Lineage &amp; Influences
+                </h2>
+              </div>
+              <span className="text-xs font-mono text-stone-500">
+                Roots, successors &amp; contrasting schools
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Roots & Mentors */}
+              <div className="flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs space-y-3.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5 font-sans">
+                      <span>🏛️</span> Roots &amp; Mentors
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60 font-semibold">
+                      {companionThinkers.influences.length}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-500 font-sans">
+                    Formative teachers, ancient masters &amp; classical traditions
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {companionThinkers.influences.map((thinker) => {
+                    const slug = authorSlugMap.get(thinker.toLowerCase())
+                    const href = slug ? `/authors/${slug}` : `/search?q=${encodeURIComponent(thinker)}`
+                    return (
+                      <Link
+                        key={thinker}
+                        href={href}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200/80 bg-stone-50/70 hover:bg-amber-50/70 hover:border-amber-300/80 px-2.5 py-1 text-xs font-medium text-stone-800 hover:text-amber-950 transition shadow-2xs group"
+                      >
+                        <span>{thinker}</span>
+                        {slug && (
+                          <span className="text-[10px] text-amber-600/70 group-hover:text-amber-800" title="View author profile">
+                            →
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Successors & Heirs */}
+              <div className="flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs space-y-3.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5 font-sans">
+                      <span>🌿</span> Successors &amp; Heirs
+                    </span>
+                    <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200/60 font-semibold">
+                      {companionThinkers.influenced.length}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-500 font-sans">
+                    Thinkers, writers &amp; modern leaders who carried ideas forward
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {companionThinkers.influenced.map((thinker) => {
+                    const slug = authorSlugMap.get(thinker.toLowerCase())
+                    const href = slug ? `/authors/${slug}` : `/search?q=${encodeURIComponent(thinker)}`
+                    return (
+                      <Link
+                        key={thinker}
+                        href={href}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200/80 bg-stone-50/70 hover:bg-indigo-50/70 hover:border-indigo-300/80 px-2.5 py-1 text-xs font-medium text-stone-800 hover:text-indigo-950 transition shadow-2xs group"
+                      >
+                        <span>{thinker}</span>
+                        {slug && (
+                          <span className="text-[10px] text-indigo-600/70 group-hover:text-indigo-800" title="View author profile">
+                            →
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Contrasting Voices */}
+              <div className="flex flex-col justify-between rounded-2xl border border-stone-200/90 bg-white p-5 shadow-2xs space-y-3.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--accent-rust,#991b1b)] flex items-center gap-1.5 font-sans">
+                      <span>⚖️</span> Contrasting Voices
+                    </span>
+                    <span className="text-[10px] font-mono text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60 font-semibold">
+                      {companionThinkers.contrasts.length}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-500 font-sans">
+                    Opposing worldviews, rival philosophical schools &amp; critiques
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {companionThinkers.contrasts.map((thinker) => {
+                    const slug = authorSlugMap.get(thinker.toLowerCase())
+                    const href = slug ? `/authors/${slug}` : `/search?q=${encodeURIComponent(thinker)}`
+                    return (
+                      <Link
+                        key={thinker}
+                        href={href}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200/80 bg-stone-50/70 hover:bg-rose-50/70 hover:border-rose-300/80 px-2.5 py-1 text-xs font-medium text-stone-800 hover:text-rose-950 transition shadow-2xs group"
+                      >
+                        <span>{thinker}</span>
+                        {slug && (
+                          <span className="text-[10px] text-rose-600/70 group-hover:text-rose-800" title="View author profile">
+                            →
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </section>
         )}

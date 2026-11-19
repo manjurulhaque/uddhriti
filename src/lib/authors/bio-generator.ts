@@ -13,6 +13,7 @@
  */
 
 import { callGeminiGenerateContent, callGeminiStreamGenerateContent } from "@/lib/gemini"
+import { extractAuthorMetaDescription } from "./seo"
 
 export type BioTone = "humanized" | "philosophical" | "punchy"
 export type BioLength = "balanced" | "concise" | "comprehensive"
@@ -532,8 +533,11 @@ CRITICAL RULES FOR HUMANIZATION & ANTI-AI FLUFF:
         const cleanBio = sanitizeHumanBioText(accumulatedBio)
         const fallback = generateCuratorAuthorBio(input)
 
-        const seoSnippet =
-          cleanBio.slice(0, 150).replace(/\n+/g, " ").trim() + "..."
+        const seoSnippet = extractAuthorMetaDescription({
+          name: input.name,
+          profession: input.profession,
+          bio: cleanBio,
+        })
 
         sendEvent("complete_bio", { bio: cleanBio })
         sendEvent("done", {

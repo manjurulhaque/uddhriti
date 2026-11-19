@@ -41,6 +41,7 @@ function AuthorBioModalInner({
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
+  const [isSeoCopied, setIsSeoCopied] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -172,6 +173,15 @@ function AuthorBioModalInner({
     navigator.clipboard.writeText(generatedBio)
     setIsCopied(true)
     setTimeout(() => setIsCopied(false), 2000)
+  }
+
+  function handleCopySeo() {
+    const textToCopy =
+      seoDescription || (generatedBio ? generatedBio.slice(0, 155).replace(/\n+/g, " ") : "")
+    if (!textToCopy) return
+    navigator.clipboard.writeText(textToCopy)
+    setIsSeoCopied(true)
+    setTimeout(() => setIsSeoCopied(false), 2000)
   }
 
   function handleApply() {
@@ -455,12 +465,38 @@ function AuthorBioModalInner({
           {/* Google SERP Snippet Preview */}
           <div className="rounded-xl border border-stone-200/90 bg-stone-50/60 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
-                Google Search Result (SERP) Mockup Preview
-              </span>
-              <span className="text-[10px] font-mono text-stone-400">
-                {seoDescription.length || Math.min(160, generatedBio.length)} / 160 chars
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">
+                  Google Search Result (SERP) &amp; Schema.org Preview
+                </span>
+                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+                  JSON-LD Ready
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-mono text-stone-400">
+                  {seoDescription.length || Math.min(160, generatedBio.length)} / 160 chars
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopySeo}
+                  disabled={!seoDescription && !generatedBio}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 transition cursor-pointer disabled:opacity-40"
+                  title="Copy SEO meta description to clipboard"
+                >
+                  {isSeoCopied ? (
+                    <>
+                      <CheckIcon className="w-3 h-3 text-emerald-600" />
+                      <span className="text-emerald-700">Copied SERP</span>
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon className="w-3 h-3 text-stone-400" />
+                      <span>Copy SERP</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1 bg-white p-3.5 rounded-lg border border-stone-200/80 shadow-2xs font-sans">
@@ -469,7 +505,7 @@ function AuthorBioModalInner({
                 <span className="font-semibold text-stone-700">{author.name.toLowerCase().replace(/\s+/g, "-")}</span>
               </div>
               <h4 className="text-sm font-semibold text-blue-700 hover:underline cursor-pointer">
-                {author.name} Quotes &amp; Philosophy | Quotzen
+                {author.name} Quotes &amp; Philosophy - {author.profession || "Thinker & Writer"}
               </h4>
               <p className="text-xs text-stone-600 leading-relaxed line-clamp-2">
                 {seoDescription ||
@@ -485,9 +521,14 @@ function AuthorBioModalInner({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               {keyThemes.length > 0 && (
                 <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
-                    Core Philosophical Themes
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
+                      Core Philosophical Themes
+                    </span>
+                    <span className="text-[9px] font-mono text-violet-600 bg-violet-50 px-1.5 py-0.2 rounded border border-violet-100">
+                      Schema: knowsAbout
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {keyThemes.map((theme) => (
                       <span
@@ -503,9 +544,14 @@ function AuthorBioModalInner({
 
               {notableWorks.length > 0 && (
                 <div className="rounded-xl border border-stone-200 bg-white p-3 space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
-                    Notable Publications / Sources
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
+                      Notable Publications / Sources
+                    </span>
+                    <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-100">
+                      Schema: workExample
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {notableWorks.map((work) => (
                       <span

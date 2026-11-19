@@ -15,11 +15,15 @@ import {
   getCategoryMeta,
   normalizeWikimediaThumbnailUrl,
 } from "@/lib/formatters"
-import { getSiteUrl } from "@/lib/site"
 import { formatSourceYearLabel } from "@/lib/sourceYear"
 import { parseSafePageNumber, sanitizeSlug, isSafeExternalUrl, isValidWikidataId } from "@/lib/security/input"
 import { BoundedMemoryCache } from "@/lib/cache/bounded-cache"
 import { publicQuoteCardSelect, type PublicQuoteCardItem } from "@/lib/quotes/selects"
+import {
+  extractAuthorMetaDescription,
+  generateAuthorPageTitle,
+  buildAuthorKnowledgeGraph,
+} from "@/lib/authors/seo"
 
 const QUOTES_PER_PAGE = 12
 const MAX_AUTHOR_CACHE_ENTRIES = 120
@@ -108,27 +112,27 @@ export async function generateMetadata({
     return { title: "Author Not Found" }
   }
 
-  const desc =
-    author.bio?.slice(0, 160) ||
-    `Read timeless quotes and philosophical thoughts by ${author.name}${
-      author.profession ? `, ${author.profession}` : ""
-    }.`
+  const title = generateAuthorPageTitle(author)
+  const desc = extractAuthorMetaDescription(author)
+  const authorImageUrl = normalizeWikimediaThumbnailUrl(author.imageUrl)
 
   return {
-    title: `${author.name} Quotes`,
+    title,
     description: desc,
     alternates: {
       canonical: `/authors/${slug}`,
     },
     openGraph: {
-      title: `${author.name} Quotes - Quotzen`,
+      title: `${author.name} Quotes & Philosophy - Quotzen`,
       description: desc,
       type: "profile",
+      ...(authorImageUrl ? { images: [{ url: authorImageUrl, alt: author.name }] } : {}),
     },
     twitter: {
       card: "summary_large_image",
-      title: `${author.name} Quotes - Quotzen`,
+      title: `${author.name} Quotes & Philosophy - Quotzen`,
       description: desc,
+      ...(authorImageUrl ? { images: [authorImageUrl] } : {}),
     },
   }
 }
@@ -335,35 +339,11 @@ export default async function AuthorDetailPage({
   const dateOfBirthFormatted = formatDateOfRecord(author.dateOfBirth)
   const dateOfDeathFormatted = formatDateOfRecord(author.dateOfDeath)
 
-  const siteUrl = getSiteUrl()
-  const authorUrl = `${siteUrl}/authors/${author.slug}`
-
-  const sameAsList: string[] = []
-  if (isSafeExternalUrl(author.wikipediaUrl)) sameAsList.push(author.wikipediaUrl!)
-  if (isValidWikidataId(author.wikidataId)) sameAsList.push(`https://www.wikidata.org/wiki/${author.wikidataId}`)
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    "@id": authorUrl,
-    url: authorUrl,
-    name: author.name,
-    ...(authorImageUrl ? { image: authorImageUrl } : {}),
-    ...(author.bio ? { description: author.bio } : {}),
-    ...(author.profession ? { jobTitle: author.profession } : {}),
-    ...(author.nationality ? { nationality: author.nationality } : {}),
-    ...(author.dateOfBirth
-      ? { birthDate: author.dateOfBirth.toISOString().split("T")[0] }
-      : author.birthYear
-        ? { birthDate: String(author.birthYear) }
-        : {}),
-    ...(author.dateOfDeath
-      ? { deathDate: author.dateOfDeath.toISOString().split("T")[0] }
-      : author.deathYear
-        ? { deathDate: String(author.deathYear) }
-        : {}),
-    ...(sameAsList.length > 0 ? { sameAs: sameAsList } : {}),
-  }
+  const jsonLd = buildAuthorKnowledgeGraph({
+    ...author,
+    topCategories,
+    sources: author.sources,
+  })
 
   return (
     <PublicLayout>

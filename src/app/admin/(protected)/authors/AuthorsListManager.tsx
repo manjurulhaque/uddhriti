@@ -93,16 +93,16 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     const filtered = authors.filter((author) => {
       const matchesSearch = needle
         ? [
-            author.name,
-            author.slug,
-            author.profession ?? "",
-            author.nationality ?? "",
-            author.birthYear?.toString() ?? "",
-            author.deathYear?.toString() ?? "",
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle)
+          author.name,
+          author.slug,
+          author.profession ?? "",
+          author.nationality ?? "",
+          author.birthYear?.toString() ?? "",
+          author.deathYear?.toString() ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle)
         : true
 
       const matchesQuoteFilter =

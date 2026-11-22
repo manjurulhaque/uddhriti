@@ -2,16 +2,22 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Select,
+  Textarea,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+} from "@/components/ui"
+import { slugify } from "@/lib/slug"
 
-const visibilityOptions = ["PUBLIC", "PRIVATE", "EDITORIAL"] as const
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-}
+const visibilityOptions = [
+  { value: "PUBLIC", label: "PUBLIC — Visible to everyone" },
+  { value: "PRIVATE", label: "PRIVATE — Only visible to administrators" },
+  { value: "EDITORIAL", label: "EDITORIAL — Editorial and staff selection" },
+]
 
 export default function NewCollectionPage() {
   const router = useRouter()
@@ -30,7 +36,13 @@ export default function NewCollectionPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setForm((prev) => {
+      const next = { ...prev, [name]: value }
+      if (name === "title" && !prev.slug) {
+        next.slug = slugify(value)
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,90 +57,87 @@ export default function NewCollectionPage() {
       description: form.description || null,
     }
 
-    const res = await fetch("/api/admin/collections", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    try {
+      const res = await fetch("/api/admin/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      setErrors(data?.errors?.fieldErrors || {})
-      setError(data?.error || "Failed to create collection")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setErrors(data?.errors?.fieldErrors || {})
+        throw new Error(data?.error || "Failed to create collection")
+      }
+
+      router.push("/admin/collections")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create collection")
       setSubmitting(false)
-      return
     }
-
-    router.push("/admin/collections")
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">New Collection</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title="New Collection"
+        description="Curate thematic anthologies and editorial selections of quotations."
+        backHref="/admin/collections"
+        backLabel="Back to Collections"
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Title *</label>
-          <input
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection
+          title="Collection Details"
+          description="Basic information, taxonomy slug, and visibility settings."
+        >
+          <Input
             name="title"
+            label="Title"
             value={form.title}
             onChange={handleChange}
             required
-            className="border w-full p-2 rounded"
+            placeholder="e.g. Meditations on Courage & Duty"
+            error={errors.title?.[0]}
           />
-          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title[0]}</p>}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Slug</label>
-          <input
+          <Input
             name="slug"
+            label="Slug"
             value={form.slug}
             onChange={handleChange}
-            placeholder="auto-generated if empty"
-            className="border w-full p-2 rounded"
+            placeholder="e.g. meditations-on-courage-and-duty"
+            hint="Unique URL path identifier (auto-generated from title if empty)"
+            error={errors.slug?.[0]}
           />
-          {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug[0]}</p>}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Visibility *</label>
-          <select
+          <Select
             name="visibility"
+            label="Visibility"
             value={form.visibility}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
-          >
-            {visibilityOptions.map((visibility) => (
-              <option key={visibility} value={visibility}>
-                {visibility}
-              </option>
-            ))}
-          </select>
-          {errors.visibility && (
-            <p className="text-red-500 text-sm mt-1">{errors.visibility[0]}</p>
-          )}
-        </div>
+            options={visibilityOptions}
+            error={errors.visibility?.[0]}
+          />
 
-        <div>
-          <label className="block text-sm font-medium">Description</label>
-          <textarea
+          <Textarea
             name="description"
+            label="Description"
             value={form.description}
             onChange={handleChange}
             rows={4}
-            className="border w-full p-2 rounded"
+            placeholder="Describe the anthology theme, historical context, or editorial intent..."
           />
-        </div>
+        </FormSection>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
-        >
-          {submitting ? "Creating..." : "Create Collection"}
-        </button>
+        <FormActions
+          submitLabel="Create Collection"
+          submittingLabel="Creating..."
+          isSubmitting={submitting}
+          cancelHref="/admin/collections"
+        />
       </form>
     </div>
   )

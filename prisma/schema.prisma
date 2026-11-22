@@ -77,6 +77,30 @@ enum CollectionVisibility {
   EDITORIAL
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  BULK_UPDATE
+  BULK_DELETE
+  IMPORT
+  REPAIR
+  LOGIN
+  LOGOUT
+}
+
+enum AuditEntityType {
+  QUOTE
+  AUTHOR
+  SOURCE
+  CATEGORY
+  TAG
+  COLLECTION
+  FAQ
+  SYSTEM
+}
+
 //////////////////////////////////////////////////////
 // ADMIN
 //////////////////////////////////////////////////////
@@ -84,17 +108,19 @@ enum CollectionVisibility {
 model Admin {
   id String @id @default(uuid()) @db.Uuid
 
-  email String @unique
-  name String?
+  email String  @unique
+  name  String?
 
   passwordHash String?
-  role AdminRole @default(EDITOR)
+  role         AdminRole @default(EDITOR)
 
-  createdQuotes Quote[] @relation("QuoteCreatedBy")
+  createdQuotes   Quote[] @relation("QuoteCreatedBy")
   publishedQuotes Quote[] @relation("QuotePublishedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([role])
 }
 
 //////////////////////////////////////////////////////
@@ -104,9 +130,9 @@ model Admin {
 model Author {
   id String @id @default(uuid()) @db.Uuid
 
-  name String
+  name           String
   nameNormalized String @unique
-  slug String @unique
+  slug           String @unique
 
   bio String?
 
@@ -117,16 +143,16 @@ model Author {
   dateOfDeath DateTime?
 
   nationality String?
-  profession String?
+  profession  String?
 
   imageUrl String?
 
   wikipediaUrl String?
-  wikidataId String?
+  wikidataId   String?
 
   quoteCount Int @default(0)
 
-  quotes Quote[]
+  quotes  Quote[]
   sources Source[]
 
   createdAt DateTime @default(now())
@@ -134,6 +160,7 @@ model Author {
 
   @@index([nameNormalized])
   @@index([quoteCount])
+  @@index([quoteCount(sort: Desc), name])
 }
 
 //////////////////////////////////////////////////////
@@ -144,22 +171,22 @@ model Source {
   id String @id @default(uuid()) @db.Uuid
 
   title String
-  slug String @unique
+  slug  String @unique
 
   type WorkType
 
-  year Int?
-  yearLabel String?
+  year            Int?
+  yearLabel       String?
   yearApproximate Boolean @default(false)
 
   publisher String?
-  location String?
+  location  String?
 
   description String?
   externalUrl String?
 
   authorId String? @db.Uuid
-  author Author? @relation(fields: [authorId], references: [id])
+  author   Author? @relation(fields: [authorId], references: [id])
 
   quotes Quote[]
 
@@ -167,6 +194,10 @@ model Source {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([authorId])
+  @@index([quoteCount])
+  @@index([type])
 }
 
 //////////////////////////////////////////////////////
@@ -181,7 +212,7 @@ model Category {
 
   description String?
 
-  metaTitle String?
+  metaTitle       String?
   metaDescription String?
 
   quoteCount Int @default(0)
@@ -192,6 +223,7 @@ model Category {
   updatedAt DateTime @default(now()) @updatedAt
 
   @@index([quoteCount])
+  @@index([quoteCount(sort: Desc), name])
 }
 
 //////////////////////////////////////////////////////
@@ -215,7 +247,9 @@ model Tag {
   createdAt DateTime @default(now())
 
   @@index([type])
+  @@index([type, name])
   @@index([quoteCount])
+  @@index([quoteCount(sort: Desc), name])
 }
 
 //////////////////////////////////////////////////////
@@ -226,7 +260,7 @@ model Collection {
   id String @id @default(uuid()) @db.Uuid
 
   title String
-  slug String @unique
+  slug  String @unique
 
   description String?
 
@@ -238,6 +272,9 @@ model Collection {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([visibility])
+  @@index([quoteCount])
 }
 
 //////////////////////////////////////////////////////
@@ -247,86 +284,96 @@ model Collection {
 model Quote {
   id String @id @default(uuid()) @db.Uuid
 
-  content String
-  meaning String?
+  content           String
+  meaning           String?
   historicalContext String?
-  modernRelevance String?
-  language String @default("en")
-  wordCount Int?
+  modernRelevance   String?
+  language          String  @default("en")
+  wordCount         Int?
 
   searchVector Unsupported("tsvector")?
 
-  slug String
+  slug        String
   slugHistory QuoteSlugHistory[]
 
   normalizedContent String?
-  contentHash String
+  contentHash       String
 
   authorId String? @db.Uuid
-  author Author? @relation(fields: [authorId], references: [id])
+  author   Author? @relation(fields: [authorId], references: [id])
 
   authorName String?
   authorSlug String?
 
   sourceId String? @db.Uuid
-  source Source? @relation(fields: [sourceId], references: [id])
+  source   Source? @relation(fields: [sourceId], references: [id])
 
-  categoryId String @db.Uuid
-  category Category @relation(fields: [categoryId], references: [id])
+  categoryId String   @db.Uuid
+  category   Category @relation(fields: [categoryId], references: [id])
 
   categorySlug String
 
-  tags QuoteTag[]
+  tags     QuoteTag[]
   tagSlugs String[]
 
   collections QuoteCollection[]
 
   randomKey Float @default(dbgenerated("random()"))
 
-  views Int @default(0)
-  likes Int @default(0)
+  views  Int @default(0)
+  likes  Int @default(0)
   shares Int @default(0)
 
   popularityScore Int @default(0)
 
-  trendingScore Float @default(0)
-  trendingViews24h Int @default(0)
-  trendingShares24h Int @default(0)
+  trendingScore     Float @default(0)
+  trendingViews24h  Int   @default(0)
+  trendingShares24h Int   @default(0)
 
   rankScore Float @default(0)
 
   isFeatured Boolean @default(false)
 
-  isVerified Boolean @default(false)
+  isVerified        Boolean           @default(false)
   attributionStatus AttributionStatus @default(UNKNOWN)
 
-  verificationConfidence Decimal @default(0.0) @db.Decimal(3,2)
-  verificationNote String?
+  verificationConfidence Decimal @default(0.0) @db.Decimal(3, 2)
+  verificationNote       String?
 
   adminSortKey Int @default(0)
 
   status QuoteStatus @default(DRAFT)
 
   createdById String? @db.Uuid
-  createdBy Admin? @relation("QuoteCreatedBy", fields: [createdById], references: [id])
+  createdBy   Admin?  @relation("QuoteCreatedBy", fields: [createdById], references: [id])
 
   publishedById String? @db.Uuid
-  publishedBy Admin? @relation("QuotePublishedBy", fields: [publishedById], references: [id])
+  publishedBy   Admin?  @relation("QuotePublishedBy", fields: [publishedById], references: [id])
 
-  reports QuoteReport[]
+  reports    QuoteReport[]
   dailyStats QuoteDailyStat[]
 
   publishedAt DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
   @@unique([contentHash, language])
   @@unique([slug, language])
-
   @@index([status, publishedAt])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([status, deletedAt])
+  @@index([status, deletedAt, isFeatured])
+  @@index([categorySlug, status, deletedAt])
+  @@index([status, deletedAt, trendingScore(sort: Desc)])
+  @@index([status, deletedAt, publishedAt(sort: Desc)])
+  @@index([status, deletedAt, views(sort: Desc)])
   @@index([authorId, status])
+  @@index([categoryId, status])
+  @@index([sourceId, status])
+  @@index([deletedAt])
+  @@index([adminSortKey])
   @@index([authorSlug])
   @@index([categorySlug])
   @@index([categorySlug, status, publishedAt])
@@ -344,10 +391,10 @@ model Quote {
 
 model QuoteTag {
   quoteId String @db.Uuid
-  tagId String @db.Uuid
+  tagId   String @db.Uuid
 
   quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([quoteId, tagId])
   @@index([tagId])
@@ -359,16 +406,17 @@ model QuoteTag {
 //////////////////////////////////////////////////////
 
 model QuoteCollection {
-  quoteId String @db.Uuid
+  quoteId      String @db.Uuid
   collectionId String @db.Uuid
 
-  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote      Quote      @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
   position Int?
 
   @@id([quoteId, collectionId])
   @@index([collectionId])
+  @@index([collectionId, position])
 }
 
 //////////////////////////////////////////////////////
@@ -381,7 +429,7 @@ model QuoteSlugHistory {
   slug String @unique
 
   quoteId String @db.Uuid
-  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 }
@@ -394,7 +442,7 @@ model QuoteReport {
   id String @id @default(uuid()) @db.Uuid
 
   quoteId String @db.Uuid
-  quote Quote @relation(fields: [quoteId], references: [id])
+  quote   Quote  @relation(fields: [quoteId], references: [id])
 
   reason String
 
@@ -409,11 +457,11 @@ model QuoteDailyStat {
   id String @id @default(uuid()) @db.Uuid
 
   quoteId String @db.Uuid
-  quote Quote @relation(fields: [quoteId], references: [id])
+  quote   Quote  @relation(fields: [quoteId], references: [id])
 
   date DateTime
 
-  views Int @default(0)
+  views  Int @default(0)
   shares Int @default(0)
 
   @@unique([quoteId, date])
@@ -429,7 +477,7 @@ model FAQ {
   id String @id @default(uuid()) @db.Uuid
 
   question String
-  answer String
+  answer   String
 
   pageType FAQPageType
   pageSlug String
@@ -441,4 +489,32 @@ model FAQ {
 
   @@index([pageType, pageSlug])
   @@index([pageType, pageSlug, position])
+}
+
+//////////////////////////////////////////////////////
+// AUDIT LOG
+//////////////////////////////////////////////////////
+
+model AdminAuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  action     AuditAction
+  entityType AuditEntityType
+  entityId   String?
+  entityName String?
+
+  adminId    String?         @db.Uuid
+  adminEmail String?
+  adminName  String?
+
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt  DateTime        @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([adminId])
+  @@index([createdAt(sort: Desc)])
 }

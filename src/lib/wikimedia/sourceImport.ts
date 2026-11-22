@@ -1,4 +1,7 @@
 import slugify from "slugify"
+import { prisma } from "@/lib/prisma"
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type WorkItem = {
   title: string
@@ -17,7 +20,7 @@ function normalizeWikidataId(input?: string | null) {
 function parseWikiUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikipedia.org")) {
+    if (!isAllowedDomain(url.hostname, "wikipedia.org")) {
       return null
     }
 
@@ -49,7 +52,7 @@ async function resolveWikidataIdFromWikipediaUrl(wikipediaUrl: string) {
     `?action=query&prop=pageprops&redirects=1&format=json` +
     `&titles=${encodeURIComponent(parsed.title)}`
 
-  const res = await fetch(apiUrl, { cache: "no-store" })
+  const res = await fetchWithTimeout(apiUrl, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Wikipedia page")
   }
@@ -123,7 +126,7 @@ export async function importSourcesFromWikidataAuthor(input: {
     LIMIT ${limit}
   `
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`,
     { cache: "no-store" }
   )
@@ -175,4 +178,44 @@ export function createUniqueSourceSlug(title: string, usedSlugs: Set<string>) {
   }
   usedSlugs.add(slug)
   return slug
+}
+
+/**
+ * Returns existing slugs and title keys scoped to candidate works and target author,
+ * avoiding unbounded full-table scans of the entire Source catalog during batch imports.
+ */
+export async function getExistingSourceLookup(
+  candidateWorks: { title: string }[],
+  authorId?: string | null
+) {
+  const candidateTitles = candidateWorks.map((w) => w.title.trim()).filter(Boolean)
+  const candidateSlugs = candidateTitles.map(
+    (t) => slugify(t, { lower: true, strict: true }) || "source"
+  )
+
+  const orConditions: Array<{ authorId?: string; slug?: { in: string[] }; title?: { in: string[] } }> = []
+  if (authorId) {
+    orConditions.push({ authorId })
+  }
+  if (candidateSlugs.length > 0) {
+    orConditions.push({ slug: { in: candidateSlugs } })
+  }
+  if (candidateTitles.length > 0) {
+    orConditions.push({ title: { in: candidateTitles } })
+  }
+
+  const existingSources =
+    orConditions.length > 0
+      ? await prisma.source.findMany({
+          where: { OR: orConditions },
+          select: { slug: true, title: true, authorId: true },
+        })
+      : []
+
+  const usedSlugs = new Set(existingSources.map((s) => s.slug))
+  const existingTitleAuthor = new Set(
+    existingSources.map((s) => `${s.title.trim().toLowerCase()}|${s.authorId || ""}`)
+  )
+
+  return { usedSlugs, existingTitleAuthor }
 }

@@ -1,0 +1,390 @@
+import * as React from "react"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { prisma } from "@/lib/prisma"
+import { PublicLayout, AuthorAvatar } from "@/components/public"
+import { Pagination } from "@/components/ui/pagination"
+import {
+  formatCountWithNoun,
+  formatEpoch,
+  formatLifespan,
+  cleanProfession,
+} from "@/lib/formatters"
+import { parseSafePageNumber, sanitizeSearchQuery, sanitizeSlug } from "@/lib/security/input"
+import { registerPublicDataInvalidator } from "@/lib/revalidation"
+
+export const metadata: Metadata = {
+  title: "Authors & Thinkers",
+  description:
+    "Explore timeless wisdom from history's greatest philosophers, writers, poets, and leaders across antiquity, enlightenment, and modernity.",
+}
+
+export const revalidate = 300
+
+const PAGE_SIZE = 24
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
+
+interface AuthorListItem {
+  id: string
+  name: string
+  slug: string
+  profession: string | null
+  nationality: string | null
+  birthYear: number | null
+  deathYear: number | null
+  imageUrl: string | null
+  quoteCount: number
+  quotes: Array<{ content: string }>
+}
+
+// In-memory cache for default page 1 authors browse
+let cachedDefaultAuthorsPage: {
+  authors: AuthorListItem[]
+  totalAuthors: number
+  timestamp: number
+} | null = null
+
+registerPublicDataInvalidator(() => {
+  cachedDefaultAuthorsPage = null
+})
+
+async function loadAuthorsPageData({
+  currentPage,
+  searchQuery,
+  selectedLetter,
+}: {
+  currentPage: number
+  searchQuery?: string
+  selectedLetter?: string
+}) {
+  const isDefaultBrowse = !searchQuery && (!selectedLetter || selectedLetter === "ALL") && currentPage === 1
+  const now = Date.now()
+
+  if (isDefaultBrowse && cachedDefaultAuthorsPage && now - cachedDefaultAuthorsPage.timestamp < 5 * 60 * 1000) {
+    return {
+      totalAuthors: cachedDefaultAuthorsPage.totalAuthors,
+      authors: cachedDefaultAuthorsPage.authors,
+    }
+  }
+
+  // Build where conditions
+  const whereConditions: {
+    quoteCount?: { gt: number }
+    name?: { contains: string; mode: "insensitive" }
+    nameNormalized?: { startsWith: string }
+    OR?: Array<{
+      nameNormalized?: { startsWith: string }
+      name?: { contains: string; mode: "insensitive" }
+    }>
+  } = {
+    quoteCount: { gt: 0 },
+  }
+
+  if (searchQuery) {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    whereConditions.OR = [
+      { nameNormalized: { startsWith: normalizedQuery } },
+      { name: { contains: searchQuery, mode: "insensitive" } },
+    ]
+  } else if (selectedLetter && selectedLetter !== "ALL") {
+    whereConditions.nameNormalized = {
+      startsWith: selectedLetter.toLowerCase(),
+    }
+  }
+
+  const [totalAuthors, authors] = await Promise.all([
+    prisma.author.count({ where: whereConditions }),
+    prisma.author.findMany({
+      where: whereConditions,
+      orderBy: searchQuery || selectedLetter ? { name: "asc" } : [{ quoteCount: "desc" }, { name: "asc" }],
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        profession: true,
+        nationality: true,
+        birthYear: true,
+        deathYear: true,
+        imageUrl: true,
+        quoteCount: true,
+        quotes: {
+          where: { status: "PUBLISHED", deletedAt: null },
+          take: 1,
+          orderBy: { popularityScore: "desc" },
+          select: { content: true },
+        },
+      },
+    }),
+  ])
+
+  if (isDefaultBrowse) {
+    cachedDefaultAuthorsPage = {
+      authors,
+      totalAuthors,
+      timestamp: now,
+    }
+  }
+
+  return { totalAuthors, authors }
+}
+
+interface AuthorsPageProps {
+  searchParams: Promise<{
+    q?: string
+    letter?: string
+    page?: string
+  }>
+}
+
+export default async function AuthorsPage({ searchParams }: AuthorsPageProps) {
+  const { q, letter, page } = await searchParams
+  const currentPage = parseSafePageNumber(page, 500)
+  const searchQuery = sanitizeSearchQuery(q, 100)
+  const selectedLetter = letter ? sanitizeSlug(letter, 10).toUpperCase() : ""
+
+  const { totalAuthors, authors } = await loadAuthorsPageData({
+    currentPage,
+    searchQuery,
+    selectedLetter,
+  })
+
+  const totalPages = Math.ceil(totalAuthors / PAGE_SIZE)
+
+  function buildHref(newPage: number) {
+    const params = new URLSearchParams()
+    if (searchQuery) params.set("q", searchQuery)
+    if (selectedLetter && selectedLetter !== "ALL") params.set("letter", selectedLetter)
+    if (newPage > 1) params.set("page", String(newPage))
+    const qs = params.toString()
+    return `/authors${qs ? `?${qs}` : ""}`
+  }
+
+  return (
+    <PublicLayout>
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12 space-y-8 font-sans">
+        {/* Editorial Page Header */}
+        <div className="border-b border-stone-900/10 pb-6 sm:pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <span className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-rust)]">
+              Literary Directory
+            </span>
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--ink-900)]">
+              Authors &amp; Thinkers
+            </h1>
+            <p className="text-sm sm:text-base text-stone-600 leading-relaxed font-serif">
+              Discover enduring words from philosophers, statesmen, poets, and visionaries whose ideas shaped civilization.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-end">
+            <Link
+              href="/quotes/random"
+              prefetch={false}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-rust)]/30 bg-[#c76b3e]/10 px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-rust)] transition hover:bg-[#c76b3e]/20 hover:border-[var(--accent-rust)]/50 hover:scale-[1.02] active:scale-[0.98] shadow-2xs"
+              title="Discover a random quotation from the archive"
+            >
+              <span className="text-sm" aria-hidden="true">🎲</span>
+              <span>Random Quote</span>
+            </Link>
+
+            <div className="flex items-center gap-2 text-xs font-mono text-stone-600 bg-white/90 rounded-full px-4 py-2 border border-stone-200 shadow-2xs">
+              <span>Catalog:</span>
+              <span className="font-bold text-stone-900">{formatCountWithNoun(totalAuthors, "voice")}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Search & Filter Toolbar */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <form method="GET" action="/authors" className="relative flex-1">
+              <input
+                type="text"
+                name="q"
+                defaultValue={searchQuery}
+                placeholder="Search authors by name, profession, or nationality..."
+                className="w-full rounded-2xl border border-stone-300/80 bg-white px-4 py-3 text-base sm:text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 shadow-2xs transition-all"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-2 rounded-xl bg-stone-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-black transition-all cursor-pointer"
+              >
+                Search
+              </button>
+            </form>
+
+            {searchQuery && (
+              <Link
+                href="/authors"
+                className="inline-flex items-center justify-center rounded-2xl border border-stone-200 bg-white px-4 py-3 text-xs font-semibold text-stone-600 hover:bg-stone-50 transition-all"
+              >
+                Clear Search
+              </Link>
+            )}
+          </div>
+
+          {/* Alphabet Bar (Horizontal scrolling on mobile with right-edge fade mask) */}
+          <div className="flex flex-nowrap sm:flex-wrap items-center gap-1 sm:gap-1.5 py-1 overflow-x-auto scrollbar-none [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] sm:[mask-image:none]">
+            <Link
+              href="/authors"
+              className={`min-h-[44px] sm:min-h-0 inline-flex items-center rounded-xl px-4 py-2 sm:px-3 sm:py-1.5 text-xs font-medium transition-all ${
+                !selectedLetter || selectedLetter === "ALL"
+                  ? "bg-stone-900 text-white shadow-2xs"
+                  : "bg-white border border-stone-200 text-stone-700 hover:border-stone-400"
+              }`}
+            >
+              All
+            </Link>
+            {ALPHABET.map((char) => {
+              const isActive = selectedLetter === char
+              const params = new URLSearchParams()
+              if (searchQuery) params.set("q", searchQuery)
+              params.set("letter", char)
+              const href = `/authors?${params.toString()}`
+
+              return (
+                <Link
+                  key={char}
+                  href={href}
+                  className={`h-11 w-11 sm:h-8 sm:w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl text-xs font-mono font-medium flex items-center justify-center transition-all ${
+                    isActive
+                      ? "bg-stone-900 text-white shadow-2xs scale-105"
+                      : "bg-white border border-stone-200/90 text-stone-700 hover:border-stone-400 hover:bg-stone-50"
+                  }`}
+                >
+                  {char}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Authors Grid */}
+        {authors.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {authors.map((author, index) => {
+              const epoch = formatEpoch(author.birthYear)
+              const lifespan = formatLifespan(author.birthYear, author.deathYear)
+              const cleanProf = cleanProfession(author.profession)
+
+              return (
+                <Link
+                  key={author.id}
+                  href={`/authors/${author.slug}`}
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-[1.75rem] border border-amber-900/10 bg-white/95 p-5 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-800/30 hover:shadow-lg active:scale-[0.99] h-full"
+                >
+                  {/* Subtle Top Gradient Accent */}
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--accent-rust)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-hidden="true"
+                  />
+
+                  <div className="space-y-4">
+                    {/* Header: Portrait / Monogram Seal + Meta */}
+                    <div className="flex items-start gap-3.5">
+                      <AuthorAvatar
+                        name={author.name}
+                        imageUrl={author.imageUrl}
+                        size="md"
+                        priority={index < 4}
+                        loading={index < 4 ? "eager" : undefined}
+                        className="group-hover:border-[var(--accent-rust)]/40 transition-colors"
+                      />
+
+                      <div className="min-w-0 flex-1">
+                        <h2 className="font-serif text-lg font-bold tracking-tight text-stone-900 group-hover:text-[var(--accent-rust)] transition-colors truncate">
+                          {author.name}
+                        </h2>
+
+                        {lifespan && (
+                          <p className="text-xs font-mono font-medium text-stone-500 mt-0.5">
+                            {lifespan}
+                          </p>
+                        )}
+
+                        {epoch && (
+                          <span className="inline-block rounded-md bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-600 mt-1">
+                            {epoch}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Nationality & Profession */}
+                    {(author.nationality || cleanProf) && (
+                      <div className="text-xs text-stone-600 font-sans line-clamp-1 border-t border-stone-100 pt-2.5">
+                        <span className="font-semibold text-stone-800">{author.nationality}</span>
+                        {author.nationality && cleanProf && <span> · </span>}
+                        <span>{cleanProf}</span>
+                      </div>
+                    )}
+
+                    {/* Signature Excerpt Quote Preview */}
+                    {author.quotes[0]?.content ? (
+                      <div className="rounded-xl border border-amber-900/10 bg-[#faf6f0]/70 p-3 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-rust)] block">
+                          Notable Excerpt
+                        </span>
+                        <blockquote className="font-serif italic text-xs text-stone-800 line-clamp-3 leading-relaxed">
+                          &ldquo;{author.quotes[0].content}&rdquo;
+                        </blockquote>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/60 p-3 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
+                          Philosophical Fragment
+                        </span>
+                        <p className="font-serif italic text-xs text-stone-500 line-clamp-3 leading-relaxed">
+                          Explore cataloged insights, reflections, and source texts from {author.name}.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Card Ribbon */}
+                  <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-3 text-xs">
+                    <span className="font-mono text-[11px] font-semibold text-stone-500">
+                      {formatCountWithNoun(author.quoteCount, "quotation")}
+                    </span>
+
+                    <span className="inline-flex items-center gap-1 font-semibold text-[var(--accent-rust)] transition-transform group-hover:translate-x-0.5">
+                      <span>Explore</span>
+                      <span aria-hidden="true">&rarr;</span>
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-stone-200 bg-white p-12 text-center space-y-3">
+            <span className="text-3xl">✒️</span>
+            <h3 className="font-serif text-lg font-bold text-stone-900">
+              No Authors Found
+            </h3>
+            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+              We couldn&apos;t find any thinkers matching your current search or alphabet filter.
+            </p>
+            <Link
+              href="/authors"
+              className="inline-flex items-center rounded-xl bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-black transition-all"
+            >
+              Reset Filters
+            </Link>
+          </div>
+        )}
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalAuthors}
+          pageSize={PAGE_SIZE}
+          buildHref={buildHref}
+        />
+      </div>
+    </PublicLayout>
+  )
+}

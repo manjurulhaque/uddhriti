@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 export type CrossrefWork = {
   title: string
   year: number | null
@@ -75,7 +77,7 @@ export async function importSourcesFromCrossref(input: {
     endpoint = `https://api.crossref.org/works?${params.toString()}`
   }
 
-  const res = await fetch(endpoint, { cache: "no-store" })
+  const res = await fetchWithTimeout(endpoint, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Crossref results")
   }

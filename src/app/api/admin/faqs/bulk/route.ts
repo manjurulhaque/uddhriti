@@ -1,8 +1,11 @@
 import { z } from "zod"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { faqSchema } from "@/lib/validation/faq"
 
 const bulkItemSchema = z.object({
@@ -18,10 +21,8 @@ const payloadSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited
@@ -52,8 +53,8 @@ export async function POST(req: Request) {
     .map((item, index) => {
       const rowNo = index + 1
       const normalized = {
-        question: item.question.trim(),
-        answer: item.answer.trim(),
+        question: sanitizeSpreadsheetCell(item.question.trim()),
+        answer: sanitizeSpreadsheetCell(item.answer.trim()),
         pageType: item.pageType.trim().toUpperCase(),
         pageSlug: item.pageSlug.trim(),
         position: item.position ?? 0,
@@ -92,6 +93,25 @@ export async function POST(req: Request) {
   }
 
   const result = await prisma.fAQ.createMany({ data })
+
+  if (result.count > 0) {
+    revalidatePublicSurfaces()
+  }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "FAQ",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: parsedPayload.data.items.length,
+      created: result.count,
+      skipped,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: parsedPayload.data.items.length,

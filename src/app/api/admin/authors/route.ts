@@ -2,14 +2,43 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
 import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
+import { slugify } from "@/lib/slug"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
-// ✅ GET ALL AUTHORS
-export async function GET() {
+// ✅ GET ALL AUTHORS (supports ?select=minimal)
+export async function GET(req: Request) {
   const { response } = await requireAdmin()
   if (response) return response
 
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const authors = await prisma.author.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    })
+    return NextResponse.json(authors)
+  }
+
   const authors = await prisma.author.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      profession: true,
+      nationality: true,
+      birthYear: true,
+      deathYear: true,
+      quoteCount: true,
+      createdAt: true,
+    },
   })
 
   return NextResponse.json(authors)
@@ -23,8 +52,11 @@ function normalizeAuthorName(name: string) {
 }
 
 export async function POST(req: Request) {
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const raw = await parseJsonObjectBody(req)
   if (!raw) {
@@ -36,9 +68,9 @@ export async function POST(req: Request) {
     ...raw,
     slug:
       typeof raw.slug === "string" && raw.slug.trim()
-        ? raw.slug
+        ? slugify(raw.slug)
         : typeof raw.name === "string"
-          ? raw.name.trim().toLowerCase().replace(/\s+/g, "-")
+          ? slugify(raw.name)
           : undefined,
     birthYear: raw.birthYear ? Number(raw.birthYear) : null,
     deathYear: raw.deathYear ? Number(raw.deathYear) : null,
@@ -85,6 +117,20 @@ export async function POST(req: Request) {
         ...parsed.data,
         nameNormalized: normalizedName,
       },
+    })
+
+    revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "AUTHOR",
+      entityId: author.id,
+      entityName: author.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: author.slug },
+      req,
     })
 
     return NextResponse.json(author, { status: 201 })

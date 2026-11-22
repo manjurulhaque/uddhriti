@@ -1,3 +1,6 @@
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 type ParsedGutenbergUrl = {
   bookId: number
   normalizedUrl: string
@@ -21,7 +24,7 @@ function parseGutenbergUrl(input: string): ParsedGutenbergUrl | null {
   try {
     const url = new URL(input)
     const host = url.hostname.toLowerCase()
-    if (!host.endsWith("gutenberg.org")) return null
+    if (!isAllowedDomain(host, "gutenberg.org")) return null
 
     const pathname = url.pathname
     const patterns = [
@@ -50,7 +53,7 @@ function parseGutenbergUrl(input: string): ParsedGutenbergUrl | null {
 }
 
 async function fetchBookMetadata(bookId: number) {
-  const res = await fetch(`https://gutendex.com/books/${bookId}`, { cache: "no-store" })
+  const res = await fetchWithTimeout(`https://gutendex.com/books/${bookId}`, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Gutenberg metadata")
   }
@@ -74,7 +77,17 @@ function pickPlainTextUrl(formats: Record<string, string> | undefined) {
 }
 
 async function fetchBookText(textUrl: string) {
-  const res = await fetch(textUrl, { cache: "no-store" })
+  const parsed = new URL(textUrl)
+  if (
+    parsed.protocol !== "https:" ||
+    (!isAllowedDomain(parsed.hostname, "gutenberg.org") &&
+      !isAllowedDomain(parsed.hostname, "gutendex.com") &&
+      !isAllowedDomain(parsed.hostname, "archive.org"))
+  ) {
+    throw new Error("Invalid or untrusted Gutenberg text source URL")
+  }
+
+  const res = await fetchWithTimeout(textUrl, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Gutenberg text")
   }

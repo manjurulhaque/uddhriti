@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 const quoteStatusSchema = z.enum(["DRAFT", "REVIEW", "PUBLISHED", "ARCHIVED"])
-const attributionStatusSchema = z.enum(["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"])
+export const attributionStatusSchema = z.enum(["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"])
 const maxQuoteTags = 7
 const sourceTypeSchema = z.enum([
   "BOOK",
@@ -14,10 +14,10 @@ const sourceTypeSchema = z.enum([
 ])
 
 export const quoteSchema = z.object({
-  content: z.string().trim().min(5),
-  meaning: z.string().trim().optional().nullable(),
-  historicalContext: z.string().trim().optional().nullable(),
-  modernRelevance: z.string().trim().optional().nullable(),
+  content: z.string().trim().min(5).max(10_000, "Content cannot exceed 10,000 characters"),
+  meaning: z.string().trim().max(5_000).optional().nullable(),
+  historicalContext: z.string().trim().max(5_000).optional().nullable(),
+  modernRelevance: z.string().trim().max(5_000).optional().nullable(),
   authorId: z.string().uuid(),
   categoryId: z.string().uuid(),
   sourceId: z.string().uuid().optional().nullable(),
@@ -28,7 +28,7 @@ export const quoteSchema = z.object({
   isVerified: z.boolean().optional(),
   attributionStatus: attributionStatusSchema.optional(),
   verificationConfidence: z.coerce.number().min(0).max(1).optional(),
-  verificationNote: z.string().optional().nullable(),
+  verificationNote: z.string().max(2_000).optional().nullable(),
   adminSortKey: z.coerce.number().int().optional(),
 })
 
@@ -41,4 +41,17 @@ export const quoteUpdateSchema = quoteSchema.extend({
   sourceTitle: z.string().trim().min(1).max(300).optional(),
   sourceType: sourceTypeSchema.optional(),
   publishedAt: z.union([z.string().trim(), z.date()]).optional().nullable(),
+})
+
+export const quoteContextUpdateSchema = z.object({
+  meaning: z.string().trim().max(5_000, "Meaning cannot exceed 5,000 characters").optional().nullable(),
+  historicalContext: z.string().trim().max(5_000, "Historical context cannot exceed 5,000 characters").optional().nullable(),
+  modernRelevance: z.string().trim().max(5_000, "Modern relevance cannot exceed 5,000 characters").optional().nullable(),
+})
+
+export const quoteVerificationUpdateSchema = z.object({
+  isVerified: z.boolean().optional(),
+  attributionStatus: attributionStatusSchema.optional(),
+  verificationConfidence: z.coerce.number().min(0).max(1).optional(),
+  verificationNote: z.string().trim().max(2_000, "Verification note cannot exceed 2,000 characters").optional().nullable(),
 })

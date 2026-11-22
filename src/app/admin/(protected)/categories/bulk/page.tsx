@@ -2,13 +2,19 @@
 
 import { useState } from "react"
 import { getRowValue, readItemsFromJsonOrCsv } from "@/lib/import/clientFile"
-
-type Result = {
-  received: number
-  created: number
-  failed: number
-  errors: string[]
-}
+import {
+  PageHeader,
+  BulkImportResultCard,
+  BulkImportFormatGuide,
+  BulkFileUploadInput,
+  type BulkImportResultData,
+} from "@/components/admin"
+import {
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  Textarea,
+} from "@/components/ui"
 
 function parseLines(input: string) {
   return input
@@ -42,7 +48,7 @@ export default function BulkCreateCategoriesPage() {
   >(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
-  const [result, setResult] = useState<Result | null>(null)
+  const [result, setResult] = useState<BulkImportResultData | null>(null)
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -73,7 +79,7 @@ export default function BulkCreateCategoriesPage() {
 
     const items = uploadedItems ?? parseLines(input)
     if (items.length === 0) {
-      setError("Please enter at least one line.")
+      setError("Please enter at least one line or upload a file.")
       setSubmitting(false)
       return
     }
@@ -97,69 +103,59 @@ export default function BulkCreateCategoriesPage() {
 
   return (
     <div className="p-8 max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Bulk Create Categories</h1>
+      <PageHeader
+        title="Bulk Create Categories"
+        description="Import multiple thematic taxonomies via pipe-delimited text, JSON, or CSV."
+      />
 
-      <p className="text-sm text-gray-600">
-        One category per line. Format:
-        <br />
-        <code>name|slug|description|metaTitle|metaDescription</code>
-        <br />
-        Only <code>name</code> is required.
-      </p>
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Upload JSON/CSV (optional)</label>
-          <input type="file" accept=".json,.csv,application/json,text/csv" onChange={onFileChange} />
-          {uploadedItems && (
-            <p className="text-xs text-gray-500 mt-1">
-              Loaded {uploadedItems.length} row(s) from file.
-            </p>
-          )}
-        </div>
+      <BulkImportResultCard result={result} onDismiss={() => setResult(null)} />
 
-        <textarea
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            setUploadedItems(null)
-          }}
-          rows={14}
-          className="border w-full p-3 rounded font-mono text-sm"
-          placeholder={`Motivation\nStoicism|stoicism|Ancient philosophy category\nLeadership||Quotes about leading teams`}
-        />
+      <BulkImportFormatGuide
+        format="name|slug|description|metaTitle|metaDescription"
+        notes={
+          <p>
+            Only <strong className="text-stone-900">name</strong> is required. Slug is auto-generated if left blank.
+          </p>
+        }
+      />
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection
+          title="Data Input"
+          description="Upload a CSV/JSON file or paste line-delimited records"
         >
-          {submitting ? "Creating..." : "Create Categories"}
-        </button>
+          <BulkFileUploadInput
+            onFileChange={onFileChange}
+            loadedCount={uploadedItems?.length}
+          />
+
+          <Textarea
+            label="Raw Input Rows"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value)
+              setUploadedItems(null)
+            }}
+            rows={12}
+            className="font-mono text-xs leading-relaxed"
+            placeholder={`Motivation\nStoicism|stoicism|Ancient philosophy category\nLeadership||Quotes about leading teams`}
+            hint={
+              uploadedItems
+                ? "File upload loaded. Editing text overrides uploaded file."
+                : "Type or paste multiple lines above."
+            }
+          />
+        </FormSection>
+
+        <FormActions
+          submitLabel="Create Categories"
+          submittingLabel="Creating Categories..."
+          isSubmitting={submitting}
+          cancelHref="/admin/categories"
+        />
       </form>
-
-      {result && (
-        <div className="border rounded p-4 bg-white space-y-2">
-          <div className="text-sm">
-            Received: <b>{result.received}</b>
-          </div>
-          <div className="text-sm">
-            Created: <b>{result.created}</b>
-          </div>
-          <div className="text-sm">
-            Failed: <b>{result.failed}</b>
-          </div>
-
-          {result.errors.length > 0 && (
-            <ul className="text-sm text-red-700 list-disc pl-5">
-              {result.errors.map((msg) => (
-                <li key={msg}>{msg}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   )
 }

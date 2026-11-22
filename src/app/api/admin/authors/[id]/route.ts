@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/api/admin-auth"
-import { invalidJsonBodyResponse, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
+import { invalidJsonBodyResponse, isValidUuid, mapPrismaRouteError, parseJsonObjectBody } from "@/lib/api/route-helpers"
 import { authorSchema } from "@/lib/validation/author"
+import { slugify } from "@/lib/slug"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces, revalidateAuthor } from "@/lib/revalidation"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -33,12 +37,21 @@ export async function GET(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   const { response } = await requireAdmin()
   if (response) return response
 
   const author = await prisma.author.findUnique({
     where: { id },
+    include: {
+      _count: {
+        select: {
+          quotes: true,
+          sources: true,
+        },
+      },
+    },
   })
 
   if (!author) {
@@ -54,9 +67,13 @@ export async function PATCH(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const raw = await parseJsonObjectBody(req)
   if (!raw) {
@@ -67,9 +84,9 @@ export async function PATCH(
     ...raw,
     slug:
       typeof raw.slug === "string" && raw.slug.trim()
-        ? raw.slug
+        ? slugify(raw.slug)
         : typeof raw.name === "string"
-          ? raw.name.trim().toLowerCase().replace(/\s+/g, "-")
+          ? slugify(raw.name)
           : undefined,
     birthYear: raw.birthYear ? Number(raw.birthYear) : null,
     deathYear: raw.deathYear ? Number(raw.deathYear) : null,
@@ -112,6 +129,11 @@ export async function PATCH(
   }
 
   try {
+    const previous = await prisma.author.findUnique({
+      where: { id },
+      select: { slug: true },
+    })
+
     const updated = await prisma.author.update({
       where: { id },
       data: {
@@ -119,6 +141,26 @@ export async function PATCH(
         nameNormalized: normalizedName,
       },
     })
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "AUTHOR",
+      entityId: id,
+      entityName: updated.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        slug: updated.slug,
+        profession: updated.profession,
+        nationality: updated.nationality,
+        hasImage: Boolean(updated.imageUrl),
+        hasBio: Boolean(updated.bio),
+      },
+    })
+
+    revalidatePublicSurfaces()
+    revalidateAuthor(updated.slug, previous?.slug)
 
     return NextResponse.json(updated)
   } catch (error) {
@@ -139,14 +181,21 @@ export async function DELETE(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const { response } = await requireAdmin()
+  const { admin, response } = await requireAdmin()
   if (response) return response
 
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
+
+  let deletedSlug: string | null = null
   try {
-    await prisma.author.delete({
+    const deleted = await prisma.author.delete({
       where: { id },
+      select: { slug: true },
     })
+    deletedSlug = deleted.slug
   } catch (error) {
     const response = mapPrismaRouteError(error, {
       foreignKey: "Author cannot be deleted while it is still referenced by other records.",
@@ -158,5 +207,19 @@ export async function DELETE(
     throw error
   }
 
-  return NextResponse.json({ success: true })
+    await recordAuditLog({
+      action: "DELETE",
+      entityType: "AUTHOR",
+      entityId: id,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+    })
+
+    revalidatePublicSurfaces()
+    if (deletedSlug) {
+      revalidateAuthor(deletedSlug)
+    }
+
+    return NextResponse.json({ success: true })
 }

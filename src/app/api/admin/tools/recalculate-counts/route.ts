@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireSuperAdmin } from "@/lib/api/admin-auth"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
-export async function POST() {
-  const { response } = await requireSuperAdmin()
-  if (response) return response
+export async function POST(req: Request) {
+  const { admin, response } = await requireSuperAdmin()
+  if (response || !admin) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "recalculate")
+  if (rateLimited) return rateLimited
 
   const [authorsSet, authorsReset, sourcesSet, sourcesReset, categoriesSet, categoriesReset, collectionsSet, collectionsReset, tagsSet, tagsReset] = await prisma.$transaction([
     prisma.$executeRaw`
@@ -14,6 +20,7 @@ export async function POST() {
         SELECT q."authorId" AS id, COUNT(*)::int AS cnt
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."authorId" IS NOT NULL
         GROUP BY q."authorId"
       ) c
@@ -26,6 +33,7 @@ export async function POST() {
         SELECT DISTINCT q."authorId"
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."authorId" IS NOT NULL
       )
     `,
@@ -36,6 +44,7 @@ export async function POST() {
         SELECT q."sourceId" AS id, COUNT(*)::int AS cnt
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."sourceId" IS NOT NULL
         GROUP BY q."sourceId"
       ) c
@@ -48,6 +57,7 @@ export async function POST() {
         SELECT DISTINCT q."sourceId"
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
           AND q."sourceId" IS NOT NULL
       )
     `,
@@ -58,6 +68,7 @@ export async function POST() {
         SELECT q."categoryId" AS id, COUNT(*)::int AS cnt
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
         GROUP BY q."categoryId"
       ) s
       WHERE c.id = s.id
@@ -69,6 +80,7 @@ export async function POST() {
         SELECT DISTINCT q."categoryId"
         FROM "Quote" q
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
       )
     `,
     prisma.$executeRaw`
@@ -79,6 +91,7 @@ export async function POST() {
         FROM "QuoteCollection" qc
         INNER JOIN "Quote" q ON q.id = qc."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
         GROUP BY qc."collectionId"
       ) s
       WHERE c.id = s.id
@@ -91,6 +104,7 @@ export async function POST() {
         FROM "QuoteCollection" qc
         INNER JOIN "Quote" q ON q.id = qc."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
       )
     `,
     prisma.$executeRaw`
@@ -101,6 +115,7 @@ export async function POST() {
         FROM "QuoteTag" qt
         INNER JOIN "Quote" q ON q.id = qt."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
         GROUP BY qt."tagId"
       ) c
       WHERE t.id = c.id
@@ -113,9 +128,36 @@ export async function POST() {
         FROM "QuoteTag" qt
         INNER JOIN "Quote" q ON q.id = qt."quoteId"
         WHERE q."deletedAt" IS NULL
+          AND q.status = 'PUBLISHED'
       )
     `,
   ])
+
+  revalidatePublicSurfaces()
+
+  await recordAuditLog({
+    action: "REPAIR",
+    entityType: "SYSTEM",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      tool: "recalculate-counts",
+      updatedRows: {
+        authorsSet,
+        authorsReset,
+        sourcesSet,
+        sourcesReset,
+        categoriesSet,
+        categoriesReset,
+        collectionsSet,
+        collectionsReset,
+        tagsSet,
+        tagsReset,
+      },
+    },
+    req,
+  })
 
   return NextResponse.json({
     success: true,

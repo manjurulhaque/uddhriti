@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { isAllowedDomain } from "@/lib/ip"
 import { importAuthorFromWikipediaOrWikidata, importAuthorFromWikiquote } from "@/lib/wikimedia/authorImport"
 import { importAuthorFromOpenLibrary } from "@/lib/openlibrary/authorImport"
 import { importAuthorFromViaf } from "@/lib/viaf/authorImport"
@@ -28,7 +29,7 @@ function parseWikidataIdFromUrl(input?: string) {
 
   try {
     const url = new URL(value)
-    if (!url.hostname.toLowerCase().endsWith("wikidata.org")) return undefined
+    if (!isAllowedDomain(url.hostname, "wikidata.org")) return undefined
 
     const pathMatch = url.pathname.match(/\/wiki\/(Q\d+)\/?$/i)
     if (pathMatch) return pathMatch[1].toUpperCase()
@@ -57,11 +58,11 @@ function inferProviderFromUrl(input?: string): Exclude<Provider, "auto"> | null 
     const url = new URL(value)
     const host = url.hostname.toLowerCase()
 
-    if (host.endsWith("wikiquote.org")) return "wikiquote"
-    if (host.endsWith("wikipedia.org") || host.endsWith("wikidata.org")) return "wikimedia"
-    if (host === "openlibrary.org") return "openlibrary"
-    if (host === "viaf.org") return "viaf"
-    if (host === "id.loc.gov") return "loc"
+    if (isAllowedDomain(host, "wikiquote.org")) return "wikiquote"
+    if (isAllowedDomain(host, "wikipedia.org") || isAllowedDomain(host, "wikidata.org")) return "wikimedia"
+    if (isAllowedDomain(host, "openlibrary.org")) return "openlibrary"
+    if (isAllowedDomain(host, "viaf.org")) return "viaf"
+    if (isAllowedDomain(host, "id.loc.gov")) return "loc"
   } catch {
     return null
   }
@@ -129,10 +130,8 @@ function resolveProvider(payload: ImportRequestPayload): Provider {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "import")
   if (rateLimited) return rateLimited

@@ -1,17 +1,32 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { sourceSchema } from "@/lib/validation/source"
 import { normalizeSourceYearInput, parseSourceYearInput } from "@/lib/sourceYear"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 function getSourceYearLabel(raw: { year?: unknown; yearLabel?: unknown } | null) {
   return normalizeSourceYearInput(raw?.yearLabel) ?? normalizeSourceYearInput(raw?.year)
 }
 
-export async function GET() {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+export async function GET(req: Request) {
+  const { response } = await requireAdmin()
+  if (response) return response
+
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const sources = await prisma.source.findMany({
+      select: {
+        id: true,
+        title: true,
+      },
+      orderBy: { title: "asc" },
+    })
+    return NextResponse.json(sources)
   }
 
   const sources = await prisma.source.findMany({
@@ -27,10 +42,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const raw = await req.json().catch(() => null)
   const parsedYear = parseSourceYearInput(raw?.year, raw?.yearApproximate)
@@ -82,6 +98,20 @@ export async function POST(req: Request) {
         externalUrl: parsed.data.externalUrl || null,
         authorId: parsed.data.authorId || null,
       },
+    })
+
+    revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "SOURCE",
+      entityId: source.id,
+      entityName: source.title,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { type: source.type, authorId: source.authorId },
+      req,
     })
 
     return NextResponse.json(source)

@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 export type OpenLibraryWork = {
   title: string
   year: number | null
@@ -50,7 +52,7 @@ export async function importSourcesFromOpenLibrary(input: {
   if (title) params.set("title", title)
   if (isbn) params.set("isbn", isbn)
 
-  const res = await fetch(`https://openlibrary.org/search.json?${params.toString()}`, {
+  const res = await fetchWithTimeout(`https://openlibrary.org/search.json?${params.toString()}`, {
     cache: "no-store",
   })
   if (!res.ok) {

@@ -1,4 +1,6 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type ViafHeadingEntry = {
   text?: string
@@ -19,7 +21,7 @@ type ViafRecord = {
 function parseViafIdFromUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("viaf.org")) return null
+    if (!isAllowedDomain(url.hostname, "viaf.org")) return null
     const match = url.pathname.match(/\/viaf\/(\d+)/)
     return match?.[1] || null
   } catch {
@@ -70,7 +72,7 @@ export async function importAuthorFromViaf(payload: {
     throw new Error("Provide viafId or a valid viafUrl")
   }
 
-  const res = await fetch(`https://viaf.org/viaf/${encodeURIComponent(viafId)}/viaf.json`, {
+  const res = await fetchWithTimeout(`https://viaf.org/viaf/${encodeURIComponent(viafId)}/viaf.json`, {
     cache: "no-store",
   })
   if (!res.ok) {

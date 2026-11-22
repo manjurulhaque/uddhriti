@@ -1,18 +1,23 @@
 import crypto from "crypto"
 import slugify from "slugify"
 import { NextResponse } from "next/server"
+import { AttributionStatus } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
-import { quoteUpdateSchema } from "@/lib/validation/quote"
+import { requireAdmin } from "@/lib/api/admin-auth"
+import { quoteUpdateSchema, quoteContextUpdateSchema, quoteVerificationUpdateSchema } from "@/lib/validation/quote"
 import { parseDateTimeLocalInAppTimeZone } from "@/lib/datetime"
 import {
   recalculateAuthorQuoteCounts,
   recalculateCategoryQuoteCounts,
   recalculateSourceQuoteCounts,
   recalculateTagQuoteCounts,
+  recalculateCollectionQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
+import { isValidUuid } from "@/lib/api/route-helpers"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -35,11 +40,10 @@ export async function GET(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const quote = await prisma.quote.findUnique({
     where: { id },
@@ -69,13 +73,226 @@ export async function PATCH(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
+
+  // Support lightweight quick-update for quote meaning, historical context, and modern relevance
+  if (
+    body?.action === "updateContext" ||
+    (!body?.content &&
+      !body?.authorId &&
+      (body?.meaning !== undefined ||
+        body?.historicalContext !== undefined ||
+        body?.modernRelevance !== undefined))
+  ) {
+    const parsedContext = quoteContextUpdateSchema.safeParse(body)
+    if (!parsedContext.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: parsedContext.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const existing = await prisma.quote.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        slug: true,
+        status: true,
+        content: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } } } },
+      },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: "Quote not found" }, { status: 404 })
+    }
+
+    const meaning = parsedContext.data.meaning !== undefined ? (parsedContext.data.meaning?.trim() || null) : undefined
+    const historicalContext = parsedContext.data.historicalContext !== undefined ? (parsedContext.data.historicalContext?.trim() || null) : undefined
+    const modernRelevance = parsedContext.data.modernRelevance !== undefined ? (parsedContext.data.modernRelevance?.trim() || null) : undefined
+
+    const updatedQuote = await prisma.quote.update({
+      where: { id },
+      data: {
+        ...(meaning !== undefined && { meaning }),
+        ...(historicalContext !== undefined && { historicalContext }),
+        ...(modernRelevance !== undefined && { modernRelevance }),
+      },
+      select: {
+        id: true,
+        meaning: true,
+        historicalContext: true,
+        modernRelevance: true,
+        status: true,
+        slug: true,
+      },
+    })
+
+    if (existing.status === "PUBLISHED") {
+      revalidatePublicSurfaces()
+      revalidateQuote(existing.slug, {
+        authorSlug: existing.author?.slug,
+        categorySlug: existing.category?.slug,
+        tagSlugs: existing.tags.map((t) => t.tag.slug),
+      })
+    }
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      entityId: id,
+      entityName: existing.content?.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        action: "updateContext",
+        hasMeaning: Boolean(updatedQuote.meaning),
+        hasHistoricalContext: Boolean(updatedQuote.historicalContext),
+        hasModernRelevance: Boolean(updatedQuote.modernRelevance),
+      },
+      req,
+    })
+
+    return NextResponse.json({
+      success: true,
+      quote: updatedQuote,
+    })
+  }
+
+  // Support lightweight quick-update for quote verification and attribution status
+  if (
+    body?.action === "updateVerification" ||
+    (!body?.content &&
+      !body?.authorId &&
+      (body?.isVerified !== undefined ||
+        body?.attributionStatus !== undefined ||
+        body?.verificationNote !== undefined ||
+        body?.verificationConfidence !== undefined))
+  ) {
+    const parsedVerification = quoteVerificationUpdateSchema.safeParse(body)
+    if (!parsedVerification.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: parsedVerification.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const existing = await prisma.quote.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        slug: true,
+        status: true,
+        content: true,
+        isFeatured: true,
+        isVerified: true,
+        attributionStatus: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } } } },
+      },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: "Quote not found" }, { status: 404 })
+    }
+
+    const nextIsVerified =
+      parsedVerification.data.isVerified !== undefined
+        ? parsedVerification.data.isVerified
+        : existing.isVerified
+    const nextAttribution = (parsedVerification.data.attributionStatus !== undefined
+      ? parsedVerification.data.attributionStatus
+      : existing.attributionStatus) as AttributionStatus
+
+    const nextConfidence =
+      parsedVerification.data.verificationConfidence !== undefined
+        ? parsedVerification.data.verificationConfidence
+        : deriveVerificationConfidence({
+            isVerified: nextIsVerified,
+            attributionStatus: nextAttribution,
+          })
+
+    const nextAdminSortKey = deriveAdminSortKey({
+      status: existing.status,
+      isFeatured: existing.isFeatured,
+      isVerified: nextIsVerified,
+      attributionStatus: nextAttribution,
+    })
+
+    const verificationNote =
+      parsedVerification.data.verificationNote !== undefined
+        ? parsedVerification.data.verificationNote?.trim() || null
+        : undefined
+
+    const updatedQuote = await prisma.quote.update({
+      where: { id },
+      data: {
+        isVerified: nextIsVerified,
+        attributionStatus: nextAttribution,
+        verificationConfidence: nextConfidence.toFixed(2),
+        adminSortKey: nextAdminSortKey,
+        ...(verificationNote !== undefined && { verificationNote }),
+      },
+      select: {
+        id: true,
+        isVerified: true,
+        attributionStatus: true,
+        verificationConfidence: true,
+        verificationNote: true,
+        adminSortKey: true,
+        status: true,
+        slug: true,
+      },
+    })
+
+    if (existing.status === "PUBLISHED") {
+      revalidatePublicSurfaces()
+      revalidateQuote(existing.slug, {
+        authorSlug: existing.author?.slug,
+        categorySlug: existing.category?.slug,
+        tagSlugs: existing.tags.map((t) => t.tag.slug),
+      })
+    }
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      entityId: id,
+      entityName: existing.content?.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        action: "updateVerification",
+        isVerified: updatedQuote.isVerified,
+        attributionStatus: updatedQuote.attributionStatus,
+        verificationConfidence: Number(updatedQuote.verificationConfidence),
+        verificationNote: updatedQuote.verificationNote,
+      },
+      req,
+    })
+
+    return NextResponse.json({
+      success: true,
+      quote: {
+        ...updatedQuote,
+        verificationConfidence: Number(updatedQuote.verificationConfidence),
+      },
+    })
+  }
+
   const parsed = quoteUpdateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
@@ -133,10 +350,14 @@ export async function PATCH(
       const previousQuote = await tx.quote.findUnique({
         where: { id },
         select: {
+          slug: true,
+          author: { select: { slug: true } },
+          category: { select: { slug: true } },
           authorId: true,
           sourceId: true,
           categoryId: true,
           tags: { select: { tagId: true } },
+          collections: { select: { collectionId: true } },
           publishedAt: true,
           status: true,
         },
@@ -269,13 +490,44 @@ export async function PATCH(
       await recalculateSourceQuoteCounts(tx, [previousQuote.sourceId, sourceId])
       await recalculateCategoryQuoteCounts(tx, [previousQuote.categoryId, category.id])
       await recalculateTagQuoteCounts(tx, [...previousQuote.tags.map((entry) => entry.tagId), ...tags.map((tag) => tag.id)])
+      await recalculateCollectionQuoteCounts(tx, previousQuote.collections.map((c) => c.collectionId))
 
-      return { quote, previousStatus: previousQuote.status }
+      return {
+        quote,
+        previousStatus: previousQuote.status,
+        previousQuoteSlug: previousQuote.slug,
+        previousAuthorSlug: previousQuote.author?.slug,
+        previousCategorySlug: previousQuote.category?.slug,
+        tagSlugs: tags.map((t) => t.slug),
+      }
     })
 
     if (updated.previousStatus === "PUBLISHED" || updated.quote.status === "PUBLISHED") {
       revalidatePublicSurfaces()
+      revalidateQuote(updated.quote.slug, {
+        oldSlug: updated.previousQuoteSlug,
+        authorSlug: author.slug,
+        oldAuthorSlug: updated.previousAuthorSlug,
+        categorySlug: category.slug,
+        oldCategorySlug: updated.previousCategorySlug,
+        tagSlugs: updated.tagSlugs,
+      })
     }
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "QUOTE",
+      entityId: id,
+      entityName: updated.quote.content?.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        status: updated.quote.status,
+        previousStatus: updated.previousStatus,
+      },
+      req,
+    })
 
     return NextResponse.json(updated.quote)
   } catch (err: unknown) {
@@ -289,23 +541,37 @@ export async function DELETE(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
+
+  const isPermanentDelete = new URL(req.url).searchParams.get("permanent") === "true"
+  if (isPermanentDelete && admin.role !== "SUPER_ADMIN") {
+    return NextResponse.json(
+      { error: "Forbidden: super admin privileges required to permanently delete records" },
+      { status: 403 }
+    )
   }
 
-  let shouldRevalidateHomepage = false
-
-  await prisma.$transaction(async (tx) => {
+  const { shouldRevalidateHomepage, deletedQuoteDetails } = await prisma.$transaction(async (tx) => {
+    let shouldRevalidate = false
+    let details: { slug: string; authorSlug?: string; categorySlug?: string; tagSlugs: string[] } | null = null
     const existing = await tx.quote.findUnique({
       where: { id },
       select: {
         id: true,
+        slug: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } }, tagId: true } },
+        collections: { select: { collectionId: true } },
         authorId: true,
         sourceId: true,
         categoryId: true,
-        tags: { select: { tagId: true } },
         deletedAt: true,
         status: true,
       },
@@ -315,11 +581,16 @@ export async function DELETE(
       throw new Error("Quote not found")
     }
 
-    if (existing.status === "PUBLISHED" && !existing.deletedAt) {
-      shouldRevalidateHomepage = true
+    details = {
+      slug: existing.slug,
+      authorSlug: existing.author?.slug,
+      categorySlug: existing.category?.slug,
+      tagSlugs: existing.tags.map((t) => t.tag.slug),
     }
 
-    const isPermanentDelete = new URL(req.url).searchParams.get("permanent") === "true"
+    if (existing.status === "PUBLISHED" && !existing.deletedAt) {
+      shouldRevalidate = true
+    }
 
     if (isPermanentDelete) {
       await tx.quoteReport.deleteMany({
@@ -344,11 +615,31 @@ export async function DELETE(
     await recalculateSourceQuoteCounts(tx, [existing.sourceId])
     await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
     await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
+    await recalculateCollectionQuoteCounts(tx, existing.collections.map((entry) => entry.collectionId))
+
+    return { shouldRevalidateHomepage: shouldRevalidate, deletedQuoteDetails: details }
   })
 
   if (shouldRevalidateHomepage) {
     revalidatePublicSurfaces()
+    if (deletedQuoteDetails) {
+      revalidateQuote(deletedQuoteDetails.slug, {
+        authorSlug: deletedQuoteDetails.authorSlug,
+        categorySlug: deletedQuoteDetails.categorySlug,
+        tagSlugs: deletedQuoteDetails.tagSlugs,
+      })
+    }
   }
+
+  await recordAuditLog({
+    action: "DELETE",
+    entityType: "QUOTE",
+    entityId: id,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
 
   return NextResponse.json({ success: true })
 }
@@ -358,27 +649,33 @@ export async function POST(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   if (body?.action !== "restore") {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   }
 
-  let shouldRevalidateHomepage = false
-
-  await prisma.$transaction(async (tx) => {
+  const { shouldRevalidateHomepage, restoredQuoteDetails } = await prisma.$transaction(async (tx) => {
+    let shouldRevalidate = false
+    let details: { slug: string; authorSlug?: string; categorySlug?: string; tagSlugs: string[] } | null = null
     const existing = await tx.quote.findUnique({
       where: { id },
       select: {
+        slug: true,
+        author: { select: { slug: true } },
+        category: { select: { slug: true } },
+        tags: { select: { tag: { select: { slug: true } }, tagId: true } },
+        collections: { select: { collectionId: true } },
         authorId: true,
         sourceId: true,
         categoryId: true,
-        tags: { select: { tagId: true } },
         deletedAt: true,
         status: true,
       },
@@ -388,6 +685,13 @@ export async function POST(
       throw new Error("Quote not found")
     }
 
+    details = {
+      slug: existing.slug,
+      authorSlug: existing.author?.slug,
+      categorySlug: existing.category?.slug,
+      tagSlugs: existing.tags.map((t) => t.tag.slug),
+    }
+
     if (existing.deletedAt) {
       await tx.quote.update({
         where: { id },
@@ -395,19 +699,39 @@ export async function POST(
       })
 
       if (existing.status === "PUBLISHED") {
-        shouldRevalidateHomepage = true
+        shouldRevalidate = true
       }
 
       await recalculateAuthorQuoteCounts(tx, [existing.authorId])
       await recalculateSourceQuoteCounts(tx, [existing.sourceId])
       await recalculateCategoryQuoteCounts(tx, [existing.categoryId])
       await recalculateTagQuoteCounts(tx, existing.tags.map((entry) => entry.tagId))
+      await recalculateCollectionQuoteCounts(tx, existing.collections.map((entry) => entry.collectionId))
     }
+
+    return { shouldRevalidateHomepage: shouldRevalidate, restoredQuoteDetails: details }
   })
 
   if (shouldRevalidateHomepage) {
     revalidatePublicSurfaces()
+    if (restoredQuoteDetails) {
+      revalidateQuote(restoredQuoteDetails.slug, {
+        authorSlug: restoredQuoteDetails.authorSlug,
+        categorySlug: restoredQuoteDetails.categorySlug,
+        tagSlugs: restoredQuoteDetails.tagSlugs,
+      })
+    }
   }
+
+  await recordAuditLog({
+    action: "RESTORE",
+    entityType: "QUOTE",
+    entityId: id,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
 
   return NextResponse.json({ success: true })
 }

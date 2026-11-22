@@ -1,0 +1,287 @@
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
+import { prisma } from "@/lib/prisma"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { searchQuoteIds } from "@/lib/quotes/search"
+import { getQuoteSort, buildQuoteOrderBy } from "@/lib/quotes/sort"
+import { escapeCsvCell } from "@/lib/security/csv"
+import { isValidUuid } from "@/lib/api/route-helpers"
+import type { Prisma, QuoteStatus, AttributionStatus } from "@prisma/client"
+
+export async function GET(req: Request) {
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
+  if (rateLimited) return rateLimited
+
+  const { searchParams } = new URL(req.url)
+  const format = searchParams.get("format")?.toLowerCase() === "json" ? "json" : "csv"
+  const filter = searchParams.get("filter")
+  const categoryParam = searchParams.get("category")?.trim() || searchParams.get("categoryId")?.trim()
+  const authorParam = searchParams.get("author")?.trim() || searchParams.get("authorId")?.trim()
+  const tagParam = searchParams.get("tag")?.trim() || searchParams.get("tagId")?.trim()
+  const sourceParam = searchParams.get("source")?.trim() || searchParams.get("sourceId")?.trim()
+  const sortParam = searchParams.get("sort")
+  const statusParam = searchParams.get("status")?.toUpperCase()
+  const verifiedParam = searchParams.get("verified")?.trim().toLowerCase() || searchParams.get("isVerified")?.trim().toLowerCase()
+  const attributionParam = searchParams.get("attribution")?.toUpperCase() || searchParams.get("attributionStatus")?.toUpperCase()
+  const rawIds = searchParams.get("ids")
+  const ids = rawIds ? rawIds.split(",").map((s) => s.trim()).filter(Boolean) : []
+  const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "10000", 10)), 20000)
+
+  // Build where clause based on selected IDs or active filters
+  const where: Prisma.QuoteWhereInput = { deletedAt: null }
+
+  if (ids.length > 0) {
+    where.id = { in: ids }
+  } else {
+    if (statusParam && ["PUBLISHED", "DRAFT", "ARCHIVED", "REVIEW"].includes(statusParam)) {
+      const statusCondition: Prisma.QuoteWhereInput = { status: statusParam as QuoteStatus }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, statusCondition] : [statusCondition]
+    }
+
+    if (verifiedParam === "verified" || verifiedParam === "true") {
+      const verifiedCondition: Prisma.QuoteWhereInput = { isVerified: true }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, verifiedCondition] : [verifiedCondition]
+    } else if (verifiedParam === "unverified" || verifiedParam === "false") {
+      const verifiedCondition: Prisma.QuoteWhereInput = { isVerified: false }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, verifiedCondition] : [verifiedCondition]
+    }
+
+    if (attributionParam && ["CONFIRMED", "DISPUTED", "MISATTRIBUTED", "UNKNOWN"].includes(attributionParam)) {
+      const attributionCondition: Prisma.QuoteWhereInput = { attributionStatus: attributionParam as AttributionStatus }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, attributionCondition] : [attributionCondition]
+    }
+
+    if (filter === "draft") {
+      where.status = { in: ["DRAFT", "REVIEW"] }
+    } else if (filter === "archived") {
+      where.status = "ARCHIVED"
+    } else if (filter === "featured" || filter === "is-featured") {
+      where.isFeatured = true
+    } else if (filter === "unverified") {
+      where.isVerified = false
+    } else if (filter === "disputed" || filter === "misattributed" || filter === "attribution-risk") {
+      where.attributionStatus = { in: ["DISPUTED", "MISATTRIBUTED"] }
+    } else if (filter === "unattributed") {
+      where.OR = [{ authorId: null }, { authorName: null }]
+    } else if (filter === "missing-source") {
+      where.sourceId = null
+    } else if (filter === "no-tags") {
+      where.tags = { none: {} }
+    } else if (
+      filter === "no-context" ||
+      filter === "missing-context" ||
+      filter === "without-context" ||
+      filter === "no-interpretation" ||
+      filter === "missing-interpretation" ||
+      filter === "without-interpretation"
+    ) {
+      const noContextCondition: Prisma.QuoteWhereInput = {
+        AND: [
+          { OR: [{ meaning: null }, { meaning: "" }] },
+          { OR: [{ historicalContext: null }, { historicalContext: "" }] },
+          { OR: [{ modernRelevance: null }, { modernRelevance: "" }] },
+        ],
+      }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, noContextCondition] : [noContextCondition]
+    } else if (
+      filter === "has-context" ||
+      filter === "curated" ||
+      filter === "with-context" ||
+      filter === "has-interpretation" ||
+      filter === "with-interpretation"
+    ) {
+      const hasContextCondition: Prisma.QuoteWhereInput = {
+        OR: [
+          { AND: [{ meaning: { not: null } }, { meaning: { not: "" } }] },
+          { AND: [{ historicalContext: { not: null } }, { historicalContext: { not: "" } }] },
+          { AND: [{ modernRelevance: { not: null } }, { modernRelevance: { not: "" } }] },
+        ],
+      }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, hasContextCondition] : [hasContextCondition]
+    } else if (filter === "orphaned") {
+      where.OR = [{ authorId: null }, { authorName: null }, { sourceId: null }, { tags: { none: {} } }]
+    }
+
+    if (categoryParam && categoryParam !== "all") {
+      const categoryCondition: Prisma.QuoteWhereInput = isValidUuid(categoryParam)
+        ? { categoryId: categoryParam }
+        : { categorySlug: categoryParam }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, categoryCondition] : [categoryCondition]
+    }
+
+    if (authorParam && authorParam !== "all") {
+      const authorCondition: Prisma.QuoteWhereInput = isValidUuid(authorParam)
+        ? { authorId: authorParam }
+        : {
+            OR: [
+              { authorSlug: authorParam },
+              { author: { slug: authorParam } },
+            ],
+          }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, authorCondition] : [authorCondition]
+    }
+
+    if (tagParam && tagParam !== "all") {
+      const tagCondition: Prisma.QuoteWhereInput = isValidUuid(tagParam)
+        ? { tags: { some: { tagId: tagParam } } }
+        : { tags: { some: { tag: { slug: tagParam } } } }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, tagCondition] : [tagCondition]
+    }
+
+    if (sourceParam && sourceParam !== "all") {
+      const sourceCondition: Prisma.QuoteWhereInput = isValidUuid(sourceParam)
+        ? { sourceId: sourceParam }
+        : { source: { slug: sourceParam } }
+      where.AND = Array.isArray(where.AND) ? [...where.AND, sourceCondition] : [sourceCondition]
+    }
+
+    const searchQuery = searchParams.get("search")?.trim() || searchParams.get("q")?.trim()
+    if (searchQuery) {
+      const searchMatchingIds = await searchQuoteIds(searchQuery, limit)
+      if (Array.isArray(searchMatchingIds)) {
+        where.id = { in: searchMatchingIds }
+      } else {
+        const searchCondition: Prisma.QuoteWhereInput = {
+          OR: [
+            { content: { contains: searchQuery, mode: "insensitive" } },
+            { authorName: { contains: searchQuery, mode: "insensitive" } },
+            { author: { name: { contains: searchQuery, mode: "insensitive" } } },
+            { category: { name: { contains: searchQuery, mode: "insensitive" } } },
+            { source: { title: { contains: searchQuery, mode: "insensitive" } } },
+          ],
+        }
+        where.AND = Array.isArray(where.AND) ? [...where.AND, searchCondition] : [searchCondition]
+      }
+    }
+  }
+
+  const quotes = await prisma.quote.findMany({
+    where,
+    orderBy: buildQuoteOrderBy(getQuoteSort(sortParam)),
+    take: limit,
+    select: {
+      id: true,
+      content: true,
+      meaning: true,
+      historicalContext: true,
+      modernRelevance: true,
+      language: true,
+      status: true,
+      authorName: true,
+      authorSlug: true,
+      author: { select: { name: true, slug: true } },
+      source: { select: { title: true, type: true } },
+      category: { select: { name: true, slug: true } },
+      tags: { select: { tag: { select: { name: true, slug: true, type: true } } } },
+      views: true,
+      likes: true,
+      shares: true,
+      isVerified: true,
+      publishedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  })
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
+
+  if (format === "json") {
+    const jsonOutput = quotes.map((q) => ({
+      id: q.id,
+      content: q.content,
+      meaning: q.meaning,
+      historicalContext: q.historicalContext,
+      modernRelevance: q.modernRelevance,
+      language: q.language,
+      status: q.status,
+      author: q.author?.name || q.authorName || null,
+      authorSlug: q.author?.slug || q.authorSlug || null,
+      source: q.source?.title || null,
+      sourceType: q.source?.type || null,
+      category: q.category.name,
+      categorySlug: q.category.slug,
+      tags: q.tags.map((t) => t.tag.name),
+      stats: {
+        views: q.views,
+        likes: q.likes,
+        shares: q.shares,
+      },
+      isVerified: q.isVerified,
+      publishedAt: q.publishedAt ? q.publishedAt.toISOString() : null,
+      createdAt: q.createdAt.toISOString(),
+      updatedAt: q.updatedAt.toISOString(),
+    }))
+
+    return new Response(JSON.stringify(jsonOutput, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": `attachment; filename="quotzen-quotes-${timestamp}.json"`,
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    })
+  }
+
+  // Format CSV with standard RFC 4180 headers
+  const csvHeaders = [
+    "ID",
+    "Quote Text",
+    "Author",
+    "Author Slug",
+    "Category",
+    "Category Slug",
+    "Source",
+    "Tags",
+    "Status",
+    "Meaning",
+    "Historical Context",
+    "Modern Relevance",
+    "Views",
+    "Likes",
+    "Shares",
+    "Verified",
+    "Published At",
+    "Created At",
+  ]
+
+  const csvRows = quotes.map((q) => {
+    const authorName = q.author?.name || q.authorName || ""
+    const authorSlug = q.author?.slug || q.authorSlug || ""
+    const sourceTitle = q.source?.title || ""
+    const tagList = q.tags.map((t) => t.tag.name).join("; ")
+
+    return [
+      escapeCsvCell(q.id),
+      escapeCsvCell(q.content),
+      escapeCsvCell(authorName),
+      escapeCsvCell(authorSlug),
+      escapeCsvCell(q.category.name),
+      escapeCsvCell(q.category.slug),
+      escapeCsvCell(sourceTitle),
+      escapeCsvCell(tagList),
+      escapeCsvCell(q.status),
+      escapeCsvCell(q.meaning || ""),
+      escapeCsvCell(q.historicalContext || ""),
+      escapeCsvCell(q.modernRelevance || ""),
+      escapeCsvCell(q.views),
+      escapeCsvCell(q.likes),
+      escapeCsvCell(q.shares),
+      escapeCsvCell(q.isVerified ? "Yes" : "No"),
+      escapeCsvCell(q.publishedAt ? q.publishedAt.toISOString() : ""),
+      escapeCsvCell(q.createdAt.toISOString()),
+    ].join(",")
+  })
+
+  // UTF-8 Byte Order Mark (\uFEFF) ensures Excel properly decodes Unicode characters
+  const csvPayload = `\uFEFF${[csvHeaders.join(","), ...csvRows].join("\r\n")}`
+
+  return new Response(csvPayload, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="quotzen-quotes-${timestamp}.csv"`,
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    },
+  })
+}
+

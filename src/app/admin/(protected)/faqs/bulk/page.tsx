@@ -2,16 +2,26 @@
 
 import { useState } from "react"
 import { getRowValue, readItemsFromJsonOrCsv } from "@/lib/import/clientFile"
-
-type Result = {
-  received: number
-  created: number
-  skipped: number
-  failed: number
-  errors: string[]
-}
+import {
+  PageHeader,
+  BulkImportResultCard,
+  BulkImportFormatGuide,
+  BulkFileUploadInput,
+  type BulkImportResultData,
+} from "@/components/admin"
+import {
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+  Textarea,
+} from "@/components/ui"
 
 const PAGE_TYPES = ["TAG", "CATEGORY", "AUTHOR", "QUOTE", "COLLECTION"] as const
+
+function normalizePageType(value: string) {
+  const normalized = value.trim().toUpperCase()
+  return PAGE_TYPES.includes(normalized as (typeof PAGE_TYPES)[number]) ? normalized : "TAG"
+}
 
 function parseLines(input: string) {
   return input
@@ -30,11 +40,6 @@ function parseLines(input: string) {
     })
 }
 
-function normalizePageType(value: string) {
-  const normalized = value.trim().toUpperCase()
-  return PAGE_TYPES.includes(normalized as (typeof PAGE_TYPES)[number]) ? normalized : "TAG"
-}
-
 export default function BulkImportFaqsPage() {
   const [input, setInput] = useState("")
   const [uploadedItems, setUploadedItems] = useState<
@@ -48,7 +53,7 @@ export default function BulkImportFaqsPage() {
   >(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
-  const [result, setResult] = useState<Result | null>(null)
+  const [result, setResult] = useState<BulkImportResultData | null>(null)
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -79,7 +84,7 @@ export default function BulkImportFaqsPage() {
 
     const items = uploadedItems ?? parseLines(input)
     if (items.length === 0) {
-      setError("Please enter at least one FAQ row.")
+      setError("Please enter at least one FAQ row or upload a file.")
       setSubmitting(false)
       return
     }
@@ -103,69 +108,59 @@ export default function BulkImportFaqsPage() {
 
   return (
     <div className="p-8 max-w-4xl space-y-6">
-      <h1 className="text-2xl font-bold">Bulk Import FAQs</h1>
+      <PageHeader
+        title="Bulk Import FAQs"
+        description="Batch create frequently asked questions and associate them with target entity landing pages."
+      />
 
-      <p className="text-sm text-gray-600">
-        One FAQ per line. Format:
-        <br />
-        <code>question|answer|pageType|pageSlug|position</code>
-      </p>
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Upload JSON/CSV (optional)</label>
-          <input type="file" accept=".json,.csv,application/json,text/csv" onChange={onFileChange} />
-          {uploadedItems && (
-            <p className="text-xs text-gray-500 mt-1">Loaded {uploadedItems.length} row(s) from file.</p>
-          )}
-        </div>
+      <BulkImportResultCard result={result} onDismiss={() => setResult(null)} />
 
-        <textarea
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            setUploadedItems(null)
-          }}
-          rows={14}
-          className="border w-full p-3 rounded font-mono text-sm"
-          placeholder={`What is stoicism?|Stoicism is a school of philosophy...|CATEGORY|stoicism|0\nWho said this quote?|It is commonly attributed to...|QUOTE|the-obstacle-is-the-way|1`}
-        />
+      <BulkImportFormatGuide
+        format="question|answer|pageType|pageSlug|position"
+        notes={
+          <p>
+            Valid page types: <strong className="text-stone-900">{PAGE_TYPES.join(", ")}</strong>. Position is 0-indexed.
+          </p>
+        }
+      />
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection
+          title="Data Input"
+          description="Upload a CSV/JSON file or paste raw FAQ lines"
         >
-          {submitting ? "Importing..." : "Import FAQs"}
-        </button>
+          <BulkFileUploadInput
+            onFileChange={onFileChange}
+            loadedCount={uploadedItems?.length}
+          />
+
+          <Textarea
+            label="Raw Input Rows"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value)
+              setUploadedItems(null)
+            }}
+            rows={12}
+            className="font-mono text-xs leading-relaxed"
+            placeholder={`What is stoicism?|Stoicism is a school of Hellenistic philosophy...|CATEGORY|stoicism|0\nWho said this quote?|It is commonly attributed to Marcus Aurelius...|QUOTE|the-obstacle-is-the-way|1`}
+            hint={
+              uploadedItems
+                ? "File upload loaded. Editing text overrides uploaded file."
+                : "Type or paste multiple lines above."
+            }
+          />
+        </FormSection>
+
+        <FormActions
+          submitLabel="Import FAQs"
+          submittingLabel="Importing FAQs..."
+          isSubmitting={submitting}
+          cancelHref="/admin/faqs"
+        />
       </form>
-
-      {result && (
-        <div className="border rounded p-4 bg-white space-y-2">
-          <div className="text-sm">
-            Received: <b>{result.received}</b>
-          </div>
-          <div className="text-sm">
-            Created: <b>{result.created}</b>
-          </div>
-          <div className="text-sm">
-            Skipped: <b>{result.skipped}</b>
-          </div>
-          <div className="text-sm">
-            Failed: <b>{result.failed}</b>
-          </div>
-
-          {result.errors.length > 0 && (
-            <ul className="text-sm text-red-700 list-disc pl-5">
-              {result.errors.map((msg) => (
-                <li key={msg}>{msg}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   )
 }
-

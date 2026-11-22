@@ -1,19 +1,34 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
-import { getDashboardMetrics } from "@/lib/dashboard/metrics"
-import { formatDateInAppTimeZone, formatShortDateInAppTimeZone, subtractDays } from "@/lib/datetime"
+import { getCachedDashboardMetrics } from "@/lib/dashboard/metrics"
+import { formatDateInAppTimeZone, formatShortDateInAppTimeZone } from "@/lib/datetime"
+import { formatNumber } from "@/lib/formatters"
+import { RefreshMetricsButton } from "./RefreshMetricsButton"
+import { Button, Badge } from "@/components/ui"
+import {
+  PageHeader,
+  StatCard,
+  KpiCard,
+  AttentionCard,
+  MiniBarChart,
+  Metric,
+  DashboardCard,
+  DashboardLink,
+  DashboardPostAction,
+  ListOrEmpty,
+  EmptyRow,
+} from "@/components/admin"
 
 export default async function DashboardPage() {
   const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
+  if (!admin) {
     redirect("/admin/login")
   }
 
-  const now = new Date()
-  const sevenDaysAgo = subtractDays(now, 7)
-  const fourteenDaysAgo = subtractDays(now, 14)
-  const thirtyDaysAgo = subtractDays(now, 30)
+  if (admin.role !== "SUPER_ADMIN") {
+    redirect("/")
+  }
 
   const {
     totalQuotes,
@@ -71,11 +86,9 @@ export default async function DashboardPage() {
     activeCategories,
     activeTags,
     featuredPublishedQuotes,
-  } = await getDashboardMetrics({
-    sevenDaysAgo,
-    fourteenDaysAgo,
-    thirtyDaysAgo,
-  })
+    noContextQuotes,
+    hasContextQuotes,
+  } = await getCachedDashboardMetrics()
 
   const publishRate = totalQuotes === 0 ? 0 : Math.round((publishedQuotes / totalQuotes) * 100)
   const attributedQuotes = Math.max(0, totalQuotes - unattributedQuotes)
@@ -111,6 +124,7 @@ export default async function DashboardPage() {
   const authorCoveragePct = totalAuthors === 0 ? 0 : Math.round((activeAuthors / totalAuthors) * 100)
   const categoryCoveragePct = totalCategories === 0 ? 0 : Math.round((activeCategories / totalCategories) * 100)
   const tagCoveragePct = totalTags === 0 ? 0 : Math.round((activeTags / totalTags) * 100)
+  const curatedCoveragePct = totalQuotes === 0 ? 0 : Math.round((hasContextQuotes / totalQuotes) * 100)
   const featuredPublishedPct = publishedQuotes === 0 ? 0 : Math.round((featuredPublishedQuotes / publishedQuotes) * 100)
   const engagementPerPublished7d = publishedLast7Days === 0 ? 0 : Math.round(engagementNow / publishedLast7Days)
   const published30dTotal = publishedDailySeries.reduce((sum, entry) => sum + entry.count, 0)
@@ -126,32 +140,32 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-6 py-8 md:px-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <span className="inline-flex items-center rounded-full border border-stone-300 bg-stone-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-stone-700">
+      <PageHeader
+        title="Dashboard"
+        description="Operations, quality, and publishing health across all quotation surfaces."
+        badge={
+          <Badge variant="neutral" size="sm">
             Admin Overview
-          </span>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">Dashboard</h1>
-            <p className="text-sm text-stone-600">Operations, quality, and publishing health</p>
+          </Badge>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <RefreshMetricsButton />
+            <Button href="/admin/quotes/new" variant="primary" size="sm">
+              + New Quote
+            </Button>
+            <Button href="/admin/quotes/import" variant="outline" size="sm">
+              Import Quotes
+            </Button>
+            <Button href="/admin/authors/bulk" variant="outline" size="sm">
+              Import Authors
+            </Button>
+            <Button href="/admin/sources/bulk" variant="outline" size="sm">
+              Import Sources
+            </Button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/quotes/new" className="rounded-full bg-stone-950 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800">
-            + New Quote
-          </Link>
-          <Link href="/admin/quotes/import" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:bg-stone-50">
-            Import Quotes
-          </Link>
-          <Link href="/admin/authors/bulk" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:bg-stone-50">
-            Import Authors
-          </Link>
-          <Link href="/admin/sources/bulk" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:bg-stone-50">
-            Import Sources
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       <section className="overflow-hidden rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,23,42,0.08),_transparent_24%),linear-gradient(180deg,_#ffffff_0%,_#fafaf9_100%)] p-5 shadow-[0_18px_50px_rgba(28,25,23,0.08)]">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-8">
@@ -161,13 +175,13 @@ export default async function DashboardPage() {
           <StatCard title="Categories" value={totalCategories} subtitle={categoriesTrendLabel} href="/admin/categories" />
           <StatCard title="Tags" value={totalTags} subtitle={tagsTrendLabel} href="/admin/tags" />
           <StatCard title="Sources" value={totalSources} subtitle={sourcesTrendLabel} href="/admin/sources" />
-          <StatCard title="Collections" value={totalCollections} href="#" />
+          <StatCard title="Collections" value={totalCollections} href="/admin/collections" />
           <StatCard title="Trash" value={deletedQuotes} subtitle={deletedTrendLabel} href="/admin/quotes/deleted" />
         </div>
       </section>
 
       <DashboardCard title="Needs Attention">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <AttentionCard
             title="Moderation Backlog"
             value={moderationBacklogQuotes}
@@ -176,11 +190,25 @@ export default async function DashboardPage() {
             tone={staleModerationQuotes > 0 ? "danger" : "warning"}
           />
           <AttentionCard
+            title="Attribution Risk"
+            value={attributionRiskQuotes}
+            subtitle="Disputed or misattributed quotes"
+            href="/admin/quotes?filter=disputed"
+            tone={attributionRiskQuotes > 0 ? "danger" : "neutral"}
+          />
+          <AttentionCard
             title="Unattributed Quotes"
             value={unattributedQuotes}
             subtitle="Missing author relation or author name"
             href="/admin/quotes?filter=unattributed"
             tone={unattributedQuotes > 0 ? "danger" : "neutral"}
+          />
+          <AttentionCard
+            title="Missing Context"
+            value={noContextQuotes}
+            subtitle="Quotes lacking meaning & context"
+            href="/admin/quotes?filter=no-context"
+            tone={noContextQuotes > 0 ? "warning" : "neutral"}
           />
           <AttentionCard
             title="Missing Sources"
@@ -195,13 +223,6 @@ export default async function DashboardPage() {
             subtitle="Quotes that need tag coverage"
             href="/admin/quotes?filter=no-tags"
             tone={noTagQuotes > 0 ? "warning" : "neutral"}
-          />
-          <AttentionCard
-            title="Trash"
-            value={deletedQuotes}
-            subtitle="Soft-deleted quotes waiting in recycle bin"
-            href="/admin/quotes/deleted"
-            tone={deletedQuotes > 0 ? "warning" : "neutral"}
           />
         </div>
       </DashboardCard>
@@ -225,7 +246,7 @@ export default async function DashboardPage() {
           subtitle={`C:${formatNumber(attributionConfirmedQuotes)} D:${formatNumber(attributionDisputedQuotes)} M:${formatNumber(
             attributionMisattributedQuotes
           )} U:${formatNumber(attributionUnknownQuotes)}`}
-          href="/admin/quotes"
+          href={attributionRiskQuotes > 0 ? "/admin/quotes?filter=disputed" : "/admin/quotes"}
         />
         <KpiCard
           title="Verification Confidence"
@@ -260,11 +281,11 @@ export default async function DashboardPage() {
           title="Attribution Risk"
           value={formatNumber(attributionRiskQuotes)}
           subtitle={`${attributionRiskPct}% disputed/misattributed`}
-          href="/admin/quotes"
+          href={attributionRiskQuotes > 0 ? "/admin/quotes?filter=disputed" : "/admin/quotes"}
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           title="Author Coverage"
           value={`${authorCoveragePct}%`}
@@ -284,10 +305,16 @@ export default async function DashboardPage() {
           href="/admin/tags"
         />
         <KpiCard
+          title="Curated Context"
+          value={`${curatedCoveragePct}%`}
+          subtitle={`${formatNumber(hasContextQuotes)} curated with meaning/context`}
+          href="/admin/quotes?filter=has-context"
+        />
+        <KpiCard
           title="Featured Published"
           value={`${featuredPublishedPct}%`}
           subtitle={`${formatNumber(featuredPublishedQuotes)} featured | ${formatNumber(engagementPerPublished7d)} engagement/7d publish`}
-          href="/admin/quotes"
+          href="/admin/quotes?filter=featured"
         />
       </div>
 
@@ -318,20 +345,31 @@ export default async function DashboardPage() {
             <Metric label="Featured" value={featuredQuotes} />
             <Metric label="Publish Rate" value={`${publishRate}%`} />
           </div>
+          <div className="grid gap-2 text-sm mt-3 pt-3 border-t border-stone-100">
+            <DashboardLink href="/admin/quotes?filter=draft" label="View Draft & Review Quotes" />
+            <DashboardLink href="/admin/quotes?filter=featured" label="View Featured Quotes" />
+            <DashboardLink href="/admin/quotes?filter=archived" label="View Archived Quotes" />
+          </div>
         </DashboardCard>
 
         <DashboardCard title="Data Quality">
           <div className="grid grid-cols-2 gap-3">
             <Metric label="Attributed" value={attributedQuotes} />
             <Metric label="Unattributed" value={unattributedQuotes} />
+            <Metric label="Curated Context" value={hasContextQuotes} />
+            <Metric label="Missing Context" value={noContextQuotes} />
             <Metric label="Orphaned" value={orphanedQuotes} />
+            <Metric label="Curated Rate" value={`${curatedCoveragePct}%`} />
           </div>
-          <p className="text-xs text-gray-500 mt-3">
-            Unattributed quotes are missing author relation or author name.
+          <p className="text-xs text-stone-500 mt-3">
+            Editorial and quality health across attribution, contextual enrichment, and relationships.
           </p>
           <div className="grid gap-2 text-sm mt-3">
-            <DashboardLink href="/admin/quotes?filter=orphaned" label="View Orphaned Quotes" />
+            <DashboardLink href="/admin/quotes?filter=no-context" label="View Quotes Missing Context" />
+            <DashboardLink href="/admin/quotes?filter=has-context" label="View Curated Quotes (With Context)" />
+            <DashboardLink href="/admin/quotes?filter=disputed" label="View Disputed Quotes" />
             <DashboardLink href="/admin/quotes?filter=unattributed" label="View Unattributed Quotes" />
+            <DashboardLink href="/admin/quotes?filter=orphaned" label="View Orphaned Quotes" />
             <DashboardLink href="/admin/quotes?filter=missing-source" label="View Missing Source Quotes" />
             <DashboardLink href="/admin/quotes?filter=no-tags" label="View No-tag Quotes" />
           </div>
@@ -344,65 +382,121 @@ export default async function DashboardPage() {
             <DashboardLink href="/admin/authors/bulk" label="Bulk Import Authors" />
             <DashboardLink href="/admin/sources/bulk" label="Bulk Import Sources" />
             <DashboardLink href="/admin/quotes/import" label="Bulk Import Quotes" />
+            <DashboardLink href="/admin/faqs/bulk" label="Bulk Import FAQs" />
             <DashboardPostAction action="/api/admin/tools/recalculate-counts" label="Recalculate Quote Counts" />
           </div>
         </DashboardCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <DashboardCard title="Top Categories">
+        <DashboardCard
+          title="Top Categories"
+          action={
+            <Link
+              href="/admin/categories"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              Manage categories &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No categories with quotes yet."
             items={topCategories.map((c, i) => ({
               key: c.id,
               left: `${i + 1}. ${c.name}`,
               right: `${formatNumber(c.quoteCount)} quotes`,
+              href: `/admin/quotes?category=${c.slug}`,
             }))}
           />
         </DashboardCard>
 
-        <DashboardCard title="Top Tags">
+        <DashboardCard
+          title="Top Tags"
+          action={
+            <Link
+              href="/admin/tags"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              Manage tags &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No tags with quotes yet."
             items={topTags.map((t, i) => ({
               key: t.id,
-              left: `${i + 1}. ${t.name} (${t.type})`,
+              left: `${i + 1}. #${t.name} (${t.type})`,
               right: `${formatNumber(t.quoteCount)} quotes`,
+              href: `/admin/quotes?tag=${t.slug}`,
             }))}
           />
         </DashboardCard>
 
-        <DashboardCard title="Top Sources">
+        <DashboardCard
+          title="Top Sources"
+          action={
+            <Link
+              href="/admin/sources"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              Manage sources &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No sources with quotes yet."
             items={topSources.map((s, i) => ({
               key: s.id,
               left: `${i + 1}. ${truncate(s.title, 50)} (${s.type})`,
               right: `${formatNumber(s.quoteCount)} quotes`,
+              href: `/admin/quotes?source=${s.slug}`,
             }))}
           />
         </DashboardCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <DashboardCard title="Most Viewed Quotes">
+        <DashboardCard
+          title="Most Viewed Quotes"
+          action={
+            <Link
+              href="/admin/quotes?sort=views"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              View all by views &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No published quotes with views yet."
             items={mostViewedQuotes.map((q, i) => ({
               key: q.id,
               left: `${i + 1}. ${truncate(q.content, 90)} | ${q.authorName ?? "Unknown"}`,
               right: `${formatNumber(q.views)} views`,
+              href: `/admin/quotes/${q.id}`,
             }))}
           />
         </DashboardCard>
 
-        <DashboardCard title="Trending Quotes">
+        <DashboardCard
+          title="Trending Quotes"
+          action={
+            <Link
+              href="/admin/quotes?sort=views"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-900 transition"
+            >
+              View top quotes &rarr;
+            </Link>
+          }
+        >
           <ListOrEmpty
             empty="No trending signal available yet."
             items={trendingQuotes.map((q, i) => ({
               key: q.id,
               left: `${i + 1}. ${truncate(q.content, 90)} | ${q.authorName ?? "Unknown"}`,
               right: `Score ${q.score.toFixed(2)}`,
+              href: `/admin/quotes/${q.id}`,
             }))}
           />
         </DashboardCard>
@@ -413,12 +507,16 @@ export default async function DashboardPage() {
           <div className="space-y-3 text-sm">
             {recentQuotes.length === 0 && <EmptyRow message="No recent quote activity." />}
             {recentQuotes.map((q) => (
-              <div key={q.id} className="space-y-1">
-                <div className="font-medium">{truncate(q.content, 85)}</div>
-                <div className="text-gray-500">
+              <Link
+                key={q.id}
+                href={`/admin/quotes/${q.id}`}
+                className="block space-y-1 rounded-xl p-1.5 transition hover:bg-stone-50 group"
+              >
+                <div className="font-medium text-stone-900 group-hover:text-black">{truncate(q.content, 85)}</div>
+                <div className="text-gray-500 text-xs">
                   {q.createdBy?.email ?? "System"} | {formatDateInAppTimeZone(q.createdAt)}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </DashboardCard>
@@ -427,10 +525,14 @@ export default async function DashboardPage() {
           <div className="space-y-3 text-sm">
             {recentAuthors.length === 0 && <EmptyRow message="No recent author activity." />}
             {recentAuthors.map((a) => (
-              <div key={a.id} className="flex justify-between">
-                <span>{a.name}</span>
-                <span className="text-gray-500">{formatDateInAppTimeZone(a.createdAt)}</span>
-              </div>
+              <Link
+                key={a.id}
+                href={`/admin/authors/${a.id}`}
+                className="flex justify-between items-center rounded-xl p-1.5 transition hover:bg-stone-50 group"
+              >
+                <span className="font-medium text-stone-800 group-hover:text-black">{a.name}</span>
+                <span className="text-gray-500 text-xs">{formatDateInAppTimeZone(a.createdAt)}</span>
+              </Link>
             ))}
           </div>
         </DashboardCard>
@@ -439,10 +541,14 @@ export default async function DashboardPage() {
           <div className="space-y-3 text-sm">
             {recentSources.length === 0 && <EmptyRow message="No recent source activity." />}
             {recentSources.map((s) => (
-              <div key={s.id} className="flex justify-between gap-3">
-                <span>{truncate(s.title, 40)}</span>
-                <span className="text-gray-500">{formatDateInAppTimeZone(s.createdAt)}</span>
-              </div>
+              <Link
+                key={s.id}
+                href={`/admin/sources/${s.id}`}
+                className="flex justify-between items-center gap-3 rounded-xl p-1.5 transition hover:bg-stone-50 group"
+              >
+                <span className="font-medium text-stone-800 truncate group-hover:text-black">{truncate(s.title, 40)}</span>
+                <span className="text-gray-500 text-xs shrink-0">{formatDateInAppTimeZone(s.createdAt)}</span>
+              </Link>
             ))}
           </div>
         </DashboardCard>
@@ -451,9 +557,6 @@ export default async function DashboardPage() {
   )
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat().format(value)
-}
 
 function formatPeriodDelta(current: number, previous: number, actionLabel: string) {
   const delta = current - previous
@@ -461,224 +564,11 @@ function formatPeriodDelta(current: number, previous: number, actionLabel: strin
   return `${formatNumber(current)} ${actionLabel} in 7d | ${direction}${formatNumber(delta)} vs prev 7d`
 }
 
-function formatShortDate(value: Date) {
+function formatShortDate(value: Date | string) {
   return formatShortDateInAppTimeZone(value)
 }
 
 function truncate(value: string, maxLength: number) {
   if (value.length <= maxLength) return value
   return `${value.slice(0, maxLength)}...`
-}
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-  href,
-}: {
-  title: string
-  value: number
-  subtitle?: string
-  href?: string
-}) {
-  const content = (
-    <div className="h-full rounded-2xl border border-white/70 bg-white/85 p-4 shadow-[0_8px_24px_rgba(28,25,23,0.06)] backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(28,25,23,0.10)]">
-      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500">{title}</p>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-stone-950">{formatNumber(value)}</p>
-      {subtitle && <p className="mt-2 text-xs leading-5 text-stone-600">{subtitle}</p>}
-    </div>
-  )
-
-  return href && href !== "#" ? <Link href={href}>{content}</Link> : content
-}
-
-function DashboardCard({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-[24px] border border-stone-200 bg-white p-6 shadow-[0_14px_36px_rgba(28,25,23,0.06)]">
-      <h2 className="mb-4 text-lg font-semibold tracking-tight text-stone-950">{title}</h2>
-      {children}
-    </section>
-  )
-}
-
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number
-}) {
-  return (
-    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-3">
-      <div className="text-xl font-bold tracking-tight text-stone-950">{typeof value === "number" ? formatNumber(value) : value}</div>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{label}</div>
-    </div>
-  )
-}
-
-function KpiCard({
-  title,
-  value,
-  subtitle,
-  href,
-}: {
-  title: string
-  value: string | number
-  subtitle?: string
-  href?: string
-}) {
-  const content = (
-    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-[0_10px_26px_rgba(28,25,23,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(28,25,23,0.08)]">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{title}</p>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-stone-950">{typeof value === "number" ? formatNumber(value) : value}</p>
-      {subtitle ? <p className="mt-2 text-xs leading-5 text-stone-600">{subtitle}</p> : null}
-    </div>
-  )
-
-  return href ? <Link href={href}>{content}</Link> : content
-}
-
-function MiniBarChart({
-  data,
-}: {
-  data: { label: string; value: number }[]
-}) {
-  if (data.length === 0) {
-    return <EmptyRow message="No chart data available yet." />
-  }
-
-  const width = 560
-  const height = 180
-  const chartTop = 12
-  const chartHeight = 120
-  const horizontalPadding = 12
-  const availableWidth = width - horizontalPadding * 2
-  const gap = data.length > 20 ? 6 : 16
-  const barWidth = Math.max(8, Math.floor((availableWidth - gap * Math.max(data.length - 1, 0)) / data.length))
-  const xStep = barWidth + gap
-  const maxValue = Math.max(...data.map((entry) => entry.value), 1)
-  const peakValue = Math.max(...data.map((entry) => entry.value))
-  const gridLines = [0.25, 0.5, 0.75, 1]
-  const labelEvery = data.length > 20 ? 3 : 1
-
-  return (
-    <div className="space-y-3 rounded-[22px] border border-stone-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fafaf9_100%)] p-4">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
-        {gridLines.map((line) => {
-          const y = chartTop + chartHeight - chartHeight * line
-          return <line key={line} x1="0" x2={width} y1={y} y2={y} stroke="#e7e5e4" strokeDasharray="4 4" />
-        })}
-        {data.map((entry, index) => {
-          const x = horizontalPadding + index * xStep
-          const barHeight = maxValue === 0 ? 0 : Math.max((entry.value / maxValue) * chartHeight, entry.value > 0 ? 4 : 0)
-          const y = chartTop + (chartHeight - barHeight)
-          const isPeak = entry.value === peakValue && peakValue > 0
-
-          return (
-            <g key={`${entry.label}-${index}`}>
-              <rect x={x} y={y} width={barWidth} height={barHeight} rx={6} fill={isPeak ? "#d97706" : "#0f172a"} />
-              {index % labelEvery === 0 ? (
-                <text x={x + barWidth / 2} y={chartTop + chartHeight + 18} textAnchor="middle" className="fill-stone-500 text-[10px]">
-                  {entry.label}
-                </text>
-              ) : null}
-              <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" className="fill-stone-700 text-[10px]">
-                {entry.value}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />
-          Daily published count
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-600" />
-          Peak day
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function AttentionCard({
-  title,
-  value,
-  subtitle,
-  href,
-  tone,
-}: {
-  title: string
-  value: number
-  subtitle: string
-  href: string
-  tone: "neutral" | "warning" | "danger"
-}) {
-  const toneClass =
-    tone === "danger"
-      ? "border-red-200 bg-[linear-gradient(180deg,_#fff1f2_0%,_#ffe4e6_100%)]"
-      : tone === "warning"
-      ? "border-amber-200 bg-[linear-gradient(180deg,_#fffbeb_0%,_#fef3c7_100%)]"
-      : "border-stone-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fafaf9_100%)]"
-
-  return (
-    <Link href={href} className={`block rounded-[22px] border p-4 shadow-[0_10px_26px_rgba(28,25,23,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(28,25,23,0.08)] ${toneClass}`}>
-      <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{title}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight text-stone-950">{formatNumber(value)}</p>
-      <p className="mt-2 text-sm leading-6 text-stone-700">{subtitle}</p>
-    </Link>
-  )
-}
-
-function DashboardLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={href} className="rounded-2xl border border-stone-200 px-3 py-2 text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
-      {label}
-    </Link>
-  )
-}
-
-function DashboardPostAction({ action, label }: { action: string; label: string }) {
-  return (
-    <form action={action} method="post">
-      <button type="submit" className="w-full rounded-2xl border border-stone-200 px-3 py-2 text-left text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
-        {label}
-      </button>
-    </form>
-  )
-}
-
-function ListOrEmpty({
-  items,
-  empty,
-}: {
-  items: { key: string; left: string; right: string }[]
-  empty: string
-}) {
-  if (items.length === 0) {
-    return <EmptyRow message={empty} />
-  }
-
-  return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <div key={item.key} className="flex justify-between gap-4 rounded-2xl border border-stone-100 bg-stone-50/70 px-3 py-2 text-sm">
-          <span className="text-stone-800">{item.left}</span>
-          <span className="whitespace-nowrap text-stone-500">{item.right}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function EmptyRow({ message }: { message: string }) {
-  return <p className="rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-500">{message}</p>
 }

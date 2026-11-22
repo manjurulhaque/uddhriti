@@ -2,9 +2,14 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { PageHeader } from "@/components/admin"
+import { Input, Textarea, FormSection, FormActions, FormErrorBanner } from "@/components/ui"
+import { slugify } from "@/lib/slug"
 
 export default function NewCategoryPage() {
   const router = useRouter()
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
   const [form, setForm] = useState({
     name: "",
@@ -20,21 +25,27 @@ export default function NewCategoryPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setForm((prev) => {
+      const next = { ...prev, [name]: value }
+      if (name === "name" && !prev.slug) {
+        next.slug = slugify(value)
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitting(true)
     setErrors({})
+    setError("")
 
     const res = await fetch("/api/admin/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        slug:
-          form.slug ||
-          form.name.trim().toLowerCase().replace(/\s+/g, "-"),
+        slug: form.slug || slugify(form.name),
         description: form.description || null,
         metaTitle: form.metaTitle || null,
         metaDescription: form.metaDescription || null,
@@ -42,8 +53,10 @@ export default function NewCategoryPage() {
     })
 
     if (!res.ok) {
-      const data = await res.json()
-      setErrors(data.errors?.fieldErrors || {})
+      const data = await res.json().catch(() => null)
+      setErrors(data?.errors?.fieldErrors || {})
+      setError(data?.error || "Failed to create category")
+      setSubmitting(false)
       return
     }
 
@@ -51,85 +64,72 @@ export default function NewCategoryPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">New Category</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title="New Category"
+        description="Create a new thematic taxonomy to organize published quotes."
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
 
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium">Name *</label>
-          <input
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection title="Category Details" description="Basic identification and description">
+          <Input
             name="name"
+            label="Name"
             value={form.name}
             onChange={handleChange}
             required
-            className="border w-full p-2 rounded"
+            error={errors.name}
+            placeholder="e.g. Stoicism, Love, Courage"
           />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.name[0]}
-            </p>
-          )}
-        </div>
 
-        {/* Slug */}
-        <div>
-          <label className="block text-sm font-medium">Slug</label>
-          <input
+          <Input
             name="slug"
+            label="Slug"
             value={form.slug}
             onChange={handleChange}
-            placeholder="auto-generated if empty"
-            className="border w-full p-2 rounded"
+            error={errors.slug}
+            hint="Auto-generated from name if left empty."
+            placeholder="e.g. stoicism"
           />
-          {errors.slug && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.slug[0]}
-            </p>
-          )}
-        </div>
 
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium">Description</label>
-          <textarea
+          <Textarea
             name="description"
+            label="Description"
             value={form.description}
             onChange={handleChange}
             rows={3}
-            className="border w-full p-2 rounded"
+            placeholder="Provide context or summary for this category..."
           />
-        </div>
+        </FormSection>
 
-        {/* SEO Meta */}
-        <div>
-          <label className="block text-sm font-medium">Meta Title</label>
-          <input
+        <FormSection title="SEO & Metadata" description="Search engine optimization and meta tags">
+          <Input
             name="metaTitle"
+            label="Meta Title"
             value={form.metaTitle}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            placeholder="Custom SEO title for category page"
           />
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">
-            Meta Description
-          </label>
-          <textarea
+          <Textarea
             name="metaDescription"
+            label="Meta Description"
             value={form.metaDescription}
             onChange={handleChange}
             rows={2}
-            className="border w-full p-2 rounded"
+            placeholder="Brief snippet shown in search engine results..."
           />
-        </div>
+        </FormSection>
 
-        <button className="bg-black text-white px-6 py-2 rounded">
-          Create Category
-        </button>
+        <FormActions
+          submitLabel="Create Category"
+          submittingLabel="Creating..."
+          isSubmitting={submitting}
+          cancelHref="/admin/categories"
+        />
       </form>
     </div>
   )
-}
+}

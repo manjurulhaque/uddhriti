@@ -2,15 +2,17 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Select,
+  Textarea,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+} from "@/components/ui"
 import { tagTypeOptions } from "@/lib/tags/catalog"
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-}
+import { slugify } from "@/lib/slug"
 
 export default function NewTagPage() {
   const router = useRouter()
@@ -62,76 +64,62 @@ export default function NewTagPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">New Tag</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title="New Tag"
+        description="Create a semantic tag or topic to categorize quotations."
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Name *</label>
-          <input
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection title="Tag Information" description="Name, type, and URL identifier">
+          <Input
             name="name"
+            label="Name"
             value={form.name}
             onChange={handleChange}
             required
-            className="border w-full p-2 rounded"
+            error={errors.name}
+            placeholder="e.g. Resilience, Wisdom, Leadership"
           />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>
-          )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Slug</label>
-          <input
+          <Input
             name="slug"
+            label="Slug"
             value={form.slug}
             onChange={handleChange}
-            placeholder="auto-generated if empty"
-            className="border w-full p-2 rounded"
+            error={errors.slug}
+            hint="Auto-generated from name if left empty."
+            placeholder="e.g. resilience"
           />
-          {errors.slug && (
-            <p className="text-red-500 text-sm mt-1">{errors.slug[0]}</p>
-          )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Type *</label>
-          <select
+          <Select
             name="type"
+            label="Type"
             value={form.type}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
-          >
-            {tagTypeOptions.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-          {errors.type && (
-            <p className="text-red-500 text-sm mt-1">{errors.type[0]}</p>
-          )}
-        </div>
+            required
+            error={errors.type}
+            options={tagTypeOptions.map((type) => ({ value: type, label: type }))}
+          />
 
-        <div>
-          <label className="block text-sm font-medium">Description</label>
-          <textarea
+          <Textarea
             name="description"
+            label="Description"
             value={form.description}
             onChange={handleChange}
             rows={3}
-            className="border w-full p-2 rounded"
+            placeholder="Describe the tag context or themes covered..."
           />
-        </div>
+        </FormSection>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
-        >
-          {submitting ? "Creating..." : "Create Tag"}
-        </button>
+        <FormActions
+          submitLabel="Create Tag"
+          submittingLabel="Creating..."
+          isSubmitting={submitting}
+          cancelHref="/admin/tags"
+        />
       </form>
     </div>
   )

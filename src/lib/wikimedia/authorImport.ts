@@ -1,3 +1,6 @@
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 export type ImportPayload = {
   wikipediaUrl?: string
   wikidataId?: string
@@ -24,7 +27,7 @@ export type ImportedAuthor = {
 function parseWikiUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikipedia.org")) {
+    if (!isAllowedDomain(url.hostname, "wikipedia.org")) {
       return null
     }
 
@@ -49,7 +52,7 @@ function parseWikiUrl(input: string) {
 function parseWikiquoteUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikiquote.org")) {
+    if (!isAllowedDomain(url.hostname, "wikiquote.org")) {
       return null
     }
 
@@ -179,6 +182,9 @@ function commonsFileUrl(fileName: string) {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`
 }
 
+import { normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
+export { normalizeWikimediaThumbnailUrl }
+
 function mediaWikiHeaders() {
   return {
     Accept: "application/json",
@@ -187,7 +193,7 @@ function mediaWikiHeaders() {
 }
 
 async function fetchJson(url: string) {
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     cache: "no-store",
     headers: mediaWikiHeaders(),
   })
@@ -228,7 +234,7 @@ async function fetchWikipediaSummary(wikipediaUrl: string) {
     return {
       title: typeof title === "string" ? title : null,
       bio: typeof extract === "string" ? extract : null,
-      imageUrl: typeof thumbnail?.source === "string" ? thumbnail.source : null,
+      imageUrl: normalizeWikimediaThumbnailUrl(typeof thumbnail?.source === "string" ? thumbnail.source : null),
       wikidataId: typeof pageprops?.wikibase_item === "string" ? pageprops.wikibase_item : null,
       wikipediaUrl: parsed.normalizedUrl,
     }
@@ -263,8 +269,9 @@ async function fetchWikipediaSummary(wikipediaUrl: string) {
     return {
       title: pageTitle,
       bio: typeof summary?.extract === "string" ? summary.extract : null,
-      imageUrl:
-        typeof summary?.thumbnail?.source === "string" ? summary.thumbnail.source : null,
+      imageUrl: normalizeWikimediaThumbnailUrl(
+        typeof summary?.thumbnail?.source === "string" ? summary.thumbnail.source : null
+      ),
       wikidataId,
       wikipediaUrl: normalizedWikipediaUrl,
     }
@@ -382,7 +389,7 @@ async function fetchWikipediaCategoryMembers(
       `&cmtitle=${encodeURIComponent(categoryTitle)}` +
       `&cmnamespace=0&cmtype=page&cmlimit=${pageLimit}${continuePart}`
 
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetchWithTimeout(url, { cache: "no-store" })
     if (!res.ok) {
       throw new Error("Failed to fetch category members from Wikipedia")
     }
@@ -432,7 +439,7 @@ async function fetchWikiquoteCategoryMembers(
       `&cmtitle=${encodeURIComponent(categoryTitle)}` +
       `&cmnamespace=0&cmtype=page&cmlimit=${pageLimit}${continuePart}`
 
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetchWithTimeout(url, { cache: "no-store" })
     if (!res.ok) {
       throw new Error("Failed to fetch category members from Wikiquote")
     }
@@ -482,7 +489,7 @@ async function fetchWikiquotePageLinks(
       `&titles=${encodeURIComponent(pageTitle)}` +
       `&plnamespace=0&pllimit=${pageLimit}${continuePart}`
 
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetchWithTimeout(url, { cache: "no-store" })
     if (!res.ok) {
       throw new Error("Failed to fetch links from Wikiquote page")
     }

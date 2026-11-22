@@ -1,7 +1,26 @@
 import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 
-export async function parseJsonObjectBody(req: Request) {
+export const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isValidUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_REGEX.test(value.trim())
+}
+
+export function invalidUuidResponse(entityName = "Record") {
+  return NextResponse.json({ error: `${entityName} not found` }, { status: 404 })
+}
+
+export async function parseJsonObjectBody(req: Request, maxSizeBytes = 5 * 1024 * 1024) {
+  const contentLength = req.headers.get("content-length")
+  if (contentLength) {
+    const size = parseInt(contentLength, 10)
+    if (!Number.isNaN(size) && size > maxSizeBytes) {
+      return null
+    }
+  }
+
   const body = await req.json().catch(() => null)
   return body && typeof body === "object" ? body : null
 }
@@ -10,7 +29,7 @@ export function invalidJsonBodyResponse() {
   return NextResponse.json(
     {
       error: "Validation failed",
-      errors: { formErrors: ["Invalid JSON body"], fieldErrors: {} },
+      errors: { formErrors: ["Invalid or oversized JSON body"], fieldErrors: {} },
     },
     { status: 400 }
   )
@@ -43,7 +62,8 @@ export function mapPrismaRouteError(
     )
   }
 
-  if (error.code === "P2025") {
+  // Record not found (P2025) or malformed UUID (P2023)
+  if (error.code === "P2025" || error.code === "P2023") {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 

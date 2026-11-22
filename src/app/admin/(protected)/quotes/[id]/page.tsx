@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { formatDateTimeLocalInAppTimeZone } from "@/lib/datetime"
 import { prisma } from "@/lib/prisma"
+import { getQuoteEditorOptions } from "@/lib/quotes/editorOptions"
+import { PageHeader } from "@/components/admin"
 import QuoteEditorForm from "../QuoteEditorForm"
 
 export default async function EditQuotePage({
@@ -16,10 +18,26 @@ export default async function EditQuotePage({
 
   const { id } = await params
 
-  const [quote, authors, categories, sources, tags] = await Promise.all([
+  const [quote, options] = await Promise.all([
     prisma.quote.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        content: true,
+        meaning: true,
+        historicalContext: true,
+        modernRelevance: true,
+        authorId: true,
+        categoryId: true,
+        sourceId: true,
+        language: true,
+        status: true,
+        publishedAt: true,
+        isFeatured: true,
+        isVerified: true,
+        attributionStatus: true,
+        verificationNote: true,
+        deletedAt: true,
         tags: {
           select: {
             tagId: true,
@@ -27,31 +45,23 @@ export default async function EditQuotePage({
         },
       },
     }),
-    prisma.author.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.category.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, slug: true },
-    }),
-    prisma.source.findMany({
-      orderBy: { title: "asc" },
-      select: { id: true, title: true },
-    }),
-    prisma.tag.findMany({
-      orderBy: [{ type: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, type: true, description: true },
-    }),
+    getQuoteEditorOptions(),
   ])
 
   if (!quote || quote.deletedAt) {
     notFound()
   }
 
+  const { authors, categories, sources, tags } = options
+
   return (
-    <div className="mx-auto max-w-6xl p-8">
-      <h1 className="mb-6 text-2xl font-bold">Edit Quote</h1>
+    <div className="mx-auto max-w-6xl p-8 space-y-6">
+      <PageHeader
+        title="Edit Quote"
+        description="Modify quote content, citations, taxonomies, and publication status."
+        backHref="/admin/quotes"
+        backLabel="Back to Quotes"
+      />
       <QuoteEditorForm
         mode="edit"
         quoteId={quote.id}

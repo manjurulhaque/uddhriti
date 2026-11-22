@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { tagSchema } from "@/lib/validation/tag"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 function normalizeTagName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ")
 }
 
-export async function GET() {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+export async function GET(req: Request) {
+  const { response } = await requireAdmin()
+  if (response) return response
+
+  const { searchParams } = new URL(req.url)
+  const isMinimal = searchParams.get("select") === "minimal" || searchParams.get("fields") === "minimal"
+
+  if (isMinimal) {
+    const tags = await prisma.tag.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: "asc" },
+    })
+    return NextResponse.json(tags)
   }
 
   const tags = await prisma.tag.findMany({
@@ -21,10 +36,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json()
   const parsed = tagSchema.safeParse(body)
@@ -62,6 +78,20 @@ export async function POST(req: Request) {
         type: parsed.data.type,
         description: parsed.data.description || null,
       },
+    })
+
+    revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "TAG",
+      entityId: tag.id,
+      entityName: tag.name,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: tag.slug, type: tag.type },
+      req,
     })
 
     return NextResponse.json(tag, { status: 201 })

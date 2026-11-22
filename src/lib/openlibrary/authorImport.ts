@@ -1,4 +1,6 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 type OpenLibraryAuthor = {
   key?: string
@@ -28,7 +30,7 @@ function toIsoDate(raw?: string | null) {
 function parseOpenLibraryAuthorUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("openlibrary.org")) return null
+    if (!isAllowedDomain(url.hostname, "openlibrary.org")) return null
     const match = url.pathname.match(/\/authors\/(OL\d+A)/i)
     if (!match) return null
     return match[1].toUpperCase()
@@ -38,7 +40,7 @@ function parseOpenLibraryAuthorUrl(input: string) {
 }
 
 async function fetchAuthorById(olid: string): Promise<OpenLibraryAuthor> {
-  const res = await fetch(`https://openlibrary.org/authors/${encodeURIComponent(olid)}.json`, {
+  const res = await fetchWithTimeout(`https://openlibrary.org/authors/${encodeURIComponent(olid)}.json`, {
     cache: "no-store",
   })
   if (!res.ok) {
@@ -51,7 +53,7 @@ async function searchAuthorByName(name: string): Promise<OpenLibraryAuthor | nul
   const params = new URLSearchParams()
   params.set("q", name)
   params.set("limit", "1")
-  const res = await fetch(`https://openlibrary.org/search/authors.json?${params.toString()}`, {
+  const res = await fetchWithTimeout(`https://openlibrary.org/search/authors.json?${params.toString()}`, {
     cache: "no-store",
   })
   if (!res.ok) return null

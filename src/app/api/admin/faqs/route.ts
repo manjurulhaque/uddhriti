@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { faqSchema } from "@/lib/validation/faq"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 export async function GET() {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const faqs = await prisma.fAQ.findMany({
     orderBy: [{ pageType: "asc" }, { pageSlug: "asc" }, { position: "asc" }],
@@ -17,10 +18,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = faqSchema.safeParse(body)
@@ -39,6 +41,20 @@ export async function POST(req: Request) {
       pageSlug: parsed.data.pageSlug,
       position: parsed.data.position ?? 0,
     },
+  })
+
+  revalidatePublicSurfaces()
+
+  await recordAuditLog({
+    action: "CREATE",
+    entityType: "FAQ",
+    entityId: faq.id,
+    entityName: faq.question,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: { pageType: faq.pageType, pageSlug: faq.pageSlug, position: faq.position },
+    req,
   })
 
   return NextResponse.json(faq, { status: 201 })

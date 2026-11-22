@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
-import { mapPrismaRouteError } from "@/lib/api/route-helpers"
+import { requireAdmin } from "@/lib/api/admin-auth"
+import { isValidUuid, mapPrismaRouteError } from "@/lib/api/route-helpers"
 import { faqSchema } from "@/lib/validation/faq"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 type Context = {
   params: Promise<{ id: string }>
@@ -13,11 +16,10 @@ export async function GET(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const faq = await prisma.fAQ.findUnique({
     where: { id },
@@ -35,11 +37,13 @@ export async function PATCH(
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = faqSchema.safeParse(body)
@@ -62,6 +66,20 @@ export async function PATCH(
       },
     })
 
+    revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "FAQ",
+      entityId: updated.id,
+      entityName: updated.question,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { pageType: updated.pageType, pageSlug: updated.pageSlug, position: updated.position },
+      req,
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
     const response = mapPrismaRouteError(error)
@@ -74,19 +92,23 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   context: Context
 ) {
   const { id } = await context.params
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
 
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
+
+  let deleted: { id: string; question: string } | null = null
   try {
-    await prisma.fAQ.delete({
+    deleted = await prisma.fAQ.delete({
       where: { id },
+      select: { id: true, question: true },
     })
   } catch (error) {
     const response = mapPrismaRouteError(error)
@@ -96,6 +118,19 @@ export async function DELETE(
 
     throw error
   }
+
+  revalidatePublicSurfaces()
+
+  await recordAuditLog({
+    action: "DELETE",
+    entityType: "FAQ",
+    entityId: id,
+    entityName: deleted?.question,
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    req,
+  })
 
   return NextResponse.json({ success: true })
 }

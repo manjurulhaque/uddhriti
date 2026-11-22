@@ -1,9 +1,11 @@
 import type { ImportedAuthor } from "@/lib/wikimedia/authorImport"
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
 
 function parseLocIdFromUrl(input: string) {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("id.loc.gov")) return null
+    if (!isAllowedDomain(url.hostname, "id.loc.gov")) return null
     const match = url.pathname.match(/\/authorities\/names\/([A-Za-z0-9-]+)/)
     return match?.[1] || null
   } catch {
@@ -56,7 +58,7 @@ function extractYearsFromLabel(label: string) {
 }
 
 async function fetchAuthorityById(id: string) {
-  const res = await fetch(`https://id.loc.gov/authorities/names/${encodeURIComponent(id)}.json`, {
+  const res = await fetchWithTimeout(`https://id.loc.gov/authorities/names/${encodeURIComponent(id)}.json`, {
     cache: "no-store",
   })
   if (!res.ok) {
@@ -68,7 +70,7 @@ async function fetchAuthorityById(id: string) {
 async function searchAuthorityByName(name: string) {
   const params = new URLSearchParams()
   params.set("q", name)
-  const res = await fetch(`https://id.loc.gov/authorities/names/suggest2/?${params.toString()}`, {
+  const res = await fetchWithTimeout(`https://id.loc.gov/authorities/names/suggest2/?${params.toString()}`, {
     cache: "no-store",
   })
   if (!res.ok) return null

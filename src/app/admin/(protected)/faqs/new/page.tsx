@@ -2,6 +2,15 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { PageHeader } from "@/components/admin"
+import {
+  Input,
+  Select,
+  Textarea,
+  FormSection,
+  FormActions,
+  FormErrorBanner,
+} from "@/components/ui"
 
 const pageTypes = ["TAG", "CATEGORY", "AUTHOR", "QUOTE", "COLLECTION"] as const
 
@@ -53,82 +62,80 @@ export default function NewFaqPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">New FAQ</h1>
+    <div className="p-8 max-w-3xl space-y-6">
+      <PageHeader
+        title="New FAQ"
+        description="Add a structured frequently asked question to an entity landing page."
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Question *</label>
-          <input
+      <FormErrorBanner error={error} onDismiss={() => setError("")} />
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <FormSection title="Question & Answer" description="The core Q&A copy displayed to users">
+          <Input
             name="question"
+            label="Question"
             value={form.question}
             onChange={handleChange}
-            className="border w-full p-2 rounded"
+            required
+            error={errors.question}
+            placeholder="e.g. What is the central theme of Stoic philosophy?"
           />
-          {errors.question && <p className="text-sm text-red-600 mt-1">{errors.question[0]}</p>}
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Answer *</label>
-          <textarea
+          <Textarea
             name="answer"
+            label="Answer"
             value={form.answer}
             onChange={handleChange}
+            required
+            error={errors.answer}
             rows={5}
-            className="border w-full p-2 rounded"
+            placeholder="Write a clear, authoritative response..."
           />
-          {errors.answer && <p className="text-sm text-red-600 mt-1">{errors.answer[0]}</p>}
-        </div>
+        </FormSection>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium">Page Type *</label>
-            <select
+        <FormSection
+          title="Target Page & Ordering"
+          description="Where this FAQ should appear and its display order"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
               name="pageType"
+              label="Page Type"
               value={form.pageType}
               onChange={handleChange}
-              className="border w-full p-2 rounded"
-            >
-              {pageTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
+              required
+              options={pageTypes.map((type) => ({ value: type, label: type }))}
+            />
 
-          <div>
-            <label className="block text-sm font-medium">Position</label>
-            <input
+            <Input
               name="position"
               type="number"
+              label="Display Position"
               value={form.position}
               onChange={handleChange}
-              className="border w-full p-2 rounded"
+              hint="0-indexed display priority order"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium">Page Slug *</label>
-          <input
+          <Input
             name="pageSlug"
+            label="Target Page Slug"
             value={form.pageSlug}
             onChange={handleChange}
-            placeholder="example: stoicism"
-            className="border w-full p-2 rounded"
+            required
+            error={errors.pageSlug}
+            hint="The slug identifier for the category, author, tag, quote, or collection"
+            placeholder="e.g. stoicism, marcus-aurelius"
           />
-          {errors.pageSlug && <p className="text-sm text-red-600 mt-1">{errors.pageSlug[0]}</p>}
-        </div>
+        </FormSection>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          disabled={submitting}
-          className="bg-black text-white px-6 py-2 rounded disabled:opacity-50"
-        >
-          {submitting ? "Creating..." : "Create FAQ"}
-        </button>
+        <FormActions
+          submitLabel="Create FAQ"
+          submittingLabel="Creating..."
+          isSubmitting={submitting}
+          cancelHref="/admin/faqs"
+        />
       </form>
     </div>
   )

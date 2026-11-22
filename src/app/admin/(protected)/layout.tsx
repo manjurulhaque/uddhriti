@@ -1,8 +1,14 @@
-import Link from "next/link"
+import dynamic from "next/dynamic"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
+import { isPrivateOrLocalIp } from "@/lib/ip"
+import { AdminSidebar } from "@/components/admin"
 import { CurrentIpDisplay } from "./CurrentIpDisplay"
+
+const AdminCommandPalette = dynamic(
+  () => import("@/components/admin/admin-command-palette").then((mod) => mod.AdminCommandPalette)
+)
 
 export default async function ProtectedAdminLayout({
   children,
@@ -21,44 +27,14 @@ export default async function ProtectedAdminLayout({
   }
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-64 bg-white border-r p-6 space-y-6">
-        <div>
-          <h2 className="font-bold text-lg">Admin Panel</h2>
-          <p className="text-xs text-gray-500 mt-1">{admin.email}</p>
-          <p className="text-xs text-blue-600 font-medium">{admin.role}</p>
-          <p className="text-xs text-gray-500 mt-3">Current IP</p>
-          <CurrentIpDisplay initialIp={requestIp.value} initialSource={requestIp.source} />
-        </div>
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
+      <AdminSidebar
+        admin={{ email: admin.email, role: admin.role }}
+        ipDisplay={<CurrentIpDisplay initialIp={requestIp.value} initialSource={requestIp.source} />}
+      />
 
-        <nav className="flex flex-col space-y-3 text-sm">
-          <SidebarLink href="/admin/dashboard">Dashboard</SidebarLink>
-          <SidebarLink href="/admin/quotes">Quotes</SidebarLink>
-          <SidebarLink href="/admin/quotes/bulk">Bulk Upload Quotes</SidebarLink>
-          <SidebarLink href="/admin/quotes/new">+ Submit Quote</SidebarLink>
-          <SidebarLink href="/admin/authors">Authors</SidebarLink>
-          <SidebarLink href="/admin/categories">Categories</SidebarLink>
-          <SidebarLink href="/admin/tags">Tags</SidebarLink>
-          <SidebarLink href="/admin/collections">Collections</SidebarLink>
-          <SidebarLink href="/admin/sources">Sources</SidebarLink>
-          <SidebarLink href="/admin/sources/bulk">Import Sources</SidebarLink>
-          <SidebarLink href="/admin/faqs">FAQs</SidebarLink>
-          <SidebarLink href="/admin/faqs/bulk">Import FAQs</SidebarLink>
-
-          <div className="pt-6 border-t mt-6">
-            <form action="/admin/logout" method="POST">
-              <button
-                type="submit"
-                className="w-full text-left text-red-600 hover:text-red-800 transition"
-              >
-                Logout
-              </button>
-            </form>
-          </div>
-        </nav>
-      </aside>
-
-      <main className="flex-1 bg-gray-50">{children}</main>
+      <main className="flex-1 min-w-0 bg-gray-50">{children}</main>
+      <AdminCommandPalette />
     </div>
   )
 }
@@ -148,49 +124,3 @@ function normalizeIpCandidate(value: string | null | undefined) {
   return candidate
 }
 
-function isPrivateOrLocalIp(value: string) {
-  if (value === "127.0.0.1" || value === "0.0.0.0") {
-    return true
-  }
-
-  if (value.includes(":")) {
-    const normalized = value.toLowerCase()
-
-    return (
-      normalized === "::1" ||
-      normalized.startsWith("fc") ||
-      normalized.startsWith("fd") ||
-      normalized.startsWith("fe80:") ||
-      normalized.startsWith("fec0:")
-    )
-  }
-
-  const octets = value.split(".").map(Number)
-  if (octets.length !== 4 || octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
-    return false
-  }
-
-  const [first, second] = octets
-
-  return (
-    first === 10 ||
-    first === 127 ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168) ||
-    (first === 169 && second === 254)
-  )
-}
-
-function SidebarLink({
-  href,
-  children,
-}: {
-  href: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link href={href} className="text-gray-600 hover:text-black transition">
-      {children}
-    </Link>
-  )
-}

@@ -13,8 +13,8 @@ export async function recalculateAuthorQuoteCounts(tx: Prisma.TransactionClient,
     SET "quoteCount" = counts.cnt
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
-      FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
-      LEFT JOIN "Quote" q ON q."authorId" = target.id AND q."deletedAt" IS NULL
+      FROM unnest(${ids}::uuid[]) AS target(id)
+      LEFT JOIN "Quote" q ON q."authorId" = target.id AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE a.id = counts.id
@@ -30,8 +30,8 @@ export async function recalculateSourceQuoteCounts(tx: Prisma.TransactionClient,
     SET "quoteCount" = counts.cnt
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
-      FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
-      LEFT JOIN "Quote" q ON q."sourceId" = target.id AND q."deletedAt" IS NULL
+      FROM unnest(${ids}::uuid[]) AS target(id)
+      LEFT JOIN "Quote" q ON q."sourceId" = target.id AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE s.id = counts.id
@@ -50,8 +50,8 @@ export async function recalculateCategoryQuoteCounts(
     SET "quoteCount" = counts.cnt
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
-      FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
-      LEFT JOIN "Quote" q ON q."categoryId" = target.id AND q."deletedAt" IS NULL
+      FROM unnest(${ids}::uuid[]) AS target(id)
+      LEFT JOIN "Quote" q ON q."categoryId" = target.id AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE c.id = counts.id
@@ -67,11 +67,33 @@ export async function recalculateTagQuoteCounts(tx: Prisma.TransactionClient, ta
     SET "quoteCount" = counts.cnt
     FROM (
       SELECT target.id, COUNT(q.id)::int AS cnt
-      FROM unnest(ARRAY[${Prisma.join(ids)}]::uuid[]) AS target(id)
+      FROM unnest(${ids}::uuid[]) AS target(id)
       LEFT JOIN "QuoteTag" qt ON qt."tagId" = target.id
-      LEFT JOIN "Quote" q ON q.id = qt."quoteId" AND q."deletedAt" IS NULL
+      LEFT JOIN "Quote" q ON q.id = qt."quoteId" AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
       GROUP BY target.id
     ) counts
     WHERE t.id = counts.id
   `
 }
+
+export async function recalculateCollectionQuoteCounts(
+  tx: Prisma.TransactionClient,
+  collectionIds: Array<string | null | undefined>
+) {
+  const ids = compactIds(collectionIds)
+  if (ids.length === 0) return
+
+  await tx.$executeRaw`
+    UPDATE "Collection" c
+    SET "quoteCount" = counts.cnt
+    FROM (
+      SELECT target.id, COUNT(q.id)::int AS cnt
+      FROM unnest(${ids}::uuid[]) AS target(id)
+      LEFT JOIN "QuoteCollection" qc ON qc."collectionId" = target.id
+      LEFT JOIN "Quote" q ON q.id = qc."quoteId" AND q."deletedAt" IS NULL AND q.status = 'PUBLISHED'
+      GROUP BY target.id
+    ) counts
+    WHERE c.id = counts.id
+  `
+}
+

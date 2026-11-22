@@ -2,8 +2,11 @@ import slugify from "slugify"
 import { z } from "zod"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 import { authorSchema } from "@/lib/validation/author"
 import {
   importAuthorFromWikipediaOrWikidata,
@@ -94,18 +97,18 @@ function normalizeImportedForSchema(
 }
 
 function normalizeManualForSchema(item: z.infer<typeof itemSchema>) {
-  const name = item.name?.trim() || ""
+  const name = sanitizeSpreadsheetCell(item.name?.trim() || "")
 
   return {
     name,
     slug: slugify((item.slug || name).trim(), { lower: true, strict: true }),
-    bio: item.bio || null,
+    bio: item.bio ? sanitizeSpreadsheetCell(item.bio.trim()) : null,
     birthYear: item.birthYear ?? null,
     deathYear: item.deathYear ?? null,
     dateOfBirth: item.dateOfBirth || null,
     dateOfDeath: item.dateOfDeath || null,
-    profession: item.profession || null,
-    nationality: item.nationality || null,
+    profession: item.profession ? sanitizeSpreadsheetCell(item.profession) : null,
+    nationality: item.nationality ? sanitizeSpreadsheetCell(item.nationality) : null,
     imageUrl: item.imageUrl || null,
     wikipediaUrl: item.wikipediaUrl || null,
     wikidataId: item.wikidataId || null,
@@ -113,10 +116,8 @@ function normalizeManualForSchema(item: z.infer<typeof itemSchema>) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited
@@ -341,6 +342,24 @@ export async function POST(req: Request) {
       errors.push(`${rowLabel}: ${message}`)
     }
   }
+
+  if (created > 0) {
+    revalidatePublicSurfaces()
+  }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "AUTHOR",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: dedupedQueue.length,
+      created,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: dedupedQueue.length,

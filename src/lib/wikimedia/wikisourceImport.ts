@@ -1,3 +1,6 @@
+import { isAllowedDomain } from "@/lib/ip"
+import { fetchWithTimeout } from "@/lib/security/fetch"
+
 type ParsedWikisourceUrl = {
   host: string
   title: string
@@ -14,7 +17,7 @@ type ExtractedQuote = {
 function parseWikisourceUrl(input: string): ParsedWikisourceUrl | null {
   try {
     const url = new URL(input)
-    if (!url.hostname.endsWith("wikisource.org")) {
+    if (!isAllowedDomain(url.hostname, "wikisource.org")) {
       return null
     }
 
@@ -131,7 +134,7 @@ export async function importQuotesFromWikisourceUrl(input: {
     `https://${parsed.host}/w/api.php?action=query&format=json&redirects=1` +
     `&prop=revisions&rvprop=content&rvslots=main&titles=${encodeURIComponent(parsed.title)}`
 
-  const res = await fetch(apiUrl, { cache: "no-store" })
+  const res = await fetchWithTimeout(apiUrl, { cache: "no-store" })
   if (!res.ok) {
     throw new Error("Failed to fetch Wikisource page")
   }

@@ -2,8 +2,12 @@ import slugify from "slugify"
 import { z } from "zod"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
+import { getExistingSourceLookup } from "@/lib/wikimedia/sourceImport"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
 
 const workTypeSchema = z.enum([
   "BOOK",
@@ -51,10 +55,8 @@ function uniqueSlug(baseSlug: string, usedSlugs: Set<string>) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited
@@ -68,13 +70,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const existingSources = await prisma.source.findMany({
-    select: { slug: true, title: true, authorId: true },
-  })
-  const usedSlugs = new Set(existingSources.map((s) => s.slug))
-  const existingTitleAuthor = new Set(
-    existingSources.map((s) => `${s.title.trim().toLowerCase()}|${s.authorId || ""}`)
-  )
+  const { usedSlugs, existingTitleAuthor } = await getExistingSourceLookup(parsed.data.items)
 
   const authorIds = Array.from(
     new Set(
@@ -121,14 +117,14 @@ export async function POST(req: Request) {
       }
 
       return {
-        title: item.title.trim(),
+        title: sanitizeSpreadsheetCell(item.title.trim()),
         slug: uniqueSlug(baseSlug, usedSlugs),
         type: item.type || "BOOK",
         year: item.year ?? null,
         yearApproximate: item.yearApproximate ?? false,
-        publisher: item.publisher || null,
-        location: item.location || null,
-        description: item.description || null,
+        publisher: item.publisher ? sanitizeSpreadsheetCell(item.publisher.trim()) : null,
+        location: item.location ? sanitizeSpreadsheetCell(item.location.trim()) : null,
+        description: item.description ? sanitizeSpreadsheetCell(item.description.trim()) : null,
         externalUrl: item.externalUrl || null,
         authorId: item.authorId || null,
       }
@@ -143,6 +139,25 @@ export async function POST(req: Request) {
   }
 
   const result = await prisma.source.createMany({ data })
+
+  if (result.count > 0) {
+    revalidatePublicSurfaces()
+  }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "SOURCE",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: parsed.data.items.length,
+      created: result.count,
+      skipped,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: parsed.data.items.length,

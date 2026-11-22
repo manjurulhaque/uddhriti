@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getAdmin } from "@/lib/auth/getAdmin"
 import { prisma } from "@/lib/prisma"
 import { DeletedQuotesManager } from "../DeletedQuotesManager"
+import { PageHeader } from "@/components/admin"
 
 export default async function DeletedQuotesPage() {
   const admin = await getAdmin()
@@ -23,7 +23,7 @@ export default async function DeletedQuotesPage() {
       author: { select: { name: true } },
       source: { select: { title: true } },
     },
-    orderBy: { deletedAt: "desc" },
+    orderBy: [{ deletedAt: "desc" }, { id: "asc" }],
   })
 
   const normalizedQuotes = quotes
@@ -39,15 +39,13 @@ export default async function DeletedQuotesPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Deleted Quotes</h1>
-          <p className="text-sm text-gray-500">Restore soft-deleted quotes or permanently remove them.</p>
-        </div>
-        <Link href="/admin/quotes" className="border border-gray-300 px-4 py-2 rounded">
-          Back to Quotes
-        </Link>
-      </div>
+      <PageHeader
+        title="Deleted Quotes"
+        description="Restore soft-deleted quotes or permanently remove them."
+        backHref="/admin/quotes"
+        backLabel="Back to Quotes"
+      />
+
 
       <DeletedQuotesManager quotes={normalizedQuotes} />
     </div>

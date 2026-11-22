@@ -1,8 +1,20 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { formatDateInAppTimeZone } from "@/lib/datetime"
+import { formatLifespan } from "@/lib/formatters"
+import {
+  FilterToolbar,
+  AdminEntityCard,
+  AdminEntityCountBadge,
+  AdminBulkActionBar,
+} from "@/components/admin"
+import { Select, EmptyState, Pagination } from "@/components/ui"
+import { AuthorBioGeneratorModal } from "@/components/admin/authors/AuthorBioGeneratorModal"
+import { BatchBioGeneratorModal } from "@/components/admin/authors/BatchBioGeneratorModal"
+
+const PAGE_SIZE = 24
 
 type AuthorItem = {
   id: string
@@ -13,6 +25,8 @@ type AuthorItem = {
   profession: string | null
   nationality: string | null
   quoteCount: number
+  hasBio?: boolean
+  bio?: string | null
   createdAt: string
 }
 
@@ -28,14 +42,21 @@ type SortOption =
 
 type QuoteFilter = "all" | "with-quotes" | "without-quotes"
 type LifeStatusFilter = "all" | "living" | "deceased" | "unknown"
+type BioFilter = "all" | "missing-bio" | "has-bio"
 
 export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
+  const router = useRouter()
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>("newest")
   const [quoteFilter, setQuoteFilter] = useState<QuoteFilter>("all")
   const [lifeStatusFilter, setLifeStatusFilter] = useState<LifeStatusFilter>("all")
   const [nationalityFilter, setNationalityFilter] = useState("all")
   const [professionFilter, setProfessionFilter] = useState("all")
+  const [bioFilter, setBioFilter] = useState<BioFilter>("all")
+  const [page, setPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBatchBioOpen, setIsBatchBioOpen] = useState(false)
+  const [studioAuthor, setStudioAuthor] = useState<AuthorItem | null>(null)
 
   const nationalityOptions = useMemo(
     () =>
@@ -64,6 +85,7 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     lifeStatusFilter !== "all" ||
     nationalityFilter !== "all" ||
     professionFilter !== "all" ||
+    bioFilter !== "all" ||
     search.trim().length > 0
 
   const visibleAuthors = useMemo(() => {
@@ -71,16 +93,16 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     const filtered = authors.filter((author) => {
       const matchesSearch = needle
         ? [
-            author.name,
-            author.slug,
-            author.profession ?? "",
-            author.nationality ?? "",
-            author.birthYear?.toString() ?? "",
-            author.deathYear?.toString() ?? "",
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(needle)
+          author.name,
+          author.slug,
+          author.profession ?? "",
+          author.nationality ?? "",
+          author.birthYear?.toString() ?? "",
+          author.deathYear?.toString() ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle)
         : true
 
       const matchesQuoteFilter =
@@ -103,12 +125,18 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
       const matchesProfession =
         professionFilter === "all" || (author.profession?.trim() ?? "") === professionFilter
 
+      const matchesBioFilter =
+        bioFilter === "all" ||
+        (bioFilter === "missing-bio" && !author.hasBio) ||
+        (bioFilter === "has-bio" && Boolean(author.hasBio))
+
       return (
         matchesSearch &&
         matchesQuoteFilter &&
         matchesLifeStatus &&
         matchesNationality &&
-        matchesProfession
+        matchesProfession &&
+        matchesBioFilter
       )
     })
 
@@ -138,7 +166,13 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
-  }, [authors, lifeStatusFilter, nationalityFilter, professionFilter, quoteFilter, search, sortBy])
+  }, [authors, lifeStatusFilter, nationalityFilter, professionFilter, quoteFilter, bioFilter, search, sortBy])
+
+  const totalPages = Math.max(1, Math.ceil(visibleAuthors.length / PAGE_SIZE))
+  const paginatedAuthors = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return visibleAuthors.slice(start, start + PAGE_SIZE)
+  }, [visibleAuthors, page])
 
   function clearFilters() {
     setSearch("")
@@ -146,140 +180,310 @@ export function AuthorsListManager({ authors }: { authors: AuthorItem[] }) {
     setLifeStatusFilter("all")
     setNationalityFilter("all")
     setProfessionFilter("all")
+    setBioFilter("all")
     setSortBy("newest")
+    setPage(1)
   }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  function handleSelectMissingBios() {
+    const missing = visibleAuthors.filter((a) => !a.hasBio).map((a) => a.id)
+    setSelectedIds(missing)
+  }
+
+  function handleSelectAllVisible() {
+    setSelectedIds(visibleAuthors.map((a) => a.id))
+  }
+
+  async function handleApplyStudioBio(newBio: string) {
+    if (!studioAuthor) return
+    try {
+      await fetch(`/api/admin/authors/${studioAuthor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio: newBio }),
+      })
+      router.refresh()
+    } catch {
+      // Ignore
+    }
+  }
+
+  const missingBioCount = useMemo(
+    () => visibleAuthors.filter((a) => !a.hasBio).length,
+    [visibleAuthors]
+  )
+
+  const sortOptions = [
+    { value: "newest", label: "Arrange: Newest first" },
+    { value: "oldest", label: "Arrange: Oldest first" },
+    { value: "name-asc", label: "Sort: Name A-Z" },
+    { value: "name-desc", label: "Sort: Name Z-A" },
+    { value: "most-quotes", label: "Arrange: Most quotes" },
+    { value: "least-quotes", label: "Arrange: Fewest quotes" },
+    { value: "birth-asc", label: "Sort: Earliest birth year" },
+    { value: "birth-desc", label: "Sort: Latest birth year" },
+  ]
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search authors by name, slug, profession, nationality, or years"
-          className="w-full rounded border px-3 py-2 text-sm md:flex-1"
-        />
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value as SortOption)}
-          className="rounded border px-3 py-2 text-sm md:w-56"
+      {/* Sticky Bulk Action Bar */}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.length}
+        entityLabel="author"
+        onDeselectAll={() => setSelectedIds([])}
+      >
+        <button
+          type="button"
+          onClick={() => setIsBatchBioOpen(true)}
+          className="bg-violet-600 text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-violet-700 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
         >
-          <option value="newest">Arrange: Newest first</option>
-          <option value="oldest">Arrange: Oldest first</option>
-          <option value="name-asc">Sort: Name A-Z</option>
-          <option value="name-desc">Sort: Name Z-A</option>
-          <option value="most-quotes">Arrange: Most quotes</option>
-          <option value="least-quotes">Arrange: Fewest quotes</option>
-          <option value="birth-asc">Sort: Earliest birth year</option>
-          <option value="birth-desc">Sort: Latest birth year</option>
-        </select>
-      </div>
+          <span>⚡</span>
+          <span>Batch Generate Bios ({selectedIds.length})</span>
+        </button>
 
-      <div className="rounded-lg border bg-gray-50 p-3">
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-            <select
+        {missingBioCount > 0 && (
+          <button
+            type="button"
+            onClick={handleSelectMissingBios}
+            className="bg-stone-800 text-stone-200 text-xs px-2.5 py-1.5 rounded-lg hover:bg-stone-700 transition cursor-pointer"
+          >
+            Select All Missing Bios ({missingBioCount})
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSelectAllVisible}
+          className="bg-stone-800 text-stone-200 text-xs px-2.5 py-1.5 rounded-lg hover:bg-stone-700 transition cursor-pointer"
+        >
+          Select All Visible ({visibleAuthors.length})
+        </button>
+      </AdminBulkActionBar>
+
+      <FilterToolbar
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
+        searchPlaceholder="Search authors by name, slug, profession, nationality, or years"
+        sortValue={sortBy}
+        onSortChange={(value) => {
+          setSortBy(value as SortOption)
+          setPage(1)
+        }}
+        sortOptions={sortOptions}
+        visibleCount={visibleAuthors.length}
+        totalCount={authors.length}
+        itemLabel="authors"
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
+        filters={
+          <>
+            <Select
               value={quoteFilter}
-              onChange={(event) => setQuoteFilter(event.target.value as QuoteFilter)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Quotes: All authors</option>
-              <option value="with-quotes">Quotes: Has quotes</option>
-              <option value="without-quotes">Quotes: No quotes</option>
-            </select>
+              onChange={(event) => {
+                setQuoteFilter(event.target.value as QuoteFilter)
+                setPage(1)
+              }}
+              options={[
+                { value: "all", label: "Quotes: All authors" },
+                { value: "with-quotes", label: "Quotes: Has quotes" },
+                { value: "without-quotes", label: "Quotes: No quotes" },
+              ]}
+            />
 
-            <select
+            <Select
+              value={bioFilter}
+              onChange={(event) => {
+                setBioFilter(event.target.value as BioFilter)
+                setPage(1)
+              }}
+              options={[
+                { value: "all", label: "Bio: All authors" },
+                { value: "missing-bio", label: "Bio: Missing bio" },
+                { value: "has-bio", label: "Bio: Has biography" },
+              ]}
+            />
+
+            <Select
               value={lifeStatusFilter}
-              onChange={(event) => setLifeStatusFilter(event.target.value as LifeStatusFilter)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Life status: All</option>
-              <option value="living">Life status: Living</option>
-              <option value="deceased">Life status: Deceased</option>
-              <option value="unknown">Life status: Unknown</option>
-            </select>
+              onChange={(event) => {
+                setLifeStatusFilter(event.target.value as LifeStatusFilter)
+                setPage(1)
+              }}
+              options={[
+                { value: "all", label: "Life status: All" },
+                { value: "living", label: "Life status: Living" },
+                { value: "deceased", label: "Life status: Deceased" },
+                { value: "unknown", label: "Life status: Unknown" },
+              ]}
+            />
 
-            <select
+            <Select
               value={nationalityFilter}
-              onChange={(event) => setNationalityFilter(event.target.value)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Nationality: All</option>
-              {nationalityOptions.map((nationality) => (
-                <option key={nationality} value={nationality}>
-                  {nationality}
-                </option>
-              ))}
-            </select>
+              onChange={(event) => {
+                setNationalityFilter(event.target.value)
+                setPage(1)
+              }}
+              options={[
+                { value: "all", label: "Nationality: All" },
+                ...nationalityOptions.map((nat) => ({ value: nat, label: nat })),
+              ]}
+            />
 
-            <select
+            <Select
               value={professionFilter}
-              onChange={(event) => setProfessionFilter(event.target.value)}
-              className="rounded border bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Profession: All</option>
-              {professionOptions.map((profession) => (
-                <option key={profession} value={profession}>
-                  {profession}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
-            <div>
-              Showing <span className="font-medium text-gray-900">{visibleAuthors.length}</span> of{" "}
-              <span className="font-medium text-gray-900">{authors.length}</span> authors
-            </div>
-            {hasActiveFilters ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded border bg-white px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
-              >
-                Clear filters
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
+              onChange={(event) => {
+                setProfessionFilter(event.target.value)
+                setPage(1)
+              }}
+              options={[
+                { value: "all", label: "Profession: All" },
+                ...professionOptions.map((prof) => ({ value: prof, label: prof })),
+              ]}
+            />
+          </>
+        }
+      />
 
       {visibleAuthors.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visibleAuthors.map((author) => (
-            <Link
-              key={author.id}
-              href={`/admin/authors/${author.id}`}
-              className="space-y-2 rounded-lg border bg-white p-4 transition hover:shadow-md"
-            >
-              <div className="text-lg font-semibold">{author.name}</div>
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {paginatedAuthors.map((author) => {
+              const lifespan = formatLifespan(author)
+              const subtitle = [
+                author.profession,
+                author.nationality,
+                lifespan,
+              ]
+                .filter(Boolean)
+                .join(" • ")
 
-              {(author.birthYear || author.deathYear) && (
-                <div className="text-sm text-gray-500">
-                  {author.birthYear ?? "?"} - {author.deathYear ?? "Present"}
-                </div>
-              )}
+              return (
+                <AdminEntityCard
+                  key={author.id}
+                  href={`/admin/authors/${author.id}`}
+                  variant="grid"
+                  title={author.name}
+                  subtitle={subtitle || undefined}
+                  selected={selectedIds.includes(author.id)}
+                  onSelect={() => toggleSelect(author.id)}
+                  badge={
+                    <div className="flex items-center gap-1.5">
+                      {!author.hasBio && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80">
+                          No Bio
+                        </span>
+                      )}
+                      <AdminEntityCountBadge count={author.quoteCount} />
+                    </div>
+                  }
+                  meta={
+                    <div className="flex items-center justify-between w-full pt-1">
+                      <span className="text-[11px] text-stone-400">
+                        Added {formatDateInAppTimeZone(author.createdAt)}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setStudioAuthor(author)
+                          }}
+                          className="text-[11px] font-medium text-violet-700 hover:text-violet-900 bg-violet-50 hover:bg-violet-100 border border-violet-200/60 px-2 py-0.5 rounded-md transition cursor-pointer"
+                          title="Open AI Bio Studio"
+                        >
+                          ✨ Bio Studio
+                        </button>
+                        {author.quoteCount > 0 && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              router.push(`/admin/quotes?author=${author.slug}`)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                router.push(`/admin/quotes?author=${author.slug}`)
+                              }
+                            }}
+                            className="text-xs font-semibold text-stone-700 hover:text-black hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                            title={`View ${author.quoteCount} quotes by ${author.name}`}
+                          >
+                            Quotes &rarr;
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  }
+                />
+              )
+            })}
+          </div>
 
-              {author.profession || author.nationality ? (
-                <div className="text-sm text-gray-500">
-                  {[author.profession, author.nationality].filter(Boolean).join(" . ")}
-                </div>
-              ) : null}
-
-              <div className="text-sm text-gray-600">
-                Quotes: <span className="font-medium">{author.quoteCount}</span>
-              </div>
-
-              <div className="text-xs text-gray-400">
-                Created {formatDateInAppTimeZone(author.createdAt)}
-              </div>
-            </Link>
-          ))}
-        </div>
+          {totalPages > 1 && (
+            <div className="pt-2">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={visibleAuthors.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </>
       ) : (
-        <div className="rounded border border-dashed p-4 text-sm text-gray-500">
-          No authors match your search.
-        </div>
+        <EmptyState
+          title="No authors match your search"
+          description="Try clearing filters or searching for a different keyword."
+          variant="stone"
+        />
+      )}
+
+      {/* Batch Bio Generator Modal */}
+      <BatchBioGeneratorModal
+        isOpen={isBatchBioOpen}
+        onClose={() => {
+          setIsBatchBioOpen(false)
+          setSelectedIds([])
+        }}
+        authorIds={selectedIds}
+        authors={authors}
+        onComplete={() => {
+          router.refresh()
+        }}
+      />
+
+      {/* Individual Author AI Bio Studio Modal */}
+      {studioAuthor && (
+        <AuthorBioGeneratorModal
+          isOpen={Boolean(studioAuthor)}
+          onClose={() => setStudioAuthor(null)}
+          author={{
+            id: studioAuthor.id,
+            name: studioAuthor.name,
+            slug: studioAuthor.slug,
+            profession: studioAuthor.profession,
+            nationality: studioAuthor.nationality,
+            birthYear: studioAuthor.birthYear,
+            deathYear: studioAuthor.deathYear,
+            currentBio: studioAuthor.bio,
+          }}
+          onApplyBio={handleApplyStudioBio}
+        />
       )}
     </div>
   )

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireAdmin } from "@/lib/api/admin-auth"
 import { collectionSchema } from "@/lib/validation/collection"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 export async function GET() {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { response } = await requireAdmin()
+  if (response) return response
 
   const collections = await prisma.collection.findMany({
     orderBy: { createdAt: "desc" },
@@ -17,10 +18,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireAdmin()
+  if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = collectionSchema.safeParse(body)
@@ -40,6 +42,20 @@ export async function POST(req: Request) {
         visibility: parsed.data.visibility,
       },
     })
+    revalidatePublicSurfaces()
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "COLLECTION",
+      entityId: collection.id,
+      entityName: collection.title,
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: { slug: collection.slug, visibility: collection.visibility },
+      req,
+    })
+
     return NextResponse.json(collection, { status: 201 })
   } catch {
     return NextResponse.json(

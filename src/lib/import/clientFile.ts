@@ -1,4 +1,7 @@
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
+
 export type CsvRow = Record<string, string>
+export { sanitizeSpreadsheetCell }
 
 function parseDelimitedLine(line: string, delimiter: "," | "\t") {
   const cells: string[] = []
@@ -20,7 +23,7 @@ function parseDelimitedLine(line: string, delimiter: "," | "\t") {
     }
 
     if (char === delimiter && !inQuotes) {
-      cells.push(current.trim())
+      cells.push(sanitizeSpreadsheetCell(current.trim()))
       current = ""
       continue
     }
@@ -28,7 +31,7 @@ function parseDelimitedLine(line: string, delimiter: "," | "\t") {
     current += char
   }
 
-  cells.push(current.trim())
+  cells.push(sanitizeSpreadsheetCell(current.trim()))
   return cells
 }
 
@@ -113,13 +116,13 @@ export function getRowValue(row: unknown, key: string) {
   if (!row || typeof row !== "object") return ""
   const obj = row as Record<string, unknown>
   const direct = obj[key]
-  if (typeof direct === "string") return direct
+  if (typeof direct === "string") return sanitizeSpreadsheetCell(direct)
   if (typeof direct === "number" || typeof direct === "boolean") return String(direct)
 
   const lowerKey = key.toLowerCase()
   for (const [k, v] of Object.entries(obj)) {
     if (k.toLowerCase() === lowerKey) {
-      if (typeof v === "string") return v
+      if (typeof v === "string") return sanitizeSpreadsheetCell(v)
       if (typeof v === "number" || typeof v === "boolean") return String(v)
       return ""
     }

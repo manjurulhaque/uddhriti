@@ -4,8 +4,12 @@ import { QuoteBulkUploadPage } from "../QuoteBulkUploadPage"
 
 export default async function QuoteBulkImportPage() {
   const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
+  if (!admin) {
     redirect("/admin/login")
+  }
+
+  if (admin.role !== "SUPER_ADMIN") {
+    redirect("/")
   }
 
   return <QuoteBulkUploadPage />

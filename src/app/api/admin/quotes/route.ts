@@ -11,7 +11,9 @@ import {
   recalculateTagQuoteCounts,
 } from "@/lib/quoteCountSync"
 import { deriveAdminSortKey, deriveVerificationConfidence } from "@/lib/quoteAutomation"
-import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { revalidatePublicSurfaces, revalidateQuote } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
 
 function normalize(content: string) {
   return content.trim().replace(/\s+/g, " ").toLowerCase()
@@ -31,6 +33,9 @@ function countWords(content: string) {
 export async function POST(req: Request) {
   const { admin, response } = await requireSuperAdmin()
   if (response) return response
+
+  const rateLimited = enforceAdminRateLimit(admin.id, "adminMutation")
+  if (rateLimited) return rateLimited
 
   const body = await req.json().catch(() => null)
   const parsed = quoteCreateSchema.safeParse(body)
@@ -98,7 +103,7 @@ export async function POST(req: Request) {
   })
 
   try {
-    const quote = await prisma.$transaction(async (tx) => {
+    const { quote, tagSlugs } = await prisma.$transaction(async (tx) => {
       const duplicate = await tx.quote.findFirst({
         where: { contentHash, language: normalizedLanguage },
         select: { id: true },
@@ -218,12 +223,34 @@ export async function POST(req: Request) {
         tags.map((tag) => tag.id)
       )
 
-      return createdQuote
+      return { quote: createdQuote, tagSlugs: tags.map((t) => t.slug) }
     })
 
     if (isPublishing) {
       revalidatePublicSurfaces()
+      revalidateQuote(quote.slug, {
+        authorSlug: selectedAuthor.slug,
+        categorySlug: selectedCategory.slug,
+        tagSlugs,
+      })
     }
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "QUOTE",
+      entityId: quote.id,
+      entityName: quote.content.slice(0, 100),
+      adminId: admin.id,
+      adminEmail: admin.email,
+      adminName: admin.name,
+      details: {
+        status: quote.status,
+        authorId: quote.authorId,
+        categoryId: quote.categoryId,
+        sourceId: quote.sourceId,
+      },
+      req,
+    })
 
     return NextResponse.json(quote)
 

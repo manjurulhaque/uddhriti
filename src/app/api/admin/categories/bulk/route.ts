@@ -2,8 +2,11 @@ import slugify from "slugify"
 import { z } from "zod"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAdmin } from "@/lib/auth/getAdmin"
+import { requireSuperAdmin } from "@/lib/api/admin-auth"
 import { enforceAdminRateLimit } from "@/lib/api/rate-limit"
+import { revalidatePublicSurfaces } from "@/lib/revalidation"
+import { recordAuditLog } from "@/lib/audit"
+import { sanitizeSpreadsheetCell } from "@/lib/security/csv"
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -37,10 +40,8 @@ function uniqueSlug(baseSlug: string, usedSlugs: Set<string>) {
 }
 
 export async function POST(req: Request) {
-  const admin = await getAdmin()
-  if (!admin || admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const { admin, response } = await requireSuperAdmin()
+  if (response) return response
 
   const rateLimited = enforceAdminRateLimit(admin.id, "bulk")
   if (rateLimited) return rateLimited
@@ -69,11 +70,11 @@ export async function POST(req: Request) {
       }
 
       return {
-        name: item.name.trim(),
+        name: sanitizeSpreadsheetCell(item.name.trim()),
         slug: uniqueSlug(baseSlug, usedSlugs),
-        description: item.description || null,
-        metaTitle: item.metaTitle || null,
-        metaDescription: item.metaDescription || null,
+        description: item.description ? sanitizeSpreadsheetCell(item.description.trim()) : null,
+        metaTitle: item.metaTitle ? sanitizeSpreadsheetCell(item.metaTitle.trim()) : null,
+        metaDescription: item.metaDescription ? sanitizeSpreadsheetCell(item.metaDescription.trim()) : null,
       }
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -86,6 +87,24 @@ export async function POST(req: Request) {
   }
 
   const result = await prisma.category.createMany({ data })
+
+  if (result.count > 0) {
+    revalidatePublicSurfaces()
+  }
+
+  await recordAuditLog({
+    action: "IMPORT",
+    entityType: "CATEGORY",
+    adminId: admin.id,
+    adminEmail: admin.email,
+    adminName: admin.name,
+    details: {
+      received: parsed.data.items.length,
+      created: result.count,
+      failed: errors.length,
+    },
+    req,
+  })
 
   return NextResponse.json({
     received: parsed.data.items.length,

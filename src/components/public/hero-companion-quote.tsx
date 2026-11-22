@@ -94,7 +94,7 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
   return (
     <article className="group relative flex flex-col justify-between rounded-[1.4rem] border border-white/12 bg-white/6 p-5 backdrop-blur-md shadow-lg transition-all duration-300 hover:border-white/20 hover:bg-white/9">
       {/* Top Header Row */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-gold)]/20 text-xs">
             🎲
@@ -162,7 +162,7 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between border-t border-white/10 pt-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3 text-xs">
         {categoryName && categorySlug ? (
           <Link
             href={`/categories/${categorySlug}`}

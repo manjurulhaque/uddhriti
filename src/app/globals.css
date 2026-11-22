@@ -21,10 +21,25 @@
   --color-foreground: var(--foreground);
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@supports not (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 ::selection {

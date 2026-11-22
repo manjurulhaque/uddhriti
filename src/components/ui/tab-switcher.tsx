@@ -42,7 +42,7 @@ export function TabSwitcher<T extends string = string>({
     <div
       role="tablist"
       aria-label={label}
-      className={`flex items-center gap-2 rounded-2xl border border-stone-200 bg-white/90 p-1.5 shadow-2xs ${className}`}
+      className={`flex max-w-full overflow-x-auto scrollbar-none items-center gap-2 rounded-2xl border border-stone-200 bg-white/90 p-1.5 shadow-2xs ${className}`}
     >
       {tabs.map((tab, index) => {
         const isActive = tab.id === activeTab
@@ -57,7 +57,7 @@ export function TabSwitcher<T extends string = string>({
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(tab.id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+            className={`inline-flex shrink-0 whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
               isActive
                 ? "bg-[var(--ink-900)] text-white shadow-xs"
                 : "text-stone-700 hover:text-stone-900 hover:bg-stone-50"

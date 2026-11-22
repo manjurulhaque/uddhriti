@@ -44,7 +44,7 @@ export function HomeHero({
         <div className="absolute -left-20 top-16 h-56 w-56 rounded-full border border-white/10 bg-white/5 blur-3xl" />
         <div className="absolute right-0 top-0 h-64 w-64 translate-x-1/3 -translate-y-1/4 rounded-full bg-[rgba(244,162,97,0.18)] blur-3xl" />
 
-        <div className="relative grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.35fr_0.85fr] lg:px-12 lg:py-12">
+        <div className="relative grid gap-8 px-4 py-6 sm:px-8 sm:py-8 lg:grid-cols-[1.35fr_0.85fr] lg:px-12 lg:py-12">
           <div className="animate-rise space-y-7">
             {/* Top Reader Actions Row */}
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -136,7 +136,7 @@ export function HomeHero({
 
             {/* Sanctuary Reading Quick Strip */}
             <div className="rounded-[1.4rem] border border-white/12 bg-white/6 p-4 backdrop-blur-md shadow-md transition-all hover:border-white/20 hover:bg-white/9">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-gold)]/20 text-sm" aria-hidden="true">
                     🕊️

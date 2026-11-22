@@ -101,7 +101,7 @@ export default function CopyrightPage() {
           </aside>
 
           {/* Legal Body Sections */}
-          <div className="lg:col-span-3 space-y-10 text-stone-700 leading-relaxed text-sm sm:text-base">
+          <div className="min-w-0 lg:col-span-3 space-y-10 text-stone-700 leading-relaxed text-sm sm:text-base">
             {/* Section 1 */}
             <section id="mission-fair-use" className="scroll-mt-24 space-y-3">
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-[var(--ink-900)]">

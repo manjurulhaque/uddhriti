@@ -131,7 +131,7 @@ export default function CookiesPage() {
           </aside>
 
           {/* Legal Body Sections */}
-          <div className="lg:col-span-3 space-y-10 text-stone-700 leading-relaxed text-sm sm:text-base">
+          <div className="min-w-0 lg:col-span-3 space-y-10 text-stone-700 leading-relaxed text-sm sm:text-base">
             {/* Section 1 */}
             <section id="what-are-cookies" className="scroll-mt-24 space-y-3">
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-[var(--ink-900)]">
@@ -199,7 +199,7 @@ export default function CookiesPage() {
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-[var(--ink-900)]">
                 4. Detailed Storage &amp; Cookie Inventory
               </h2>
-              <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-2xs">
+              <div className="w-full max-w-full overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-2xs">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-stone-200 bg-stone-50/70 font-semibold text-stone-800">

@@ -27,13 +27,13 @@ export default async function ProtectedAdminLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 w-full max-w-full overflow-x-clip">
       <AdminSidebar
         admin={{ email: admin.email, role: admin.role }}
         ipDisplay={<CurrentIpDisplay initialIp={requestIp.value} initialSource={requestIp.source} />}
       />
 
-      <main className="flex-1 min-w-0 bg-gray-50">{children}</main>
+      <main className="flex-1 min-w-0 max-w-full bg-gray-50">{children}</main>
       <AdminCommandPalette />
     </div>
   )

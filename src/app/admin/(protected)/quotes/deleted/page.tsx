@@ -38,7 +38,7 @@ export default async function DeletedQuotesPage() {
     }))
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <PageHeader
         title="Deleted Quotes"
         description="Restore soft-deleted quotes or permanently remove them."

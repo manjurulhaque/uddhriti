@@ -565,7 +565,7 @@ export default async function QuotesPage({
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <PageHeader
         title="Quotes"
         description="Review, publish, and curate quotations archive entries."

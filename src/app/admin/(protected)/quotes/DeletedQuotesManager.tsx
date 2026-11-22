@@ -262,6 +262,7 @@ export function DeletedQuotesManager({
                   selected={selectedIds.includes(quote.id)}
                   onSelect={() => onToggleSelect(quote.id)}
                   disabled={isBusy}
+                  titleClassName="line-clamp-2 break-words whitespace-normal font-normal"
                   title={
                     <span className="font-serif italic font-normal text-stone-900 line-clamp-2 text-base leading-snug">
                       “{quote.content}”

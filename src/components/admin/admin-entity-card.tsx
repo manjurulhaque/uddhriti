@@ -17,6 +17,7 @@ export interface AdminEntityCardProps {
   className?: string
   children?: React.ReactNode
   variant?: "row" | "grid"
+  titleClassName?: string
 }
 
 export function AdminEntityCard({
@@ -34,6 +35,7 @@ export function AdminEntityCard({
   className = "",
   children,
   variant = "row",
+  titleClassName,
 }: AdminEntityCardProps) {
   const isClickable = Boolean(href || onClick)
 
@@ -48,8 +50,12 @@ export function AdminEntityCard({
   const content = (
     <div className="flex-1 min-w-0">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-semibold text-stone-900 group-hover:text-black tracking-tight text-sm sm:text-base truncate">
+        <div className="min-w-0 flex-1">
+          <div
+            className={`font-semibold text-stone-900 group-hover:text-black tracking-tight text-sm sm:text-base ${
+              titleClassName ?? "truncate"
+            }`}
+          >
             {title}
           </div>
           {subtitle && (
@@ -77,6 +83,26 @@ export function AdminEntityCard({
     </div>
   )
 
+  const clickableContent = href ? (
+    <Link
+      href={href}
+      className="flex-1 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded-lg"
+    >
+      {content}
+    </Link>
+  ) : onClick ? (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded-lg"
+    >
+      {content}
+    </button>
+  ) : (
+    <div className="flex-1 min-w-0">{content}</div>
+  )
+
   return (
     <div className={cardBaseStyles}>
       <div className="flex items-start gap-3.5">
@@ -94,34 +120,18 @@ export function AdminEntityCard({
 
         {avatar && <div className="shrink-0 pt-0.5">{avatar}</div>}
 
-        {href ? (
-          <Link
-            href={href}
-            className="flex-1 min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded-lg"
-          >
-            {content}
-          </Link>
-        ) : onClick ? (
-          <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            className="flex-1 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded-lg"
-          >
-            {content}
-          </button>
-        ) : (
-          content
-        )}
+        <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+          {clickableContent}
 
-        {actions && (
-          <div
-            className="shrink-0 flex items-center gap-2 pt-0.5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {actions}
-          </div>
-        )}
+          {actions && (
+            <div
+              className="shrink-0 flex flex-wrap items-center gap-2 pt-0.5 md:self-start"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {actions}
+            </div>
+          )}
+        </div>
 
         {isClickable && !actions && variant === "row" && (
           <div className="shrink-0 hidden sm:flex items-center self-center text-stone-400 group-hover:text-stone-700 transition-colors pl-1">

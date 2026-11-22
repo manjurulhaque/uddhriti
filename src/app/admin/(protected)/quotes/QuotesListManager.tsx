@@ -1049,9 +1049,9 @@ export function QuotesListManager({
 
       {selectedCount > 0 ? (
         <div className="sticky top-2 z-20 rounded-2xl border border-stone-200/90 bg-white/95 p-4 shadow-md backdrop-blur-md space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <span className="text-sm font-semibold text-stone-900">{selectedCount} quotes selected</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsBatchEnrichOpen(true)}
@@ -1318,6 +1318,7 @@ export function QuotesListManager({
               href={`/admin/quotes/${quote.id}`}
               selected={selectedIds.includes(quote.id)}
               onSelect={() => onToggleSelect(quote.id)}
+              titleClassName="line-clamp-2 break-words whitespace-normal font-normal"
               title={
                 <span className="font-serif italic font-normal text-stone-900 group-hover:text-black line-clamp-2 text-base leading-snug">
                   “{quote.content}”
@@ -1689,7 +1690,7 @@ export function QuotesListManager({
                 </>
               }
               actions={
-                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                   <Button
                     type="button"
                     variant="outline"

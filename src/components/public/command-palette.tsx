@@ -491,6 +491,9 @@ export function CommandPalette() {
                                   fill
                                   sizes="32px"
                                   unoptimized
+                                  loading="eager"
+                                  decoding="async"
+                                  referrerPolicy="no-referrer"
                                   className="object-cover"
                                 />
                               ) : (

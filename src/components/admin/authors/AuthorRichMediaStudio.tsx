@@ -220,6 +220,7 @@ export function AuthorRichMediaStudio({
                   unoptimized
                   loading="eager"
                   priority
+                  referrerPolicy="no-referrer"
                   className="object-cover"
                 />
               ) : (
@@ -247,6 +248,7 @@ export function AuthorRichMediaStudio({
                     unoptimized
                     loading="eager"
                     priority
+                    referrerPolicy="no-referrer"
                     className="object-cover opacity-85"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -278,6 +280,7 @@ export function AuthorRichMediaStudio({
                   unoptimized
                   loading="eager"
                   priority
+                  referrerPolicy="no-referrer"
                   className="object-cover"
                 />
               ) : (
@@ -326,6 +329,7 @@ export function AuthorRichMediaStudio({
                 fill
                 sizes="500px"
                 unoptimized
+                referrerPolicy="no-referrer"
                 className="object-contain"
               />
             </div>

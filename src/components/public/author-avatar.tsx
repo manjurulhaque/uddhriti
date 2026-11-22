@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import Image from "next/image"
 import { getAuthorInitials, normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
@@ -56,14 +58,22 @@ export function AuthorAvatar({
   const normalizedUrl = normalizeWikimediaThumbnailUrl(imageUrl)
   const initials = getAuthorInitials(name)
   const sizeConfig = SIZE_CLASSES[size]
+  const [hasError, setHasError] = React.useState(false)
 
-  const effectiveLoading = loading ?? (priority ? "eager" : undefined)
+  React.useEffect(() => {
+    setHasError(false)
+  }, [normalizedUrl])
+
+  // On mobile WebKit (iOS Safari), loading="lazy" inside overflow:hidden containers with position:absolute
+  // frequently fails to trigger the intersection observer. Defaulting to "eager" with decoding="async"
+  // and referrerPolicy="no-referrer" (preventing Wikimedia 403 hotlink blocking) ensures instant loading.
+  const effectiveLoading = loading ?? "eager"
 
   return (
     <div
       className={`relative shrink-0 overflow-hidden border border-stone-200/90 bg-stone-100 shadow-2xs group ${sizeConfig.container} ${className}`}
     >
-      {normalizedUrl ? (
+      {normalizedUrl && !hasError ? (
         <Image
           src={normalizedUrl}
           alt={name}
@@ -72,6 +82,9 @@ export function AuthorAvatar({
           unoptimized
           priority={priority}
           loading={effectiveLoading}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setHasError(true)}
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

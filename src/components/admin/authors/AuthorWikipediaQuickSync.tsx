@@ -212,6 +212,9 @@ export function AuthorWikipediaQuickSync({
                                 fill
                                 sizes="48px"
                                 unoptimized
+                                loading="eager"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
                                 className="object-cover"
                               />
                             ) : (

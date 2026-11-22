@@ -614,6 +614,16 @@ export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): 
   let normalized = url.trim()
   if (!normalized) return null
 
+  // Ensure HTTPS to prevent mixed content blocking on mobile devices
+  if (
+    normalized.startsWith("http://upload.wikimedia.org") ||
+    normalized.startsWith("http://commons.wikimedia.org") ||
+    normalized.startsWith("http://thumb.wikimedia.org") ||
+    normalized.startsWith("http://en.wikipedia.org")
+  ) {
+    normalized = normalized.replace(/^http:\/\//i, "https://")
+  }
+
   // 1. Rewrite thumb.wikimedia.org to canonical upload.wikimedia.org host
   if (normalized.includes("thumb.wikimedia.org/")) {
     normalized = normalized.replace("thumb.wikimedia.org/", "upload.wikimedia.org/")

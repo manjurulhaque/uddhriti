@@ -181,8 +181,25 @@ export function PublicHeader() {
                   </Link>
                 )
               })}
-              <div className="pt-2 mt-2 border-t border-stone-200/70 text-center text-xs text-stone-500 px-1">
+              <div className="pt-2.5 mt-2 border-t border-stone-200/70 space-y-2 text-center text-xs text-stone-500 px-1">
                 <span>Timeless Quotes &amp; Ideas</span>
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-stone-500 pt-1">
+                  <Link href="/privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-stone-900 transition-colors py-1">
+                    Privacy
+                  </Link>
+                  <span className="text-stone-300" aria-hidden="true">•</span>
+                  <Link href="/terms" onClick={() => setMobileMenuOpen(false)} className="hover:text-stone-900 transition-colors py-1">
+                    Terms
+                  </Link>
+                  <span className="text-stone-300" aria-hidden="true">•</span>
+                  <Link href="/copyright" onClick={() => setMobileMenuOpen(false)} className="hover:text-stone-900 transition-colors py-1">
+                    Copyright
+                  </Link>
+                  <span className="text-stone-300" aria-hidden="true">•</span>
+                  <Link href="/cookies" onClick={() => setMobileMenuOpen(false)} className="hover:text-stone-900 transition-colors py-1">
+                    Cookies
+                  </Link>
+                </div>
               </div>
             </nav>
           </div>

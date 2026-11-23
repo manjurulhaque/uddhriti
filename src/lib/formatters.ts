@@ -635,6 +635,22 @@ export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): 
     normalized = normalized.replace("thumb.wikimedia.org/", "upload.wikimedia.org/")
   }
 
+  // 2. Fix known deleted/renamed Wikimedia asset filenames
+  if (
+    normalized.includes("Martin_Luther_King%2C_Jr..jpg") ||
+    normalized.includes("Martin%20Luther%20King%2C%20Jr..jpg") ||
+    normalized.includes("Martin_Luther_King,_Jr..jpg") ||
+    normalized.includes("Martin Luther King, Jr..jpg") ||
+    normalized.includes("The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg/640px-")
+  ) {
+    return "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg/500px-The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg"
+  }
+
+  // 3. Fix invalid 640px static bucket on upload.wikimedia.org (Wikimedia strictly requires buckets: 120, 250, 330, 500, 960)
+  if (normalized.includes("upload.wikimedia.org/") && normalized.includes("/640px-")) {
+    normalized = normalized.replace(/\/640px-/g, "/500px-")
+  }
+
   // 2. Convert un-thumbnailed raw TIFF on upload.wikimedia.org to Special:FilePath thumbnail
   // Mobile browsers (iOS Safari, Android Chrome) do not support TIFF files natively.
   if (

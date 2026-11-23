@@ -25,10 +25,10 @@ describe("Author Image URL Normalization for Mobile Compatibility", () => {
   })
 
   it("rewrites legacy thumb.wikimedia.org hosts to canonical upload.wikimedia.org", () => {
-    const legacyUrl = "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Photo.jpg/640px-Photo.jpg"
+    const legacyUrl = "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Photo.jpg/500px-Photo.jpg"
     assert.equal(
       normalizeWikimediaThumbnailUrl(legacyUrl),
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Photo.jpg/640px-Photo.jpg"
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Photo.jpg/500px-Photo.jpg"
     )
   })
 
@@ -69,6 +69,22 @@ describe("Author Image URL Normalization for Mobile Compatibility", () => {
     assert.equal(
       normalizeWikimediaThumbnailUrl(trackedUrl),
       "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Hans-Zimmer.jpg/500px-Hans-Zimmer.jpg"
+    )
+  })
+
+  it("rewrites known deleted Martin Luther King Jr. filename to official 500px portrait", () => {
+    const badMlkUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/Martin%20Luther%20King%2C%20Jr..jpg?width=640"
+    assert.equal(
+      normalizeWikimediaThumbnailUrl(badMlkUrl),
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg/500px-The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg"
+    )
+  })
+
+  it("rewrites invalid 640px static bucket on upload.wikimedia.org to 500px valid bucket", () => {
+    const invalid640Url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg/640px-The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg"
+    assert.equal(
+      normalizeWikimediaThumbnailUrl(invalid640Url),
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg/500px-The_Rev._Dr._Martin_Luther_King_Jr._Color_Portrait_%28high_quality%29.jpg"
     )
   })
 })

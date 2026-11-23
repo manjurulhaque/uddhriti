@@ -71,31 +71,33 @@ export function QuoteCard({
   if (isFeatured) {
     return (
       <article
-        className={`group relative overflow-hidden rounded-[1.6rem] border border-white/12 bg-white/9 p-6 backdrop-blur-md shadow-xl transition-all duration-300 hover:border-white/20 hover:bg-white/12 ${className}`}
+        className={`group relative overflow-hidden rounded-[1.6rem] border border-white/12 bg-white/9 p-4 sm:p-6 backdrop-blur-md shadow-xl transition-all duration-300 hover:border-white/20 hover:bg-white/12 min-w-0 max-w-full ${className}`}
         style={style}
       >
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-sand)]">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.12em] sm:tracking-[0.22em] text-[var(--accent-sand)]">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span>{badgeLabel || "Quote of the Day"}</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)]" aria-hidden="true" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-gold)] shrink-0" aria-hidden="true" />
             {isVerified && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-normal text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-normal text-emerald-300 shrink-0">
                 <span className="h-1 w-1 rounded-full bg-emerald-400" />
                 Verified
               </span>
             )}
           </div>
-          {bookmarkButton}
+          <div className="shrink-0 -mr-1">
+            {bookmarkButton}
+          </div>
         </div>
 
         {quoteHref ? (
           <Link href={quoteHref} className="block group/link">
-            <blockquote className="mt-4 text-xl sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white group-hover/link:text-[var(--accent-sand)] transition-colors">
+            <blockquote className="mt-4 text-lg sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white group-hover/link:text-[var(--accent-sand)] transition-colors break-words">
               &ldquo;{content}&rdquo;
             </blockquote>
           </Link>
         ) : (
-          <blockquote className="mt-4 text-xl sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white">
+          <blockquote className="mt-4 text-lg sm:text-2xl leading-relaxed sm:leading-relaxed font-serif text-white break-words">
             &ldquo;{content}&rdquo;
           </blockquote>
         )}
@@ -125,11 +127,11 @@ export function QuoteCard({
   if (isDark) {
     return (
       <article
-        className={`group relative rounded-[1.4rem] border border-white/10 bg-white/6 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/9 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] ${className}`}
+        className={`group relative rounded-[1.4rem] border border-white/10 bg-white/6 p-4 sm:p-5 transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/9 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] min-w-0 max-w-full ${className}`}
         style={style}
       >
-        <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] sm:tracking-[0.18em] text-white/55">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {trendingRank !== undefined ? (
               <span className="inline-flex items-center gap-1.5 text-[var(--accent-sand)]">
                 Rank #{trendingRank}
@@ -140,13 +142,15 @@ export function QuoteCard({
               <span />
             )}
             {isVerified && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-normal text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-normal text-emerald-300 shrink-0">
                 <span className="h-1 w-1 rounded-full bg-emerald-400" />
                 Verified
               </span>
             )}
           </div>
-          {bookmarkButton}
+          <div className="shrink-0 -mr-1">
+            {bookmarkButton}
+          </div>
         </div>
 
         {quoteHref ? (

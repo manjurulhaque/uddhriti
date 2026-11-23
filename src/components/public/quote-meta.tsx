@@ -33,7 +33,7 @@ export function QuoteMeta({
       : "bg-amber-800/6 text-stone-700 border-amber-900/10 hover:bg-amber-800/14 hover:border-amber-900/20 hover:text-stone-900"
 
   return (
-    <div className={`space-y-1 ${className}`}>
+    <div className={`space-y-1 min-w-0 max-w-full break-words ${className}`}>
       <p className={`text-sm font-semibold tracking-wide ${nameClass}`}>
         {authorName ? (
           authorSlug ? (

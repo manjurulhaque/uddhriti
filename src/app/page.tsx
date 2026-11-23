@@ -413,7 +413,7 @@ export default async function HomePage() {
   return (
     <PublicLayout>
       <JsonLd data={jsonLd} />
-      <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 space-y-6 sm:space-y-8 w-full max-w-full min-w-0">
         <HomeHero
           heroQuote={heroQuote}
           companionQuotes={companionQuotes}

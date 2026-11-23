@@ -51,10 +51,10 @@ export function HeroSearch() {
       {/* Search Input Bar */}
       <form
         onSubmit={handleSubmit}
-        className="group relative flex items-center rounded-2xl border border-white/18 bg-white/8 p-1.5 backdrop-blur-md transition-all duration-200 focus-within:border-[var(--accent-gold)] focus-within:bg-white/14 focus-within:ring-4 focus-within:ring-[var(--accent-gold)]/20 hover:border-white/28 hover:bg-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
+        className="group relative flex items-center rounded-2xl border border-white/18 bg-white/8 p-1 sm:p-1.5 backdrop-blur-md transition-all duration-200 focus-within:border-[var(--accent-gold)] focus-within:bg-white/14 focus-within:ring-4 focus-within:ring-[var(--accent-gold)]/20 hover:border-white/28 hover:bg-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.2)] w-full max-w-full"
       >
         {/* Search Icon */}
-        <div className="flex pl-3.5 pr-2 text-white/50 transition-colors group-focus-within:text-[var(--accent-gold)]">
+        <div className="flex pl-2.5 sm:pl-3.5 pr-1.5 sm:pr-2 text-white/50 transition-colors group-focus-within:text-[var(--accent-gold)]">
           <SearchIcon className="h-4 w-4" />
         </div>
 
@@ -65,7 +65,7 @@ export function HeroSearch() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
           aria-label="Search quotations by author or keyword"
-          className="w-full min-w-0 bg-transparent px-2 py-2 text-base text-white placeholder-white/50 outline-none"
+          className="w-full min-w-0 flex-1 bg-transparent px-1.5 sm:px-2 py-2 text-sm sm:text-base text-white placeholder-white/50 outline-none"
         />
 
         {/* Keyboard Shortcut Indicator */}
@@ -84,7 +84,7 @@ export function HeroSearch() {
         {/* Submit Search Button */}
         <button
           type="submit"
-          className="ml-2 inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-gold)] px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--ink-900)] shadow-xs transition hover:bg-[#e2b765] hover:scale-[1.02] active:scale-[0.98] shrink-0 cursor-pointer"
+          className="ml-1 sm:ml-2 inline-flex items-center gap-1 sm:gap-1.5 rounded-xl bg-[var(--accent-gold)] px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-[var(--ink-900)] shadow-xs transition hover:bg-[#e2b765] hover:scale-[1.02] active:scale-[0.98] shrink-0 cursor-pointer"
         >
           <span>Search</span>
           <span aria-hidden="true">&rarr;</span>

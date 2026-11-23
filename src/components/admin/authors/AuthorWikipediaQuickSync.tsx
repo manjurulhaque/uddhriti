@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import { normalizeWikimediaThumbnailUrl } from "@/lib/formatters"
 import { Button } from "@/components/ui"
 import { ExternalLinkIcon, SearchIcon, WikipediaIcon } from "@/components/ui/icons"
 import type { WikipediaCandidate } from "@/app/api/admin/authors/search-wikipedia/route"
@@ -207,7 +208,7 @@ export function AuthorWikipediaQuickSync({
                           <div className="relative w-12 h-12 rounded-lg bg-stone-200 border border-stone-300/80 overflow-hidden shrink-0">
                             {candidate.thumbnailUrl ? (
                               <Image
-                                src={candidate.thumbnailUrl}
+                                src={normalizeWikimediaThumbnailUrl(candidate.thumbnailUrl) || candidate.thumbnailUrl}
                                 alt={candidate.title}
                                 fill
                                 sizes="48px"

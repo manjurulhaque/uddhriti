@@ -179,7 +179,7 @@ function extractImageFileName(claims: Record<string, unknown> | undefined) {
 }
 
 function commonsFileUrl(fileName: string) {
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}?width=640`
 }
 
 import { normalizeWikimediaThumbnailUrl } from "@/lib/formatters"

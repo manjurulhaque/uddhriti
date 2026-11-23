@@ -606,8 +606,14 @@ export function getTagTypeMeta(type: string): TagTypeMeta {
 /**
  * Normalizes Wikimedia Commons & Wikipedia thumbnail URLs.
  * 1. Rewrites thumb.wikimedia.org to canonical upload.wikimedia.org host.
- * 2. Strips API tracking query parameters (?utm_source=...).
- * 3. Enforces valid 960px bucketed thumbnail sizes for TIFF files (avoiding HTTP 400).
+ * 2. Ensures Special:FilePath URLs always have ?width=640 to generate lightweight,
+ *    mobile-compatible raster thumbnails (automatically converting raw TIFFs to JPEG
+ *    and SVGs to PNG, avoiding mobile out-of-memory crashes and unsupported format failures).
+ * 3. Converts un-thumbnailed raw TIFF files on upload.wikimedia.org to Special:FilePath
+ *    JPEG thumbnails so mobile devices (iOS Safari & Android Chrome) can render them.
+ * 4. Strips tracking query parameters (?utm_source=...) while preserving functional
+ *    parameters like ?width= on Special:FilePath.
+ * 5. Enforces valid 960px bucketed thumbnail sizes for TIFF files (avoiding HTTP 400).
  */
 export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): string | null {
   if (!url) return null
@@ -629,8 +635,45 @@ export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): 
     normalized = normalized.replace("thumb.wikimedia.org/", "upload.wikimedia.org/")
   }
 
-  // 2. Strip API tracking queries on Wikimedia/Wikipedia assets
-  if ((normalized.includes("wikimedia.org/") || normalized.includes("wikipedia.org/")) && normalized.includes("?")) {
+  // 2. Convert un-thumbnailed raw TIFF on upload.wikimedia.org to Special:FilePath thumbnail
+  // Mobile browsers (iOS Safari, Android Chrome) do not support TIFF files natively.
+  if (
+    normalized.includes("upload.wikimedia.org/wikipedia/commons/") &&
+    !normalized.includes("/thumb/") &&
+    /\.tiff?$/i.test(normalized.split("?")[0])
+  ) {
+    const rawPath = normalized.split("?")[0]
+    const filename = rawPath.split("/").pop()
+    if (filename) {
+      normalized = `https://commons.wikimedia.org/wiki/Special:FilePath/${filename}?width=640`
+    }
+  }
+
+  // 3. Handle Wikimedia Commons Special:FilePath URLs
+  if (normalized.includes("/wiki/Special:FilePath/")) {
+    try {
+      const parsed = new URL(normalized)
+      const currentWidth = parsed.searchParams.get("width")
+      const widthVal =
+        currentWidth && !isNaN(Number(currentWidth)) && Number(currentWidth) > 0
+          ? currentWidth
+          : "640"
+      
+      // Clean query parameters: preserve width, strip tracking params
+      const searchParams = new URLSearchParams()
+      searchParams.set("width", widthVal)
+      parsed.search = searchParams.toString()
+      normalized = parsed.toString()
+    } catch {
+      if (!normalized.includes("?width=")) {
+        normalized = `${normalized.split("?")[0]}?width=640`
+      }
+    }
+  } else if (
+    (normalized.includes("wikimedia.org/") || normalized.includes("wikipedia.org/")) &&
+    normalized.includes("?")
+  ) {
+    // 4. Strip tracking queries on standard Wikimedia/Wikipedia assets
     try {
       const parsed = new URL(normalized)
       parsed.search = ""
@@ -640,7 +683,7 @@ export function normalizeWikimediaThumbnailUrl(url: string | null | undefined): 
     }
   }
 
-  // 3. Fix Wikimedia Commons TIFF bucket sizes (lossy-page1-{not-960}px returns HTTP 400)
+  // 5. Fix Wikimedia Commons TIFF bucket sizes (lossy-page1-{not-960}px returns HTTP 400)
   if (/\.tiff?\/lossy-page1-\d+px-/i.test(normalized)) {
     normalized = normalized.replace(/lossy-page1-\d+px-/i, "lossy-page1-960px-")
   }

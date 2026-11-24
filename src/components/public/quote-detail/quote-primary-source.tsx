@@ -17,12 +17,32 @@ export interface QuotePrimarySourceProps {
   className?: string
 }
 
+/**
+ * Checks whether a verification note represents a genuine citation reference
+ * rather than an unverified placeholder from initial ingestion.
+ */
+export function isValidVerificationCitation(note?: string | null): boolean {
+  if (!note) return false
+  const lower = note.toLowerCase()
+  if (
+    lower.includes("pending primary source verification") ||
+    lower.includes("cross-referencing against standard literary concordance") ||
+    lower.includes("requires primary citation check") ||
+    lower.includes("primary citation cannot be validated")
+  ) {
+    return false
+  }
+  return true
+}
+
 export function QuotePrimarySource({
   source,
   verificationNote,
   className = "",
 }: QuotePrimarySourceProps) {
   if (!source) return null
+
+  const hasCitation = isValidVerificationCitation(verificationNote)
 
   return (
     <section
@@ -61,7 +81,7 @@ export function QuotePrimarySource({
         </p>
       )}
 
-      {verificationNote && (
+      {hasCitation && (
         <div className="rounded-xl bg-stone-50 border border-stone-200/80 p-3 text-xs text-stone-700 flex items-start gap-2">
           <span className="font-bold text-stone-900 shrink-0">Verification Reference:</span>
           <span className="font-mono text-stone-600">{verificationNote}</span>

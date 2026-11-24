@@ -7,9 +7,9 @@ export function PublicFooter() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="mt-16 border-t border-[var(--ink-900)]/12 bg-[var(--ink-900)] text-[var(--page-cream)]">
+    <footer className="mt-16 border-t border-[var(--ink-900)]/12 bg-[var(--ink-900)] text-[var(--page-cream)] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
       {/* Top Banner / Mission Statement */}
-      <div className="border-b border-white/10 bg-white/4 px-5 py-8 sm:px-8 lg:px-12">
+      <div className="border-b border-white/10 bg-white/4 px-4 py-8 sm:px-8 lg:px-12">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-sand)]">
@@ -26,10 +26,10 @@ export function PublicFooter() {
       </div>
 
       {/* Main Footer Links */}
-      <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-8 lg:px-12">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand Column */}
-          <div className="space-y-4 sm:col-span-2 lg:col-span-2">
+          <div className="col-span-2 space-y-4 sm:col-span-2 lg:col-span-2">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[var(--ink-900)] font-serif font-bold italic shadow-xs">
                 Q
@@ -58,22 +58,22 @@ export function PublicFooter() {
             </p>
             <ul className="space-y-2 text-xs text-white/75">
               <li>
-                <Link href="/" className="hover:text-white transition-colors">
+                <Link href="/" className="hover:text-white transition-colors block py-0.5">
                   Home &amp; Hero
                 </Link>
               </li>
               <li>
-                <Link href="/#trending" className="hover:text-white transition-colors">
+                <Link href="/#trending" className="hover:text-white transition-colors block py-0.5">
                   Trending Quotes
                 </Link>
               </li>
               <li>
-                <Link href="/#highlights" className="hover:text-white transition-colors">
+                <Link href="/#highlights" className="hover:text-white transition-colors block py-0.5">
                   Featured Voices
                 </Link>
               </li>
               <li>
-                <Link href="/#latest" className="hover:text-white transition-colors">
+                <Link href="/#latest" className="hover:text-white transition-colors block py-0.5">
                   Latest Additions
                 </Link>
               </li>
@@ -87,22 +87,22 @@ export function PublicFooter() {
             </p>
             <ul className="space-y-2 text-xs text-white/75">
               <li>
-                <Link href="/categories" className="hover:text-white transition-colors">
+                <Link href="/categories" className="hover:text-white transition-colors block py-0.5">
                   Thematic Topics
                 </Link>
               </li>
               <li>
-                <Link href="/authors" className="hover:text-white transition-colors">
+                <Link href="/authors" className="hover:text-white transition-colors block py-0.5">
                   Authors &amp; Thinkers
                 </Link>
               </li>
               <li>
-                <Link href="/tags" className="hover:text-white transition-colors">
+                <Link href="/tags" className="hover:text-white transition-colors block py-0.5">
                   Thematic Tags
                 </Link>
               </li>
               <li>
-                <Link href="/quotes" className="hover:text-white transition-colors">
+                <Link href="/quotes" className="hover:text-white transition-colors block py-0.5">
                   Browse All Quotes
                 </Link>
               </li>
@@ -114,24 +114,24 @@ export function PublicFooter() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-sand)]">
               Legal &amp; Policy
             </p>
-            <ul className="space-y-2 text-xs text-white/75">
+            <ul className="space-y-2 text-xs text-white/80 font-medium">
               <li>
-                <Link href="/privacy" className="hover:text-white transition-colors">
+                <Link href="/privacy" className="hover:text-white transition-colors block py-0.5">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-white transition-colors">
+                <Link href="/terms" className="hover:text-white transition-colors block py-0.5">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/copyright" className="hover:text-white transition-colors">
+                <Link href="/copyright" className="hover:text-white transition-colors block py-0.5">
                   Copyright &amp; DMCA
                 </Link>
               </li>
               <li>
-                <Link href="/cookies" className="hover:text-white transition-colors">
+                <Link href="/cookies" className="hover:text-white transition-colors block py-0.5">
                   Cookie Policy
                 </Link>
               </li>
@@ -145,24 +145,24 @@ export function PublicFooter() {
             </p>
             <ul className="space-y-2 text-xs text-white/75">
               <li>
-                <Link href="/admin/login" className="hover:text-white transition-colors">
+                <Link href="/admin/login" className="hover:text-white transition-colors block py-0.5">
                   Admin Login
                 </Link>
               </li>
               <li>
-                <Link href="/robots.txt" className="hover:text-white transition-colors">
+                <Link href="/robots.txt" className="hover:text-white transition-colors block py-0.5">
                   Robots &amp; Sitemap
                 </Link>
               </li>
               <li>
-                <Link href="/sitemap.xml" className="hover:text-white transition-colors">
+                <Link href="/sitemap.xml" className="hover:text-white transition-colors block py-0.5">
                   Sitemap XML
                 </Link>
               </li>
               <li>
                 <Link
                   href="/feed.xml"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-1.5 py-0.5"
                   target="_blank"
                   rel="alternate"
                   type="application/rss+xml"
@@ -181,21 +181,21 @@ export function PublicFooter() {
             &copy; {currentYear} Quotzen Archive. All citations and excerpts belong to their
             respective authors and public domain archives.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-white/60">
-            <Link href="/privacy" className="hover:text-white transition-colors">
-              Privacy
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-white/75 font-medium">
+            <Link href="/privacy" className="hover:text-white transition-colors py-1">
+              Privacy Policy
             </Link>
-            <span className="text-white/30">•</span>
-            <Link href="/terms" className="hover:text-white transition-colors">
-              Terms
+            <span className="text-white/30" aria-hidden="true">•</span>
+            <Link href="/terms" className="hover:text-white transition-colors py-1">
+              Terms of Service
             </Link>
-            <span className="text-white/30">•</span>
-            <Link href="/copyright" className="hover:text-white transition-colors">
+            <span className="text-white/30" aria-hidden="true">•</span>
+            <Link href="/copyright" className="hover:text-white transition-colors py-1">
               Copyright &amp; DMCA
             </Link>
-            <span className="text-white/30">•</span>
-            <Link href="/cookies" className="hover:text-white transition-colors">
-              Cookies
+            <span className="text-white/30" aria-hidden="true">•</span>
+            <Link href="/cookies" className="hover:text-white transition-colors py-1">
+              Cookie Policy
             </Link>
           </div>
         </div>

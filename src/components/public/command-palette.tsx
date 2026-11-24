@@ -4,6 +4,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
+import { AuthorAvatar } from "@/components/public/author-avatar"
 import { CloseIcon, SearchIcon, SpinnerIcon } from "@/components/ui/icons"
 import { QUICK_ACTIONS, CURATED_PATHWAYS } from "@/data/command-palette"
 
@@ -483,23 +484,12 @@ export function CommandPalette() {
                         <div className="flex items-center gap-3 min-w-0">
                           {/* Visual Indicator Glyph / Avatar */}
                           {isAuthor ? (
-                            <div className="relative h-8 w-8 rounded-full overflow-hidden shrink-0 border border-stone-200 bg-stone-100 flex items-center justify-center text-xs font-serif font-bold text-stone-500">
-                              {item.imageUrl ? (
-                                <Image
-                                  src={item.imageUrl}
-                                  alt={item.title}
-                                  fill
-                                  sizes="32px"
-                                  unoptimized
-                                  loading="eager"
-                                  decoding="async"
-                                  referrerPolicy="no-referrer"
-                                  className="object-cover"
-                                />
-                              ) : (
-                                item.title.charAt(0)
-                              )}
-                            </div>
+                            <AuthorAvatar
+                              name={item.title}
+                              imageUrl={item.imageUrl}
+                              size="xs"
+                              className="rounded-full"
+                            />
                           ) : isQuote ? (
                             <span className="font-serif text-xl leading-none text-[var(--accent-gold)] shrink-0 select-none">
                               &ldquo;

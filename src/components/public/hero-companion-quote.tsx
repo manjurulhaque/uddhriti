@@ -92,14 +92,14 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
   const quoteHref = currentQuote.slug ? `/quotes/${currentQuote.slug}` : undefined
 
   return (
-    <article className="group relative flex flex-col justify-between rounded-[1.4rem] border border-white/12 bg-white/6 p-5 backdrop-blur-md shadow-lg transition-all duration-300 hover:border-white/20 hover:bg-white/9">
+    <article className="group relative flex flex-col justify-between rounded-[1.4rem] border border-white/12 bg-white/6 p-4 sm:p-5 backdrop-blur-md shadow-lg transition-all duration-300 hover:border-white/20 hover:bg-white/9 min-w-0 max-w-full">
       {/* Top Header Row */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-gold)]/20 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5 sm:pb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-gold)]/20 text-xs">
             🎲
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--accent-sand)]">
+          <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.2em] text-[var(--accent-sand)] truncate">
             Serendipity Reflection
           </span>
         </div>
@@ -107,7 +107,7 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
         <button
           type="button"
           onClick={handleShuffle}
-          className="group/btn inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-[11px] font-semibold text-white/85 transition hover:border-[var(--accent-gold)]/50 hover:bg-white/15 hover:text-white cursor-pointer"
+          className="group/btn inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-[11px] font-semibold text-white/85 transition hover:border-[var(--accent-gold)]/50 hover:bg-white/15 hover:text-white cursor-pointer"
           title="Shuffle to another memorable thought"
         >
           <span className="text-xs transition-transform duration-300 group-hover/btn:rotate-180">
@@ -125,17 +125,17 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
       >
         {quoteHref ? (
           <Link href={quoteHref} className="block group/link">
-            <blockquote className="font-serif text-sm sm:text-base leading-relaxed text-white/95 group-hover/link:text-[var(--accent-sand)] transition-colors line-clamp-3">
+            <blockquote className="font-serif text-sm sm:text-base leading-relaxed text-white/95 group-hover/link:text-[var(--accent-sand)] transition-colors line-clamp-3 break-words">
               &ldquo;{currentQuote.content}&rdquo;
             </blockquote>
           </Link>
         ) : (
-          <blockquote className="font-serif text-sm sm:text-base leading-relaxed text-white/95 line-clamp-3">
+          <blockquote className="font-serif text-sm sm:text-base leading-relaxed text-white/95 line-clamp-3 break-words">
             &ldquo;{currentQuote.content}&rdquo;
           </blockquote>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs break-words">
           {authorSlug ? (
             <Link
               href={`/authors/${authorSlug}`}
@@ -162,19 +162,19 @@ export function HeroCompanionQuote({ quotes }: HeroCompanionQuoteProps) {
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2.5 sm:pt-3 text-xs">
         {categoryName && categorySlug ? (
           <Link
             href={`/categories/${categorySlug}`}
-            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-white/70 hover:border-white/20 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-white/70 hover:border-white/20 hover:text-white transition-colors truncate max-w-[170px] sm:max-w-none"
           >
-            <span>Theme: {categoryName}</span>
+            <span className="truncate">Theme: {categoryName}</span>
           </Link>
         ) : (
           <span />
         )}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
           {/* Bookmark Button */}
           <button
             type="button"

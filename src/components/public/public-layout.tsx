@@ -13,7 +13,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
     <SavedQuotesProvider>
       <div className="min-h-screen flex flex-col bg-[var(--page-cream)] text-[var(--ink-900)] w-full max-w-full overflow-x-clip">
         <PublicHeader />
-        <div className="flex-1 pb-16 md:pb-0 w-full max-w-full min-w-0">{children}</div>
+        <div className="flex-1 w-full max-w-full min-w-0">{children}</div>
         <PublicFooter />
         <MobileBottomNav />
       </div>
